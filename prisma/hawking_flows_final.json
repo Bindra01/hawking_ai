@@ -1,0 +1,1610 @@
+[
+  {
+    "title": "An object with mass 500 g moves along x-axis with speed v = 4√x m/s. The force a",
+    "subject": "mechanics",
+    "topic": "Mechanics",
+    "difficulty": "class_11",
+    "scenario": "An object with mass 500 g moves along x-axis with speed v = 4$\\sqrt{x}$ m/s. The force acting on the object is?",
+    "goal": "Find: 4 N",
+    "final_answer": "4 N",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they try to find acceleration as dv/dt. But velocity is given as a function of x, not t. What should you do?",
+          "options": [
+            {
+              "text": "Use a = v(dv/dx) since v is a function of x",
+              "correct": true,
+              "feedback": "Exactly! When v = f(x), the chain rule gives a = v(dv/dx). This is the key move."
+            },
+            {
+              "text": "Differentiate v = 4$\\sqrt{x}$ directly w.r.t. time to get a",
+              "correct": false,
+              "feedback": "You don't have v(t) — you have v(x). Differentiating w.r.t. time needs x(t), which isn't given. Use the chain rule: a = dv/dt = (dv/dx)(dx/dt) = v(dv/dx). This bypasses time entirely."
+            },
+            {
+              "text": "Use v² = u² + 2as to find a directly",
+              "correct": false,
+              "feedback": "v² = u² + 2as assumes constant acceleration — but you haven't proven that yet. You need to find acceleration first, not assume it. Derive it from v(x) using a = v(dv/dx)."
+            }
+          ],
+          "tip": "v = f(x) — use a = v(dv/dx). v = f(t) — use a = dv/dt."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "$v = 4x^{1/2}$. What is dv/dx?",
+          "options": [
+            {
+              "text": "$2 / \\sqrt{x}$",
+              "correct": true,
+              "feedback": "Clean. Power rule: d/dx of 4x^(1/2) = 4 ×(1/2) ×$x^{-1/2}$ = 2x^(-1/2)."
+            },
+            {
+              "text": "$4 / \\sqrt{x}$",
+              "correct": false,
+              "feedback": "You forgot to multiply the coefficient. d/dx of 4x^(1/2) = 4 × ½ × $x^{-1/2}$. The 4 × ½ = 2, not 4. Result: 2/$\\sqrt{x}$."
+            },
+            {
+              "text": "$2\\sqrt{x}$",
+              "correct": false,
+              "feedback": "You brought the power down correctly (4 × ½ = 2) but didn't reduce the exponent. $x^{1/2}$ becomes $x^{-1/2}$ = 1/$\\sqrt{x}$ after differentiation, not $\\sqrt{x}$. Answer: 2/$\\sqrt{x}$."
+            }
+          ],
+          "tip": "d/dx of x^n = n·$x^{n-1}$. Never rush the constant."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "Now compute a = v · (dv/dx) = 4$\\sqrt{x}$ · (2/$\\sqrt{x}$). What happens?",
+          "options": [
+            {
+              "text": "$\\sqrt{x}$ cancels out — acceleration = 8 m/s² (constant!)",
+              "correct": true,
+              "feedback": "Beautiful cancellation. $\\sqrt{x}$ ×(1/$\\sqrt{x}$) = 1. So a = 8 m/s², constant and independent of x."
+            },
+            {
+              "text": "You get 8x, acceleration depends on position",
+              "correct": false,
+              "feedback": "Check your exponent algebra. $\\sqrt{x}$ ×(1/$\\sqrt{x}$) = $x^{1/2}$ ×$x^{-1/2}$ = x^0 = 1, not x. The x-dependence cancels completely. a = 4 ×2 = 8 m/s², a constant."
+            },
+            {
+              "text": "You get 8/x, acceleration decreases with x",
+              "correct": false,
+              "feedback": "You inverted incorrectly. $\\sqrt{x}$ × (1/$\\sqrt{x}$) = 1, not 1/x. The half-powers cancel: (+1/2) + (-1/2) = 0. So a = 8 m/s² — constant and independent of position."
+            }
+          ],
+          "tip": "When terms cancel to give constant acceleration, expect a clean final answer."
+        },
+        {
+          "type": "identify",
+          "label": "LOCK THE ANSWER",
+          "icon": "🎯",
+          "prompt": "$F = ma$. Mass is 500 g and a = 8 m/s². What is the force?",
+          "options": [
+            {
+              "text": "4 N (convert 500 g = 0.5 kg first)",
+              "correct": true,
+              "feedback": "Nailed it. 0.5 kg ×8 m/s² = 4 N. Unit conversion is non-negotiable."
+            },
+            {
+              "text": "4000 N (used 500 directly without converting)",
+              "correct": false,
+              "feedback": "You plugged in 500 directly without converting. F = ma needs kg, not grams. 500 g = 0.5 kg. So F = 0.5 ×8 = 4 N, not 500 ×8 = 4000 N. Always convert to SI first."
+            },
+            {
+              "text": "8 N (forgot to multiply by mass)",
+              "correct": false,
+              "feedback": "That's just the acceleration value, not the force. F = ma, not F = a. Multiply by mass: 0.5 kg × 8 m/s² = 4 N. Don't skip the mass."
+            }
+          ],
+          "tip": "Always convert to SI units before plugging into any formula."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "We got F = 4 N (constant). Does this make physical sense for v = 4$\\sqrt{x}$?",
+          "options": [
+            {
+              "text": "Yes — constant force means constant acceleration, consistent with v — $\\sqrt{x}$",
+              "correct": true,
+              "feedback": "Exactly. From v² = 16x, compare with v² = u² + 2as — 2a = 16, a = 8 = constant. Constant a means constant F. Everything checks out."
+            },
+            {
+              "text": "No — force should increase because speed increases with x",
+              "correct": false,
+              "feedback": "Speed increasing doesn't mean force is increasing — it means a force exists. v² = 16x has the form v² = 2as, confirming constant acceleration — constant force. Increasing v is the effect, not the cause."
+            },
+            {
+              "text": "No — force should be zero since there's no explicit time dependence",
+              "correct": false,
+              "feedback": "Force doesn't require explicit time dependence. The velocity changes with position, meaning the object accelerates, meaning a force acts. The chain rule a = v(dv/dx) finds it without any time variable."
+            }
+          ],
+          "tip": "Compare your result's form with known kinematic equations as a quick check."
+        }
+      ]
+    }
+  },
+  {
+    "title": "If the radius of curvature of the path of two particles of same mass are in the ratio 3:4",
+    "subject": "mechanics",
+    "topic": "Mechanics",
+    "difficulty": "class_11",
+    "scenario": "If the radius of curvature of the path of two particles of same mass are in the ratio 3:4, then in order to have constant centripetal force, their velocities will be in the ratio of?",
+    "goal": "Find: $\\sqrt{3} : 2$",
+    "final_answer": "$\\sqrt{3} : 2$",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "Two particles, same mass, same centripetal force, different radii. Which formula connects F, m, v, and r?",
+          "options": [
+            {
+              "text": "$F = mv^{2}/r$",
+              "correct": true,
+              "feedback": "Right. F = mv²/r is the go-to when velocity (not angular velocity) is what you're solving for."
+            },
+            {
+              "text": "$F = m\\omega^{2}r$",
+              "correct": false,
+              "feedback": "F = mω²r uses angular velocity ω, not linear velocity v. You'd need an extra conversion step (v = ωr). Since the problem asks for velocity ratio directly, F = mv²/r is cleaner."
+            },
+            {
+              "text": "$F = mv/r$",
+              "correct": false,
+              "feedback": "F = mv/r is dimensionally wrong. Force has units of kg·m/s², but mv/r gives kg·m/s / m = kg/s — that's not force. The correct formula has v², not v: F = mv²/r."
+            }
+          ],
+          "tip": "Solving for v? Use F = mv²/r. Solving for ω? Use F = mω²r."
+        },
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they assume v — r when F and m are constant. From F = mv²/r with F, m constant, what's the real relation?",
+          "options": [
+            {
+              "text": "v² — r, so v — $\\sqrt{r}$",
+              "correct": true,
+              "feedback": "Spot on. Rearrange: v² = Fr/m. With F and m constant, v² — r, meaning v — $\\sqrt{r}$."
+            },
+            {
+              "text": "v — r (direct proportionality)",
+              "correct": false,
+              "feedback": "Don't just eyeball the formula. Rearrange: v² = Fr/m. It's v² that's proportional to r, not v. Taking the square root: v — $\\sqrt{r}$. Missing the root changes your entire ratio."
+            },
+            {
+              "text": "v — 1/r (inverse proportionality)",
+              "correct": false,
+              "feedback": "v isn't inversely proportional to r. From F = mv²/r — v² = Fr/m. With F and m constant, v² increases with r. So v — $\\sqrt{r}$ — bigger radius needs more speed, not less."
+            }
+          ],
+          "tip": "Always isolate the variable you need BEFORE writing proportionalities."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "v — $\\sqrt{r}$ and r₁:r₂ = 3:4. What is v₁:v₂?",
+          "options": [
+            {
+              "text": "$\\sqrt{3} : \\sqrt{4} = \\sqrt{3} : 2$",
+              "correct": true,
+              "feedback": "Clean finish. $\\sqrt{3}$ : $\\sqrt{4}$ simplifies to $\\sqrt{3}$ : 2. That's your answer."
+            },
+            {
+              "text": "3 : 4 (forgot the square root)",
+              "correct": false,
+              "feedback": "You forgot to apply the square root. v — $\\sqrt{r}$, so the ratio of velocities = $\\sqrt{r}$atio of radii = $\\sqrt{3}$ : $\\sqrt{4}$ = $\\sqrt{3}$ : 2. Not 3:4."
+            },
+            {
+              "text": "4 : 3 (inverted the ratio)",
+              "correct": false,
+              "feedback": "You flipped the ratio. v₁ corresponds to r₁ = 3, v₂ to r₂ = 4. So v₁:v₂ = $\\sqrt{3}$:$\\sqrt{4}$ = $\\sqrt{3}$:2. The order follows the radii — don't swap them."
+            }
+          ],
+          "tip": "When v — $\\sqrt{s}$omething, apply — to every term in the ratio."
+        },
+        {
+          "type": "why",
+          "label": "DEEPER INTUITION",
+          "icon": "🧠",
+          "prompt": "Why does the particle on the larger radius need MORE speed to require the same centripetal force?",
+          "options": [
+            {
+              "text": "Larger radius = gentler curve, so you need more v² to compensate",
+              "correct": true,
+              "feedback": "Exactly. A gentler curve (bigger r) means less acceleration per unit v². To keep F the same, v must increase to compensate."
+            },
+            {
+              "text": "Larger radius means more distance, so more speed is needed",
+              "correct": false,
+              "feedback": "Distance traveled isn't the reason. It's about curvature. A larger radius means the path curves less sharply, producing less centripetal acceleration per unit v². So v must increase to compensate and maintain the same force."
+            },
+            {
+              "text": "Larger radius increases mass effect, requiring more speed",
+              "correct": false,
+              "feedback": "Mass is identical for both particles — the problem states 'same mass.' The reason is geometric: bigger r = gentler curve = less centripetal acceleration at the same speed. More speed is needed to compensate."
+            }
+          ],
+          "tip": "Think of centripetal force as 'how hard the path bends you' — bigger r = softer bend."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "We got v₁:v₂ = $\\sqrt{3}$ : 2. The particle with larger radius (r₂=4) has higher speed (2 > $\\sqrt{3}$ — 1.73). Does this check out?",
+          "options": [
+            {
+              "text": "Yes — larger r needs more v to maintain the same centripetal force",
+              "correct": true,
+              "feedback": "Perfect. v² = Fr/m — bigger r means bigger v². The direction of the inequality (2 > 1.73) matches the physics. You're solid."
+            },
+            {
+              "text": "No — larger r should need less speed",
+              "correct": false,
+              "feedback": "Larger r doesn't mean less speed — it means more. From v² = Fr/m, bigger r directly requires bigger v² to maintain the same F. The particle with r = 4 is faster (2 > $\\sqrt{3}$ — 1.73)."
+            },
+            {
+              "text": "Can't tell without knowing actual values of F and m",
+              "correct": false,
+              "feedback": "You absolutely can tell. v² = Fr/m gives everything in terms of ratios. You don't need F or m explicitly — they cancel when you divide. The ratio v₁:v₂ = $\\sqrt{r}$₁:$\\sqrt{r}$₂ = $\\sqrt{3}$:2."
+            }
+          ],
+          "tip": "After solving, check: does the bigger quantity sit where the physics says it should?"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Earth has mass 8 times and radius 2 times that of a planet",
+    "subject": "mechanics",
+    "topic": "Mechanics",
+    "difficulty": "class_11",
+    "scenario": "Earth has mass 8 times and radius 2 times that of a planet. If the escape velocity from the earth is 11.2 km/s, the escape velocity from the planet will be?",
+    "goal": "Find: 5.6 km/s",
+    "final_answer": "5.6 km/s",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "You need escape velocity. What's the formula?",
+          "options": [
+            {
+              "text": "$v_e = \\sqrt{2}GM/R$",
+              "correct": true,
+              "feedback": "Locked in. v_e = $\\sqrt{2}$GM/R. This form is perfect because the problem gives you M and R ratios directly."
+            },
+            {
+              "text": "$v_e = \\sqrt{G}M/R — orbital velocity formula$",
+              "correct": false,
+              "feedback": "$\\sqrt{G}$M/R is orbital velocity, not escape velocity. You're missing a factor of $\\sqrt{2}$. Escape velocity = $\\sqrt{2}$ ×orbital velocity. That $\\sqrt{2}$ is the difference between orbiting and escaping."
+            },
+            {
+              "text": "v_e = $\\sqrt{2}$gR only, can't use M and R form",
+              "correct": false,
+              "feedback": "v_e = $\\sqrt{2}$gR is equivalent but inconvenient here — g itself depends on M and R, adding an extra step. Since you're given M and R ratios directly, v_e = $\\sqrt{2}$GM/R is the cleaner form."
+            }
+          ],
+          "tip": "Escape = $\\sqrt{2}$ ×orbital. Mixing them up costs you the $\\sqrt{2}$ factor."
+        },
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they confuse which body is bigger. The problem says Earth's mass is 8× the planet's. So M_E = 8M_P means:",
+          "options": [
+            {
+              "text": "M_P = M_E/8 — planet is the smaller body",
+              "correct": true,
+              "feedback": "Right. 'Earth has mass 8 times that of the planet' — M_E = 8M_P — M_P = M_E/8. Read ratio statements carefully."
+            },
+            {
+              "text": "M_P = 8M_E — planet is the heavier body",
+              "correct": false,
+              "feedback": "You flipped it. 'Earth has mass 8 times the planet' means M_E = 8M_P, so M_P = M_E/8. The planet is the smaller body, not the larger one. Re-read ratio statements carefully."
+            },
+            {
+              "text": "M_P = M_E — they're equal since ratio involves both",
+              "correct": false,
+              "feedback": "They're not equal. The problem explicitly says Earth's mass is 8 times the planet's. M_E = 8M_P. The planet is 1/8 of Earth's mass. Read the ratio direction carefully."
+            }
+          ],
+          "tip": "Translate ratio sentences into equations immediately. 'A is n times B' — A = nB."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "v_e = $\\sqrt{2}$GM/R. Take the ratio v_P/v_E with M_P = M_E/8 and R_P = R_E/2. What is v_P/v_E?",
+          "options": [
+            {
+              "text": "$\\sqrt{M}_P/M_E \\times R_E/R_P = \\sqrt{1}/8 \\times 2 = \\sqrt{1}/4 = 1/2$",
+              "correct": true,
+              "feedback": "Perfect ratio work. M goes in the numerator, R in the denominator of v_e² — so when dividing, R flips. v_P/v_E = 1/2."
+            },
+            {
+              "text": "$\\sqrt{8}$ × 2 = 4 — used Earth values in numerator",
+              "correct": false,
+              "feedback": "You put Earth's values in the numerator instead of the planet's. v_P/v_E = $\\sqrt{M}$_P/M_E ×R_E/R_P = $\\sqrt{1}$/8 × 2 = $\\sqrt{1}$/4 = 1/2. The planet goes in the numerator."
+            },
+            {
+              "text": "$\\sqrt{1}$/8 × 1/2 = $\\sqrt{1}$/16 = 1/4 — flipped the R ratio",
+              "correct": false,
+              "feedback": "You flipped the R ratio. Since R is in the denominator of v_e = $\\sqrt{2}$GM/R, when you take the ratio, R_E goes in the numerator: $\\sqrt{R}$_E/R_P = $\\sqrt{2}$, not $\\sqrt{1}$/2. Result: 1/2, not 1/4."
+            }
+          ],
+          "tip": "In ratio problems, track what's in the numerator vs denominator BEFORE substituting."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "v_P = v_E/2 = 11.2/2. Final answer?",
+          "options": [
+            {
+              "text": "5.6 km/s",
+              "correct": true,
+              "feedback": "Done. 11.2 ÷2 = 5.6 km/s. Clean."
+            },
+            {
+              "text": "2.8 km/s (divided by 4 instead of 2)",
+              "correct": false,
+              "feedback": "You divided by 4 instead of 2. The ratio v_P/v_E = 1/2, not 1/4. So v_P = 11.2/2 = 5.6 km/s. Double-check which ratio you computed."
+            },
+            {
+              "text": "22.4 km/s (multiplied instead of divided)",
+              "correct": false,
+              "feedback": "You multiplied instead of dividing. The planet is smaller and less massive — its escape velocity must be less than Earth's, not more. v_P = 11.2 × (1/2) = 5.6 km/s."
+            }
+          ],
+          "tip": "Smaller M and smaller R compete — always compute the ratio, don't guess the direction."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "Planet has 1/8 the mass but 1/2 the radius. v_e — $\\sqrt{M}$/R. Is 5.6 km/s (half of Earth's) physically reasonable?",
+          "options": [
+            {
+              "text": "Yes — less mass dominates, reducing v_e despite smaller radius helping",
+              "correct": true,
+              "feedback": "Exactly. Mass dropped by 8×(pulls v_e down) but radius dropped by only 2×(pushes v_e up). Net effect: v_e drops by $\\sqrt{1}$/4 = 1/2. The competing effects partially cancel, giving a moderate reduction."
+            },
+            {
+              "text": "No — smaller radius should make escape velocity higher than Earth's",
+              "correct": false,
+              "feedback": "Smaller radius alone would increase v_e (since v_e — 1/$\\sqrt{R}$). But the mass drop (8×) overpowers the radius drop (2×). Net: v_e drops by $\\sqrt{1}$/8 × 2 = 1/2. Both effects matter."
+            },
+            {
+              "text": "No — with such low mass, escape velocity should be near zero",
+              "correct": false,
+              "feedback": "1/8 the mass is small, but 1/2 the radius partially compensates (smaller R increases v_e). The two effects don't fully cancel — mass wins, giving v_e = half of Earth's. Not near zero."
+            }
+          ],
+          "tip": "When M and R both change, check which effect dominates before judging the answer."
+        }
+      ]
+    }
+  },
+  {
+    "title": "A particle of mass m and angular momentum L in potential U(r) = kr²",
+    "subject": "mechanics",
+    "topic": "Mechanics",
+    "difficulty": "college",
+    "scenario": "A particle of mass m and angular momentum L moves in space where its potential energy is U(r) = kr² (k>0) and r is the radial coordinate. If the particle moves in a circular orbit, then the radius of the orbit is?",
+    "goal": "Find: $(L^{2}/2mk)^{1/4}$",
+    "final_answer": "$(L^{2}/2mk)^{1/4}$",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "identify",
+          "label": "WHAT MATTERS HERE",
+          "icon": "🎯",
+          "prompt": "Circular orbit in a central force with given U(r) and angular momentum L. What two conditions pin down the radius?",
+          "options": [
+            {
+              "text": "The net radial force = centripetal force, and L = mvr for circular motion",
+              "correct": true,
+              "feedback": "Exactly. For a circular orbit: the force from U(r) provides the centripetal acceleration, and angular momentum L = mvr constrains v and r together."
+            },
+            {
+              "text": "Total energy is minimum, and kinetic energy equals potential energy",
+              "correct": false,
+              "feedback": "KE = PE isn't a general rule — it holds for inverse-square forces (virial theorem) but not for U = kr². And minimizing total energy gives the radius but not the full picture. Use force balance + angular momentum."
+            },
+            {
+              "text": "Gravitational force balances centrifugal force, and v = $\\sqrt{G}$M/r",
+              "correct": false,
+              "feedback": "This isn't gravity — there's no GM/r² force here. U = kr² gives F = -2kr, a completely different force law. The approach is general: any central force = centripetal acceleration, plus L = mvr."
+            }
+          ],
+          "tip": "Circular orbit = two equations: force balance + angular momentum constraint."
+        },
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "How do you get the force from U(r) = kr²?",
+          "options": [
+            {
+              "text": "F = -dU/dr = -2kr (directed inward)",
+              "correct": true,
+              "feedback": "Right. F = -dU/dr always. The minus sign gives a restoring (inward) force: F = -2kr. The magnitude is 2kr."
+            },
+            {
+              "text": "F = U/r = kr (just divide by r)",
+              "correct": false,
+              "feedback": "F = U/r = kr is dimensionally coincidental but physically wrong. Force is the negative gradient of potential: F = -dU/dr. For U = kr²: F = -2kr. The derivative, not division, gives force."
+            },
+            {
+              "text": "F = -dU/dt (differentiate w.r.t. time)",
+              "correct": false,
+              "feedback": "dU/dt gives power (rate of energy change), not force. Force comes from the spatial derivative: F = -dU/dr. For U = kr²: F = -2kr."
+            }
+          ],
+          "tip": "F = -dU/dr is the bridge from potential energy to force. Burn it in."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "For a circular orbit: |F| = mv²/r gives 2kr = mv²/r. Using L = mvr — v = L/(mr), substitute into the force equation. What do you get?",
+          "options": [
+            {
+              "text": "2kr = L²/(m r³), so r⁴ = L²/(2mk)",
+              "correct": true,
+              "feedback": "Nailed it. Substituting v = L/(mr): mv²/r = m(L²/m²r²)/r = L²/(mr³). Set equal to 2kr — r⁴ = L²/(2mk)."
+            },
+            {
+              "text": "2kr = L²/(m r), so r² = L²/(2mk)",
+              "correct": false,
+              "feedback": "Track the exponents carefully. v = L/(mr) — v² = L²/(m²r²). Then mv²/r = L²/(mr³), not L²/(mr). You lost an r² in the denominator. Correct: 2kr = L²/(mr³)."
+            },
+            {
+              "text": "2kr = L/(m r²), so r³ = L/(2mk)",
+              "correct": false,
+              "feedback": "L = mvr, not L = mv. So v = L/(mr), and v² = L²/(m²r²). Then mv²/r = m ×L²/(m²r²) ×(1/r) = L²/(mr³). The exponent on r is -3, not -2."
+            }
+          ],
+          "tip": "When substituting v = L/(mr), write out v² explicitly before simplifying."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "From r⁴ = L²/(2mk), what is r?",
+          "options": [
+            {
+              "text": "r = (L²/2mk)^(1/4) — take the fourth root",
+              "correct": true,
+              "feedback": "Clean. r⁴ = X — r = $X^{1/4}$. The answer is r = (L²/2mk)^(1/4)."
+            },
+            {
+              "text": "$r = (L^{2}/2mk)^{1/2} — took square root instead$",
+              "correct": false,
+              "feedback": "r⁴ = X means r = $X^{1/4}$, the fourth root — not $X^{1/2}$. Square root solves r², fourth root solves r⁴. Match the root to the power you're undoing."
+            },
+            {
+              "text": "r = (L/2mk)^(1/4) — dropped the square on L",
+              "correct": false,
+              "feedback": "Keep L squared. From v² = L²/(m²r²), the L² carries through the entire derivation. Dropping the square on L changes the answer's dimensions and value. r = (L²/2mk)^(1/4)."
+            }
+          ],
+          "tip": "Match the root to the power: r⁴ — fourth root, r³ — cube root. Read your own algebra."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "$r = (L^{2}/2mk)^{1/4}$. If you increase k (stiffer potential), what happens to the orbit radius? Does it make sense?f you increase k (stiffer potential), what happens to the orbit radius? Does it make sense?",
+          "options": [
+            {
+              "text": "r decreases — stronger restoring force pulls the orbit tighter. Checks out.",
+              "correct": true,
+              "feedback": "Perfect. r — $k^{-1/4}$: bigger k means the potential well is steeper, so the particle orbits closer in. The formula and the physics agree."
+            },
+            {
+              "text": "r increases — stronger force flings the particle outward",
+              "correct": false,
+              "feedback": "A stiffer potential (larger k) means stronger inward pull at every distance. The particle doesn't get flung out — it gets pulled in tighter. r — $k^{-1/4}$: bigger k — smaller orbit."
+            },
+            {
+              "text": "r is unchanged — k shouldn't affect a circular orbit",
+              "correct": false,
+              "feedback": "k absolutely affects the orbit. The force F = 2kr depends directly on k. A stronger spring-like potential confines the particle to a smaller orbit. r — 1/$k^{1/4}$."
+            }
+          ],
+          "tip": "Test your answer against limiting cases — crank a parameter up or down and check the physics."
+        }
+      ]
+    }
+  },
+  {
+    "title": "A point charge +q at origin; +9q at (d,0,0). Find where E vanishes.",
+    "subject": "electrodynamics",
+    "topic": "Electrodynamics",
+    "difficulty": "class_12",
+    "scenario": "A point charge +q is placed at the origin. A second point charge +9q is placed at (d,0,0). The point in between them where the electric field vanishes is?",
+    "goal": "Find: (d/4, 0, 0)",
+    "final_answer": "(d/4, 0, 0)",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they assume the null point is at the midpoint (d/2). Why is the null point NOT at the midpoint?",
+          "options": [
+            {
+              "text": "The charges are unequal — the null point shifts toward the smaller charge",
+              "correct": true,
+              "feedback": "Right. The bigger charge (9q) has a stronger field, so you must move closer to the weaker charge (q) for the fields to balance. Null point shifts toward q."
+            },
+            {
+              "text": "The charges are the same sign, so fields never cancel",
+              "correct": false,
+              "feedback": "Same-sign charges CAN have a null point between them — the fields point in opposite directions in that region. But the midpoint only works if the charges are equal. Unequal — shift toward the weaker one."
+            },
+            {
+              "text": "The null point is at the midpoint only for opposite charges",
+              "correct": false,
+              "feedback": "Midpoint for opposite charges? No — opposite charges have no null between them (fields point the same way). Like charges can have a null between them, but only at the midpoint if they're equal."
+            }
+          ],
+          "tip": "Null point between like charges: always closer to the smaller charge."
+        },
+        {
+          "type": "identify",
+          "label": "WHAT MATTERS HERE",
+          "icon": "🎯",
+          "prompt": "Let the null point be at distance x from +q (at origin). What is its distance from +9q at (d,0,0)?",
+          "options": [
+            {
+              "text": "(d - x), since the point lies between them on the x-axis",
+              "correct": true,
+              "feedback": "Simple geometry. Point is at x from origin, charge 9q is at d. Distance between them = d - x (with 0 < x < d)."
+            },
+            {
+              "text": "(x - d), to keep the sign consistent",
+              "correct": false,
+              "feedback": "x - d is negative when x < d (which it must be, since the point is between the charges). Distances must be positive. Use d - x for the distance from the point to the charge at d."
+            },
+            {
+              "text": "d + x, since distances add up",
+              "correct": false,
+              "feedback": "d + x would place the point outside both charges, not between them. For a point at position x between the origin and d, the distance to the charge at d is simply d - x."
+            }
+          ],
+          "tip": "Always sketch the setup. Label distances from both charges before writing equations."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "At the null point, E from +q = E from +9q. Which equation is correct?",
+          "options": [
+            {
+              "text": "$kq/x^{2} = k(9q)/(d-x)^{2} — (d-x)^{2} = 9x^{2}$",
+              "correct": true,
+              "feedback": "Locked in. The k and q cancel: 1/x² = 9/(d-x)². Cross-multiply: (d-x)² = 9x²."
+            },
+            {
+              "text": "kq/x = k(9q)/(d-x) — forgot to square the distances",
+              "correct": false,
+              "feedback": "Electric field is E = kQ/r², not kQ/r. The distance is squared in Coulomb's law. Without the square, you get the wrong equation and the wrong null point."
+            },
+            {
+              "text": "kq/x² = k(9q)/(d+x)² — wrong distance from 9q",
+              "correct": false,
+              "feedback": "The distance from the null point to 9q is (d - x), not (d + x). The point is between the charges, so x < d, and the distance to 9q is d minus x. Check your geometry."
+            }
+          ],
+          "tip": "$E = kQ/r^{2}$. Never forget the square — it's the #1 algebra error in electrostatics.ever forget the square — it's the #1 algebra error in electrostatics."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "(d-x)² = 9x². What's the fastest way to solve this?",
+          "options": [
+            {
+              "text": "Take square root: d-x = 3x — d = 4x — x = d/4",
+              "correct": true,
+              "feedback": "Beautiful shortcut. $\\sqrt{9}$x² = 3x (positive, since x > 0). So d - x = 3x — x = d/4. The null point is at (d/4, 0, 0)."
+            },
+            {
+              "text": "Expand fully: d²-2dx+x²=9x² and use quadratic formula",
+              "correct": false,
+              "feedback": "Expanding works but is overkill. $\\sqrt{9}$x² = 3x (since x > 0). Direct square root is faster: d - x = 3x — x = d/4. Save the quadratic formula for when you actually need it."
+            },
+            {
+              "text": "Take square root: d-x = 9x — x = d/10",
+              "correct": false,
+              "feedback": "$\\sqrt{9}$ = 3, not 9. You forgot to take the root of the coefficient. $\\sqrt{9}$x² = 3x. So d - x = 3x — d = 4x — x = d/4, not d/10."
+            }
+          ],
+          "tip": "A² = B² — A = ±B. Pick the sign that keeps x between 0 and d."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "Null point at x = d/4 — that's 1/4 of the way from +q and 3/4 from +9q. Does this make sense?",
+          "options": [
+            {
+              "text": "Yes — distance ratio is 1:3, so field ratio is 9:1, exactly compensating the charge ratio 1:9",
+              "correct": true,
+              "feedback": "Perfect. Distances 1:3 — fields scale as 1/1² : 1/3² = 9:1. Charges are 1:9. Product: 9q × 1/9 = q × 9/1. Fields match. Elegant."
+            },
+            {
+              "text": "No — it should be closer to the bigger charge",
+              "correct": false,
+              "feedback": "The null point should be closer to the smaller charge, not the bigger one. The stronger charge (9q) dominates — you must move away from it (closer to q) for the fields to balance."
+            },
+            {
+              "text": "No — the ratio should be 1:9 not 1:3",
+              "correct": false,
+              "feedback": "The ratio is 1:3 in distance, which gives a 1:9 ratio in r², exactly canceling the 1:9 charge ratio. That's why the fields balance. The distance ratio squared must equal the charge ratio."
+            }
+          ],
+          "tip": "Verify: (charge ratio) ×(1/distance² ratio) should equal 1 at the null point."
+        }
+      ]
+    }
+  },
+  {
+    "title": "A 3% efficient 100W lamp: find E-field amplitude at 5m",
+    "subject": "electrodynamics",
+    "topic": "Electrodynamics",
+    "difficulty": "class_12",
+    "scenario": "A lamp emits monochromatic green light uniformly in all directions. The lamp is 3% efficient in converting electrical power to electromagnetic waves and consumes 100 W of power. The amplitude of the electric field associated with the electromagnetic radiation at a distance of 5 m from the lamp will be nearly?",
+    "goal": "Find: 2.68 V/m",
+    "final_answer": "2.68 V/m",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they use 100 W as the radiated power. The lamp is only 3% efficient. What is the actual EM power output?",
+          "options": [
+            {
+              "text": "3 W — only 3% of 100 W becomes light",
+              "correct": true,
+              "feedback": "Exactly. 3% of 100 W = 3 W goes into electromagnetic radiation. The other 97 W is wasted as heat. Miss this and your answer is off by a factor of $\\sqrt{1}$00/3."
+            },
+            {
+              "text": "100 W — total power consumed is what radiates",
+              "correct": false,
+              "feedback": "The lamp consumes 100 W total but only 3% becomes light. That's 0.03 × 100 = 3 W of EM radiation. Using 100 W overestimates E₀ by a factor of $\\sqrt{1}$00/3 — 5.8."
+            },
+            {
+              "text": "97 W — subtract the 3% loss",
+              "correct": false,
+              "feedback": "3% is the useful output, not the loss. Efficiency means 3% of input becomes light: 0.03 × 100 = 3 W radiated. The 97 W is wasted as heat. Don't subtract efficiency — multiply by it."
+            }
+          ],
+          "tip": "Efficiency problems: always compute useful power output first, before anything else."
+        },
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "You have radiated power and distance. You need E₀. Which chain of concepts connects them?",
+          "options": [
+            {
+              "text": "$Power — Intensity via I = P/(4\\pir^{2}), then I = ½\\epsilon_{0}cE_{0}^{2}$",
+              "correct": true,
+              "feedback": "That's the roadmap. Step 1: spread power over a sphere — intensity. Step 2: relate intensity to E₀ via the EM wave formula."
+            },
+            {
+              "text": "Power — Energy via E = Pt, then use E = qV to find field",
+              "correct": false,
+              "feedback": "E = qV is Coulomb electrostatics — it relates to charges, not electromagnetic waves. For EM radiation, you need the intensity-field relationship: Power — Intensity — E₀ via I = ½ε₀cE₀²."
+            },
+            {
+              "text": "Use E = P/(4πε₀r²) directly like a point charge formula",
+              "correct": false,
+              "feedback": "There's no direct P-to-E formula analogous to Coulomb's law. EM wave fields aren't point-charge fields. You need intensity as the bridge: I = P/(4πr²), then I = ½ε₀cE₀²."
+            }
+          ],
+          "tip": "For EM wave problems: Power — Intensity — Field amplitude. Always this chain."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "$I = P/(4\\pir^{2}) = 3/(4\\pi\\times 25)$. Now I = ½ε₀cE₀². Solving for E₀ gives:ow I = ½ε₀cE₀². Solving for E₀ gives:",
+          "options": [
+            {
+              "text": "$E_{0} = \\sqrt{2}I / \\epsilon_{0c} = \\sqrt{2}P / 4\\pir^{2\\epsilon_{0}c}$",
+              "correct": true,
+              "feedback": "Solid. I = ½ε₀cE₀² — E₀² = 2I/(ε₀c) — E₀ = $\\sqrt{2}$I/(ε₀c). The 2 comes from the ½ in the intensity formula."
+            },
+            {
+              "text": "E₀ = $\\sqrt{I}$ / ε₀c — forgot the factor of 2",
+              "correct": false,
+              "feedback": "You dropped the factor of 2. From I = ½ε₀cE₀², solving for E₀² gives 2I/(ε₀c), not I/(ε₀c). The ½ in the intensity formula becomes a 2 when you invert. This halves your final E₀."
+            },
+            {
+              "text": "E₀ = $\\sqrt{2}$I × ε₀c — flipped ε₀c to numerator",
+              "correct": false,
+              "feedback": "ε₀c must be in the denominator, not the numerator. From I = ½ε₀cE₀², isolate E₀²: divide both sides by ½ε₀c — E₀² = 2I/(ε₀c). Flipping ε₀c squares your error."
+            }
+          ],
+          "tip": "I = ½ε₀cE₀² — the ½ becomes a 2 when you flip. Don't lose it."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "Plug in: I = 3/(4π×25) = 3/(100π). Then E₀ = $\\sqrt{2}$ × 3 / (100π × 8.85×10⁻¹² × 3×10⁸). What do you get?",
+          "options": [
+            {
+              "text": "$E_{0} — 2.68 V/m$",
+              "correct": true,
+              "feedback": "Nailed it. E₀ = $\\sqrt{6}$ / (100π × 2.655×10⁻³) = $\\sqrt{6}$/0.8337 = $\\sqrt{7}$.196 — 2.68 V/m."
+            },
+            {
+              "text": "E₀ — 15.5 V/m (used 100 W instead of 3 W)",
+              "correct": false,
+              "feedback": "You used 100 W instead of 3 W. Only 3% of the power becomes EM radiation. Using the full 100 W gives E₀ — 15.5 V/m — off by $\\sqrt{1}$00/3. Always apply efficiency first."
+            },
+            {
+              "text": "E₀ — 1.34 V/m (forgot the factor of 2 under the root)",
+              "correct": false,
+              "feedback": "You forgot the factor of 2 under the square root. E₀ = $\\sqrt{2}$I/(ε₀c), not $\\sqrt{I}$/(ε₀c). That missing 2 from inverting the ½ in the intensity formula cuts your answer by $\\sqrt{2}$."
+            }
+          ],
+          "tip": "ε₀c — 8.85×10⁻¹² × 3×10⁸ — 2.655×10⁻³. Memorize this product for speed."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "E₀ — 2.68 V/m at 5 m from a 3 W light source. Does this magnitude make physical sense?",
+          "options": [
+            {
+              "text": "Yes — a few V/m is typical for a weak light source at meters away",
+              "correct": true,
+              "feedback": "Spot on. Everyday light sources produce E-fields of order 1-10 V/m at a few meters. kV/m would be laser territory. 2.68 V/m sits right where it should for a dim lamp."
+            },
+            {
+              "text": "No — electric fields from light should be in kV/m range",
+              "correct": false,
+              "feedback": "kV/m fields come from focused lasers or strong transmitters, not dim lamps. A 3 W source spreading over 4π(5²) — 314 m² gives an intensity of ~0.01 W/m², yielding only a few V/m."
+            },
+            {
+              "text": "No — 2.68 V/m seems too high for just 3 W of light",
+              "correct": false,
+              "feedback": "3 W sounds small, but it's concentrated electromagnetic energy. Even the Sun at Earth's distance gives only ~900 V/m. A few V/m for a lamp at 5 m is completely reasonable."
+            }
+          ],
+          "tip": "Build physical intuition: ordinary light — 1-10 V/m. Lasers — kV/m or more."
+        }
+      ]
+    }
+  },
+  {
+    "title": "E = a(1 + cosω₁t)cosω₂t — which frequencies are present?",
+    "subject": "electrodynamics",
+    "topic": "Electrodynamics",
+    "difficulty": "college",
+    "scenario": "The electric field associated with an electromagnetic radiation is given by E = a(1 + cosω₁t)cosω₂t. Which of the following frequencies are present in the field?",
+    "goal": "Find: ω₂, ω₂+ω₁, ω₂-ω₁ (notably ω₂+ω₁ is present)",
+    "final_answer": "$\\omega_{2}, \\omega_{2}+\\omega_{1}, \\omega_{2}-\\omega_{1}$",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they look at E = a(1 + cosω₁t)cosω₂t and say the frequencies are ω₁ and ω₂. Why is that wrong?",
+          "options": [
+            {
+              "text": "The product cosω₁t · cosω₂t creates new frequencies — you must expand it",
+              "correct": true,
+              "feedback": "Exactly. When two cosines multiply, you don't just read off ω₁ and ω₂. The product-to-sum identity generates sum and difference frequencies. You must expand first."
+            },
+            {
+              "text": "ω₁ is not a frequency because it's inside (1 + cosω₁t)",
+              "correct": false,
+              "feedback": "ω₁ inside (1 + cosω₁t) isn't automatically absent — but it's not directly present either. The product cosω₁t · cosω₂t creates sum and difference frequencies. You must expand to see what actually appears."
+            },
+            {
+              "text": "Only ω₂ is present since it's the carrier frequency",
+              "correct": false,
+              "feedback": "ω₂ is present (from the '1' term), but it's not the only frequency. The cosω₁t · cosω₂t product generates additional frequencies. Calling ω₂ the only carrier ignores the modulation physics entirely."
+            }
+          ],
+          "tip": "Product of cosines = sum of cosines. Always expand before identifying frequencies."
+        },
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "Which trig identity do you need to decompose cosω₁t · cosω₂t?",
+          "options": [
+            {
+              "text": "cos A · cos B = ½[cos(A+B) + cos(A-B)]",
+              "correct": true,
+              "feedback": "That's the one. Product-to-sum identity. It converts a product of two cosines into a sum of two cosines with new frequencies."
+            },
+            {
+              "text": "cos(A+B) = cos A cos B - sin A sin B",
+              "correct": false,
+              "feedback": "cos(A+B) = cos A cos B - sin A sin B expands a single cosine of a sum. You need the reverse: decomposing a product cos A · cos B into a sum. That's the product-to-sum identity."
+            },
+            {
+              "text": "cos²A = ½(1 + cos 2A)",
+              "correct": false,
+              "feedback": "cos²A = ½(1 + cos 2A) is a special case where A = B. Here A = ω₁t and B = ω₂t are different. You need the general product-to-sum: cos A cos B = ½[cos(A+B) + cos(A-B)]."
+            }
+          ],
+          "tip": "Product — Sum: use product-to-sum identities. Sum — Product: use the reverse."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "Expand E = a(1 + cosω₁t)cosω₂t step by step. First distribute, then apply the identity. What do you get?",
+          "options": [
+            {
+              "text": "a cosω₂t + (a/2)cos(ω₂+ω₁)t + (a/2)cos(ω₂-ω₁)t",
+              "correct": true,
+              "feedback": "Perfect. Distribute: a cosω₂t + a cosω₁t cosω₂t. Apply identity to the product: ½[cos(ω₂+ω₁)t + cos(ω₂-ω₁)t]. Three clean terms, three frequencies."
+            },
+            {
+              "text": "a cosω₁t + a cosω₂t + a cos(ω₁ω₂)t",
+              "correct": false,
+              "feedback": "cosω₁t doesn't appear as a standalone term. Distribute first: a cosω₂t + a cosω₁t cosω₂t. The second part becomes ½a[cos(ω₂+ω₁)t + cos(ω₂-ω₁)t]. Three terms, none is pure cosω₁t."
+            },
+            {
+              "text": "a cosω₂t + a cos(ω₂+ω₁)t (only sum frequency)",
+              "correct": false,
+              "feedback": "The product-to-sum identity produces both sum AND difference frequencies. cosω₁t · cosω₂t = ½[cos(ω₂+ω₁)t + cos(ω₂-ω₁)t]. You can't drop the difference term — both sidebands always appear together."
+            }
+          ],
+          "tip": "Distribute first, then apply trig identities. Never try to shortcut both at once."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "From the expanded form, which frequencies are present in E?",
+          "options": [
+            {
+              "text": "ω₂, (ω₂+ω₁), and (ω₂-ω₁) — three distinct frequencies",
+              "correct": true,
+              "feedback": "Locked in. The three terms are cosω₂t, cos(ω₂+ω₁)t, cos(ω₂-ω₁)t. So the frequencies are ω₂, ω₂+ω₁, and ω₂-ω₁. Notice: ω₁ alone is NOT present."
+            },
+            {
+              "text": "ω₁ and ω₂ only — the original two frequencies",
+              "correct": false,
+              "feedback": "ω₁ alone is NOT present — look at your expansion. There's no standalone cosω₁t term. The product consumed ω₁ and created ω₂±ω₁ instead. Only three frequencies exist: ω₂, ω₂+ω₁, ω₂-ω₁."
+            },
+            {
+              "text": "ω₁, ω₂, ω₂+ω₁, and ω₂-ω₁ — four frequencies",
+              "correct": false,
+              "feedback": "Count the terms in your expansion again. There are exactly three: cosω₂t, cos(ω₂+ω₁)t, cos(ω₂-ω₁)t. There is no standalone cosω₁t term — it was consumed by the product identity."
+            }
+          ],
+          "tip": "After expanding, count each distinct cos(ωt) term. Only those are your frequencies."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "We found frequencies ω₂, ω₂+ω₁, ω₂-ω₁. This looks like amplitude modulation. Does it check out physically?",
+          "options": [
+            {
+              "text": "Yes — (1 + cosω₁t) modulates the carrier ω₂, producing sidebands at ω₂ ± ω₁",
+              "correct": true,
+              "feedback": "Textbook AM radio physics. Carrier at ω₂ survives (from the '1' in the bracket), and two sidebands appear at ω₂ ± ω₁. Three frequencies total. You just derived AM from first principles."
+            },
+            {
+              "text": "No — modulation should only produce one sideband, not two",
+              "correct": false,
+              "feedback": "Standard AM always produces two sidebands — one above and one below the carrier. Single-sideband (SSB) exists but requires additional filtering. The basic (1 + cosω₁t)cosω₂t gives both."
+            },
+            {
+              "text": "No — the carrier ω₂ should disappear after modulation",
+              "correct": false,
+              "feedback": "The carrier ω₂ survives because of the '1' in (1 + cosω₁t). That constant '1' multiplied by cosω₂t gives a pure carrier term. Without the '1', you'd get suppressed-carrier modulation."
+            }
+          ],
+          "tip": "AM = carrier + two sidebands. If you see (1 + cosω₁t)cosω₂t, think radio."
+        }
+      ]
+    }
+  },
+  {
+    "title": "Monoatomic gas U = 3nRT: how far does the piston move?",
+    "subject": "thermodynamics",
+    "topic": "Thermodynamics",
+    "difficulty": "class_11",
+    "scenario": "The internal energy of a monoatomic gas is 3nRT. One mole of helium is kept in a cylinder of cross-section area 17 cm² fitted with a light movable frictionless piston. The gas is heated slowly, supplying 126 J of heat. If the temperature rises by 4°C, how far does the piston move? (P_atm = 10⁵ Pa)",
+    "goal": "Find: 15.5 cm",
+    "final_answer": "15.5 cm",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they use Cᵥ = (3/2)R for a monoatomic gas. But the problem says U = 3nRT. What is Cᵥ here?",
+          "options": [
+            {
+              "text": "Cᵥ = 3R — since U = 3nRT, dU/dT per mole = 3R",
+              "correct": true,
+              "feedback": "Sharp eye. The problem explicitly gives U = 3nRT, overriding the standard (3/2)nRT. So Cᵥ = dU/(ndT) = 3R. Read what's given, not what you expect."
+            },
+            {
+              "text": "Cᵥ = (3/2)R — monoatomic gas always has Cᵥ = (3/2)R",
+              "correct": false,
+              "feedback": "The problem explicitly states U = 3nRT, not (3/2)nRT. This overrides the standard monoatomic value. Cᵥ = dU/(ndT) = 3R. Always extract Cᵥ from the given U, not from memory."
+            },
+            {
+              "text": "Cᵥ = (5/2)R — use Cₚ since the piston moves",
+              "correct": false,
+              "feedback": "Cₚ is for heat capacity at constant pressure, not for internal energy. The question gives U = 3nRT, so Cᵥ = 3R. Don't confuse Cᵥ (from internal energy) with Cₚ (from enthalpy)."
+            }
+          ],
+          "tip": "If the problem gives U explicitly, derive Cᵥ from it. Never default to textbook values blindly."
+        },
+        {
+          "type": "identify",
+          "label": "WHAT MATTERS HERE",
+          "icon": "🎯",
+          "prompt": "Light, frictionless piston heated slowly. What type of process is this?",
+          "options": [
+            {
+              "text": "Isobaric — free piston means pressure stays at atmospheric",
+              "correct": true,
+              "feedback": "Right. A free, frictionless piston always maintains P = P_atm. Gas expands at constant pressure. This means the first law gives W = PΔV directly."
+            },
+            {
+              "text": "Isochoric — piston is just sitting there, volume is fixed",
+              "correct": false,
+              "feedback": "The piston is movable — it says so explicitly. A movable piston means volume changes, ruling out isochoric (constant volume). The piston adjusts to keep pressure equal to atmospheric."
+            },
+            {
+              "text": "Adiabatic — the cylinder is insulated",
+              "correct": false,
+              "feedback": "Heat is being supplied — 126 J. Adiabatic means Q = 0 by definition. This is the opposite of adiabatic. The free piston maintains atmospheric pressure — isobaric process."
+            }
+          ],
+          "tip": "Free piston = constant pressure = isobaric. It's a universal setup cue."
+        },
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "You need the piston displacement. Which law connects Q, ΔU, and the work done by the gas?",
+          "options": [
+            {
+              "text": "First law: Q = ΔU + W, then W = PΔV = P·A·Δx",
+              "correct": true,
+              "feedback": "Perfect chain. First law gives W = Q - ΔU. Then W = PAΔx gives displacement. Two steps, done."
+            },
+            {
+              "text": "Q = nCₚΔT gives the displacement directly",
+              "correct": false,
+              "feedback": "nCₚΔT gives you the total heat absorbed, which you already know is 126 J. It doesn't give displacement. You need: First Law — Work = Q - ΔU — then W = PAΔx to get displacement."
+            },
+            {
+              "text": "W = nRΔT, skip the first law entirely",
+              "correct": false,
+              "feedback": "W = nRΔT is only valid when Cₚ - Cᵥ = R. With the unusual Cᵥ = 3R given here, you'd need to verify Cₚ first. The safest route: W = Q - ΔU, then W = PAΔx."
+            }
+          ],
+          "tip": "For piston problems: First Law — Work — W = PAΔx — displacement."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "ΔU = nCᵥΔT = 1 ×3 ×8.3 × 4 = 99.6 J. W = Q - ΔU = 126 - 99.6 = 26.4 J. Now Δx = W/(PA). What must you be careful about?",
+          "options": [
+            {
+              "text": "Convert A = 17 cm² to m²: A = 17 ×10⁻⁴ m²",
+              "correct": true,
+              "feedback": "Critical step. 1 cm² = 10⁻⁴ m², so 17 cm² = 17 ×10⁻⁴ m². Mixing cm² with Pa (which uses m²) is a guaranteed wrong answer."
+            },
+            {
+              "text": "Convert P to dyne/cm² to match the area in cm²",
+              "correct": false,
+              "feedback": "Converting to CGS (dyne/cm²) adds unnecessary complexity and error risk. Keep everything in SI: Pascals (N/m²) with area in m². Convert 17 cm² = 17 ×10⁻⁴ m²."
+            },
+            {
+              "text": "No conversion needed — just divide 26.4 by (10⁵ × 17)",
+              "correct": false,
+              "feedback": "You must convert! P is in Pascals (N/m²), so A must be in m². If you divide 26.4 by (10⁵ × 17), you're treating A as 17 m² — off by a factor of 10⁴. Use 17 × 10⁻⁴ m²."
+            }
+          ],
+          "tip": "1 cm² = 10⁻⁴ m², not 10⁻² m². It's (10⁻²)² = 10⁻⁴. This trips up everyone."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "Δx = 26.4 / (10⁵ × 17 × 10⁻⁴) = 26.4 / 170 = 0.155 m = 15.5 cm. Does this make physical sense?",
+          "options": [
+            {
+              "text": "Yes — small cross-section (17 cm²) means gas must expand a lot linearly to do 26.4 J of work",
+              "correct": true,
+              "feedback": "Exactly. W = PAΔx — tiny A means large Δx for the same work. Think of it like a syringe: narrow cylinder, big displacement. 15.5 cm is perfectly reasonable for a 17 cm² cross-section."
+            },
+            {
+              "text": "No — 15.5 cm is too large for just 4°C temperature rise",
+              "correct": false,
+              "feedback": "A 4°C rise is modest, but the gas does real work expanding against atmospheric pressure. The small cross-section (17 cm²) amplifies the displacement. W = PAΔx — small A means large Δx."
+            },
+            {
+              "text": "No — piston displacement should be in mm, not cm",
+              "correct": false,
+              "feedback": "There's no rule that piston displacement must be in mm. W = PAΔx: with P = 10⁵ Pa, A = 17 ×10⁻⁴ m², and W = 26.4 J, you get Δx = 0.155 m = 15.5 cm. The math checks out."
+            }
+          ],
+          "tip": "W = PAΔx — for fixed W and P, small area means large displacement. Think syringe."
+        }
+      ]
+    }
+  },
+  {
+    "title": "RMS speed of O₂ at 47°C equals that of H₂ at ___°C",
+    "subject": "thermodynamics",
+    "topic": "Thermodynamics",
+    "difficulty": "class_11",
+    "scenario": "The r.m.s. speed of oxygen molecules at 47°C is equal to that of hydrogen molecules kept at ____°C. (M_O₂/M_H₂ = 32/2)",
+    "goal": "Find: -253°C",
+    "final_answer": "-253°C",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they plug in 47 directly as the temperature. What must you do first?",
+          "options": [
+            {
+              "text": "Convert to Kelvin: T = 47 + 273 = 320 K",
+              "correct": true,
+              "feedback": "Non-negotiable. The RMS formula uses absolute temperature (Kelvin). 47°C = 320 K. Using °C gives nonsense — especially dangerous when the answer is negative °C."
+            },
+            {
+              "text": "Nothing — °C works fine in the RMS formula",
+              "correct": false,
+              "feedback": "°C does NOT work in gas formulas. v_rms = $\\sqrt{3}$RT/M requires absolute temperature. At 0°C (which is really 273 K), the formula still gives a nonzero speed. Celsius breaks at T = 0 or negative values."
+            },
+            {
+              "text": "Square the temperature since v_rms involves a square root",
+              "correct": false,
+              "feedback": "You don't square the temperature. v_rms = $\\sqrt{3}$RT/M — the square root is over the entire expression, not just T. Convert 47°C to 320 K first, then substitute normally."
+            }
+          ],
+          "tip": "Every gas law formula uses Kelvin. No exceptions. Convert first, think later."
+        },
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "You need to equate RMS speeds of two different gases. What's the RMS speed formula?",
+          "options": [
+            {
+              "text": "v_rms = $\\sqrt{3}$RT/M — depends on T and molar mass M",
+              "correct": true,
+              "feedback": "Locked in. v_rms = $\\sqrt{3}$RT/M. Setting two RMS speeds equal means T₁/M₁ = T₂/M₂. That's your entire equation."
+            },
+            {
+              "text": "v_rms = $\\sqrt{3}$kT — mass doesn't matter for RMS speed",
+              "correct": false,
+              "feedback": "v_rms = $\\sqrt{3}$kT/m (with molecular mass m) is valid but dropping the mass entirely is wrong. Without mass, all gases would have the same speed at the same temperature — they don't. Heavier molecules move slower."
+            },
+            {
+              "text": "v_rms = $\\sqrt{2}$RT/M — that's the most probable speed formula",
+              "correct": false,
+              "feedback": "$\\sqrt{2}$RT/M is the most probable speed, not the RMS speed. The coefficients matter: RMS uses $\\sqrt{3}$, most probable uses $\\sqrt{2}$, mean uses $\\sqrt{8}$/π. Mixing them up changes your answer."
+            }
+          ],
+          "tip": "RMS = $\\sqrt{3}$, most probable = $\\sqrt{2}$, average = $\\sqrt{8}$/π. Know which — goes where."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "Set v_rms(O₂) = v_rms(H₂): $\\sqrt{3}$R×320/32 = $\\sqrt{3}$RT_H₂/2. What simplifies?",
+          "options": [
+            {
+              "text": "$3R cancels — 320/32 = T_H_{2}/2 — T_H_{2} = 20 K$",
+              "correct": true,
+              "feedback": "Clean. Square both sides, cancel 3R: 320/32 = T_H₂/2 — 10 = T_H₂/2 — T_H₂ = 20 K."
+            },
+            {
+              "text": "$Only R cancels — 3\\times 320/32 = T_H_{2}/2 — T_H_{2} = 60 K$",
+              "correct": false,
+              "feedback": "The 3 cancels along with R. When you square both sides: 3R × 320/32 = 3R × T/2. The 3R appears on both sides and divides out completely. You're left with 320/32 = T/2 — T = 20 K."
+            },
+            {
+              "text": "320/32 = T_H₂/2 but T_H₂ = 160 K (cross-multiplied wrong)",
+              "correct": false,
+              "feedback": "Cross-multiplication error. From 320/32 = T/2: multiply both sides by 2 — T = 2 ×10 = 20 K. Not 160 K. Check: 320/32 = 10, and 10 × 2 = 20."
+            }
+          ],
+          "tip": "When equating v_rms of two gases, everything cancels except T/M. Beautiful shortcut."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "T_H₂ = 20 K. But the question asks for the answer in °C. What is it?",
+          "options": [
+            {
+              "text": "20 - 273 = -253°C",
+              "correct": true,
+              "feedback": "Done. 20 K = 20 - 273 = -253°C. That's extremely cold — close to absolute zero. Don't forget to convert back!"
+            },
+            {
+              "text": "273 - 20 = +253°C (sign flipped)",
+              "correct": false,
+              "feedback": "You flipped the conversion. T(°C) = T(K) - 273, not 273 - T(K). So 20 K = 20 - 273 = -253°C, not +253°C. The sign matters — this is extremely cold, near absolute zero."
+            },
+            {
+              "text": "20°C (it's already in Celsius)",
+              "correct": false,
+              "feedback": "20 K is not 20°C! Kelvin and Celsius are offset by 273. T(°C) = T(K) - 273 = 20 - 273 = -253°C. Forgetting to convert back is a common exam blunder."
+            }
+          ],
+          "tip": "Solve in Kelvin, answer in whatever the question asks. Always re-read the question."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "H₂ is 16× lighter than O₂ but needs the same RMS speed. -253°C (= 20 K) is near absolute zero. Does this make sense?",
+          "options": [
+            {
+              "text": "Yes — lighter molecules move faster at any T, so H₂ needs a very low T to slow down to match O₂",
+              "correct": true,
+              "feedback": "Perfect intuition. H₂ at room temperature already zooms at ~1900 m/s vs O₂ at ~500 m/s. To bring H₂ down to O₂'s speed, you need to cool it drastically — all the way to 20 K. The factor checks: T_H₂/T_O₂ = M_H₂/M_O₂ = 2/32 = 1/16."
+            },
+            {
+              "text": "No — lighter gas should need higher temperature to match speeds",
+              "correct": false,
+              "feedback": "It's the opposite. Lighter molecules are naturally faster at any temperature (v — 1/$\\sqrt{M}$). To match a heavier molecule's slower speed, you cool the lighter one down drastically. H₂ needs very low T."
+            },
+            {
+              "text": "No — negative temperature is unphysical",
+              "correct": false,
+              "feedback": "-253°C = 20 K is perfectly physical. Absolute zero is -273°C (0 K). 20 K is cold but achievable — liquid hydrogen boils at 20 K. Negative Celsius doesn't mean negative Kelvin."
+            }
+          ],
+          "tip": "Same v_rms — T — M. Lighter gas needs proportionally lower temperature."
+        }
+      ]
+    }
+  },
+  {
+    "title": "Volume expansivity β and isothermal compressibility κ: find β/κ",
+    "subject": "thermodynamics",
+    "topic": "Thermodynamics",
+    "difficulty": "college",
+    "scenario": "At a temperature T, let β and κ denote the volume expansivity and isothermal compressibility of a gas, respectively. Then β/κ is equal to?",
+    "goal": "Find: $(\\partial P/\\partial T)_V$",
+    "final_answer": "$(\\partial P/\\partial T)_V$",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "identify",
+          "label": "WHAT MATTERS HERE",
+          "icon": "🎯",
+          "prompt": "Before doing anything, write down the definitions. What are β and κ?",
+          "options": [
+            {
+              "text": "β = (1/V)(∂V/∂T)_P and κ = -(1/V)(∂V/∂P)_T",
+              "correct": true,
+              "feedback": "Solid. β measures fractional volume change with temperature at constant P. κ measures fractional volume change with pressure at constant T. The 1/V and the minus sign in κ are non-negotiable."
+            },
+            {
+              "text": "β = (∂V/∂T)_P and κ = (∂V/∂P)_T — without the 1/V",
+              "correct": false,
+              "feedback": "The 1/V factor is essential — it makes β and κ intensive properties (independent of system size). Without it, β would scale with volume, making comparisons between systems meaningless."
+            },
+            {
+              "text": "β = (1/V)(∂P/∂T)_V and κ = -(1/V)(∂P/∂V)_T",
+              "correct": false,
+              "feedback": "You've swapped the variables. β = (1/V)(∂V/∂T)_P varies T at constant P. κ = -(1/V)(∂V/∂P)_T varies P at constant T. Getting the held-constant variable wrong changes everything."
+            }
+          ],
+          "tip": "β: how much V expands per degree. κ: how much V compresses per unit pressure."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "Compute β/κ. What happens to the 1/V factors?",
+          "options": [
+            {
+              "text": "They cancel: β/κ = (∂V/∂T)_P / [-(∂V/∂P)_T] = -(∂V/∂T)_P ×(∂P/∂V)_T",
+              "correct": true,
+              "feedback": "The 1/V in numerator and denominator cancel cleanly. You're left with a ratio of partials, which you flip the denominator to get a product: -(∂V/∂T)_P × (∂P/∂V)_T."
+            },
+            {
+              "text": "They don't cancel because the partial derivatives are different",
+              "correct": false,
+              "feedback": "The partials are different, yes, but the 1/V factors are just scalar prefactors. In the fraction β/κ, (1/V)/(1/V) = 1 regardless of what follows. They cancel as simple numbers."
+            },
+            {
+              "text": "β/κ = (1/V²)(∂V/∂T)_P × (∂V/∂P)_T — the 1/V factors multiply",
+              "correct": false,
+              "feedback": "It's a division, not multiplication. (1/V × A) ÷ (1/V × B) = A/B. The 1/V in numerator and denominator cancel. They don't multiply to give 1/V²."
+            }
+          ],
+          "tip": "When dividing response coefficients, 1/V always cancels. Look for it."
+        },
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "You have -(∂V/∂T)_P × (∂P/∂V)_T. Which thermodynamic identity finishes this?",
+          "options": [
+            {
+              "text": "Cyclic relation: (∂V/∂T)_P ×(∂T/∂P)_V ×(∂P/∂V)_T = -1",
+              "correct": true,
+              "feedback": "The cyclic relation is the power tool here. For P, V, T: the product of three cyclic partials equals -1. This lets you convert the product into a single partial derivative."
+            },
+            {
+              "text": "Maxwell relation: (∂V/∂T)_P = (∂S/∂P)_T",
+              "correct": false,
+              "feedback": "The Maxwell relation (∂V/∂T)_P = (∂S/∂P)_T is valid but introduces entropy — unnecessary here. The cyclic relation directly connects P, V, T without needing S."
+            },
+            {
+              "text": "Chain rule: (∂V/∂T)_P × (∂P/∂V)_T = (∂P/∂T)_P — just cancel ∂V",
+              "correct": false,
+              "feedback": "You can't cancel ∂V like a regular fraction! In (∂V/∂T)_P × (∂P/∂V)_T, the held-constant variables differ. These aren't simple fractions — they're partial derivatives. Use the cyclic relation instead."
+            }
+          ],
+          "tip": "Three variables, cyclic partials — product = -1. This is your go-to identity."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "From the cyclic relation: (∂V/∂T)_P × (∂P/∂V)_T = -1/(∂T/∂P)_V = -(∂P/∂T)_V. So β/κ = -[-(∂P/∂T)_V] = ?",
+          "options": [
+            {
+              "text": "(∂P/∂T)_V — the two negatives cancel",
+              "correct": true,
+              "feedback": "Clean finish. One minus from the κ definition, one from the cyclic relation — they cancel. β/κ = (∂P/∂T)_V. Pressure change with temperature at constant volume."
+            },
+            {
+              "text": "-(∂P/∂T)_V — only one negative from the cyclic relation",
+              "correct": false,
+              "feedback": "Track both negatives. One from κ's definition (the minus sign), one from the cyclic relation (product = -1). Two negatives make a positive: β/κ = +(∂P/∂T)_V, not minus."
+            },
+            {
+              "text": "(∂T/∂P)_V — inverted the final derivative",
+              "correct": false,
+              "feedback": "It's (∂P/∂T)_V, not its reciprocal (∂T/∂P)_V. When you rearrange the cyclic relation, (∂V/∂T)_P × (∂P/∂V)_T = -(∂P/∂T)_V, not -(∂T/∂P)_V. Don't flip the derivative."
+            }
+          ],
+          "tip": "Count your minus signs like you count your money. Lose one, lose the problem."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "β/κ = (∂P/∂T)_V. For an ideal gas (PV = nRT), does this check out? (∂P/∂T)_V = nR/V = P/T.",
+          "options": [
+            {
+              "text": "Yes — β = 1/T, κ = 1/P for ideal gas, so β/κ = P/T = nR/V. Matches.",
+              "correct": true,
+              "feedback": "Perfect verification. For ideal gas: β = 1/T, κ = 1/P — β/κ = P/T. And (∂P/∂T)_V = nR/V = P/T. Both paths agree. The general result holds for any gas, not just ideal."
+            },
+            {
+              "text": "No — β/κ should equal nR, not P/T",
+              "correct": false,
+              "feedback": "β/κ = nR only holds dimensionally if you ignore that nR/V = P/T. The result (∂P/∂T)_V = nR/V = P/T for ideal gas. It's the same thing — just written differently."
+            },
+            {
+              "text": "Can't verify — ideal gas is too simple for this result",
+              "correct": false,
+              "feedback": "The ideal gas is the perfect test case precisely because it's simple. If a thermodynamic identity fails for an ideal gas, it's wrong everywhere. Always verify against the simplest system."
+            }
+          ],
+          "tip": "Always test thermodynamic identities against the ideal gas. If it fails there, it's wrong everywhere."
+        }
+      ]
+    }
+  },
+  {
+    "title": "Bohr model: ratio of radius of 5th orbit in Li²⁺ and He⁺",
+    "subject": "quantum_mechanics",
+    "topic": "Quantum Mechanics",
+    "difficulty": "class_12",
+    "scenario": "Considering the Bohr model of hydrogen-like atoms, the ratio of the radius of the 5th orbit of the electron in Li²⁺ and He⁺ is?",
+    "goal": "Find: 2/3",
+    "final_answer": "2/3",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "What's the Bohr radius formula for a hydrogen-like atom with atomic number Z?",
+          "options": [
+            {
+              "text": "rₙ = a₀ n²/Z — radius scales as n² and inversely with Z",
+              "correct": true,
+              "feedback": "Locked in. rₙ = a₀n²/Z. Higher orbit (n²) means bigger radius; stronger nuclear charge (Z) pulls it in. This formula is the backbone of all Bohr model problems."
+            },
+            {
+              "text": "rₙ = a₀ n/Z — radius is linear in n",
+              "correct": false,
+              "feedback": "rₙ = a₀n²/Z, not a₀n/Z. The radius scales quadratically with n — this is a key Bohr model result from quantizing angular momentum. Linear scaling gives wrong orbital sizes."
+            },
+            {
+              "text": "rₙ = a₀ n²Z — radius increases with Z",
+              "correct": false,
+              "feedback": "Z is in the denominator, not the numerator. More protons means a stronger nuclear pull, shrinking the orbit. r — 1/Z. If r increased with Z, heavier atoms would be enormous — they're actually smaller."
+            }
+          ],
+          "tip": "Bohr radius: n² stretches it out, Z squeezes it in. r = a₀n²/Z."
+        },
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they mix up Z values. Li²⁺ and He⁺ are hydrogen-like ions. What are their atomic numbers?",
+          "options": [
+            {
+              "text": "Li²⁺: Z = 3, He⁺: Z = 2 — Z is the number of protons, unchanged by ionization",
+              "correct": true,
+              "feedback": "Right. Z = number of protons = atomic number. Ionization removes electrons, not protons. Li always has Z = 3, He always has Z = 2. The superscript tells you the charge, not Z."
+            },
+            {
+              "text": "Li²⁺: Z = 1, He⁺: Z = 1 — both have 1 electron so Z = 1",
+              "correct": false,
+              "feedback": "Z is not the number of electrons — it's the number of protons (atomic number). Li²⁺ lost 2 electrons but still has 3 protons. Ionization changes electron count, never Z."
+            },
+            {
+              "text": "Li²⁺: Z = 2, He⁺: Z = 1 — Z equals the ionic charge",
+              "correct": false,
+              "feedback": "Z is the atomic number (proton count), not the ionic charge. Li²⁺ has charge +2 but Z = 3. He⁺ has charge +1 but Z = 2. The superscript tells charge, not atomic number."
+            }
+          ],
+          "tip": "$Z = protons = fixed$. Ionization changes electrons, never Z.onization changes electrons, never Z."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "Both ions are in the 5th orbit (n = 5). The ratio r(Li²⁺)/r(He⁺) = ?",
+          "options": [
+            {
+              "text": "(a₀ ×25/3) ÷(a₀ ×25/2) = (25/3) ×(2/25) = 2/3",
+              "correct": true,
+              "feedback": "Clean. Since n is the same for both, n² and a₀ cancel entirely. You're left with Z(He⁺)/Z(Li²⁺) = 2/3. Done in one line."
+            },
+            {
+              "text": "(a₀ × 25/3) ÷ (a₀ × 25/2) = 3/2 — flipped the ratio",
+              "correct": false,
+              "feedback": "You flipped the ratio. The question asks r(Li²⁺)/r(He⁺). Since Li²⁺ is in the numerator: (n²/Z_Li) / (n²/Z_He) = Z_He/Z_Li = 2/3, not 3/2."
+            },
+            {
+              "text": "(a₀ × 5/3) ÷ (a₀ × 5/2) = 2/3 — forgot n is squared",
+              "correct": false,
+              "feedback": "n² = 25, not n = 5. The formula is r = a₀n²/Z. For n = 5, use n² = 25. But since both ions have the same n, n² cancels anyway — the ratio depends only on Z values."
+            }
+          ],
+          "tip": "Same orbit number? Then n² cancels and the ratio is purely Z₂/Z₁."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "The shortcut: when n is the same for both atoms, the radius ratio simplifies to what?",
+          "options": [
+            {
+              "text": "Just Z₂/Z₁ = Z(He⁺)/Z(Li²⁺) = 2/3 — no calculation needed",
+              "correct": true,
+              "feedback": "Exactly. Same orbit — the problem reduces to one fraction: Z_denominator / Z_numerator. You could solve this in 5 seconds. That's the power of seeing the structure."
+            },
+            {
+              "text": "n₁²/n₂² — only n matters since Z cancels",
+              "correct": false,
+              "feedback": "n doesn't cancel — Z does... wait, no. n is the same for both, so n² cancels. But Z is different (3 vs 2), so Z doesn't cancel — it's exactly what determines the ratio. r₁/r₂ = Z₂/Z₁ = 2/3."
+            },
+            {
+              "text": "(n/Z)₁ × (n/Z)₂ — multiply instead of divide",
+              "correct": false,
+              "feedback": "Ratios of radii are found by dividing, not multiplying. r₁/r₂ = (n₁²/Z₁)/(n₂²/Z₂). With same n, this simplifies to Z₂/Z₁ = 2/3."
+            }
+          ],
+          "tip": "Same n — ratio = Z₂/Z₁. Different n, same Z — ratio = n₁²/n₂². Know both shortcuts."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "We got r(Li²⁺) / r(He⁺) = 2/3. Li²⁺ has more protons than He⁺. Does it make sense that Li²⁺ has the smaller orbit?",
+          "options": [
+            {
+              "text": "Yes — 3 protons pull the electron tighter than 2 protons at the same orbit",
+              "correct": true,
+              "feedback": "Perfect. More protons = stronger Coulomb pull = smaller orbit. Li²⁺ (Z=3) squeezes the 5th orbit to 2/3 the size of He⁺ (Z=2). The ratio < 1 confirms the higher-Z ion has the tighter orbit."
+            },
+            {
+              "text": "No — more protons means a bigger atom and bigger orbit",
+              "correct": false,
+              "feedback": "More protons = stronger Coulomb attraction = electron pulled closer = smaller orbit. 'Bigger atom' in chemistry refers to more electron shells, not individual orbit sizes at the same n."
+            },
+            {
+              "text": "No — orbit size depends only on n, not on Z",
+              "correct": false,
+              "feedback": "Orbit size absolutely depends on Z. The formula r = a₀n²/Z has Z in the denominator. Same orbit number (n = 5) with different Z gives different radii. That's the entire point of hydrogen-like atoms."
+            }
+          ],
+          "tip": "Higher Z = tighter orbits. If your ratio gives larger r for larger Z, flip it."
+        }
+      ]
+    }
+  },
+  {
+    "title": "3D cubic box: degeneracy of the 5th excited state",
+    "subject": "quantum_mechanics",
+    "topic": "Quantum Mechanics",
+    "difficulty": "college",
+    "scenario": "A particle is trapped in a 3D cubic potential well (side a) with U = 0 inside and U = ∞ outside. The degeneracy of the 5th excited state is?",
+    "goal": "Find: 6",
+    "final_answer": "6",
+    "diagram_type": null,
+    "solution_flow": {
+      "steps": [
+        {
+          "type": "principle",
+          "label": "PICK YOUR WEAPON",
+          "icon": "⚡",
+          "prompt": "For a particle in a 3D cubic box, the energy depends on quantum numbers (n₁, n₂, n₃). What's the formula?",
+          "options": [
+            {
+              "text": "E — (n₁² + n₂² + n₃²), with each nᵢ = 1, 2, 3, ...",
+              "correct": true,
+              "feedback": "Right. E = (π²ℏ²/2ma²)(n₁² + n₂² + n₃²). Energy levels are set by the sum of squares. Different combos giving the same sum = degeneracy."
+            },
+            {
+              "text": "$E — (n_{1} + n_{2} + n_{3})^{2}, quantum numbers add then square$",
+              "correct": false,
+              "feedback": "The energies don't add then square: (n₁+n₂+n₃)² ≠ n₁²+n₂²+n₃² in general. The 3D box separates into three independent 1D problems, and energies add: E = Ex + Ey + Ez — n₁² + n₂² + n₃²."
+            },
+            {
+              "text": "$E — n_{1}^{2} \\times n_{2}^{2} \\times n_{3}^{2}, quantum numbers multiply$",
+              "correct": false,
+              "feedback": "Energies add, they don't multiply. Each dimension contributes independently: E_total = Ex + Ey + Ez. Since each Eᵢ — nᵢ², the total — n₁² + n₂² + n₃². Products would blow up at high quantum numbers."
+            }
+          ],
+          "tip": "Separable potential — energies add. Same sum of squares = same energy = degenerate."
+        },
+        {
+          "type": "trap",
+          "label": "SPOT THE TRAP",
+          "icon": "⚠️",
+          "prompt": "Most students get this wrong because they confuse '5th excited state' with '5th energy level'. What's the difference?",
+          "options": [
+            {
+              "text": "5th excited = 6th energy level. Ground state is the 0th excited state.",
+              "correct": true,
+              "feedback": "Critical distinction. Ground state = 0th excited state. So the 5th excited state is the 6th distinct energy level. Off-by-one errors are silent killers."
+            },
+            {
+              "text": "5th excited = 5th energy level. They mean the same thing.",
+              "correct": false,
+              "feedback": "Ground state = 1st energy level = 0th excited state. So 5th excited state = 6th energy level. If you count ground state as the 1st excited state, you're off by one — a silent killer in counting problems."
+            },
+            {
+              "text": "5th excited = 5th state counting all degeneracies individually.",
+              "correct": false,
+              "feedback": "Degeneracy is how many quantum states share one energy level, not how you count individual states. The 5th excited state is the 6th distinct energy value. Count levels, not states."
+            }
+          ],
+          "tip": "nth excited state = (n+1)th energy level. Always start counting from 0."
+        },
+        {
+          "type": "setup",
+          "label": "SET UP THE MATH",
+          "icon": "🔧",
+          "prompt": "List the energy levels by increasing value of S = n₁² + n₂² + n₃² (each nᵢ ≥ 1). What are the first 6 values of S?",
+          "options": [
+            {
+              "text": "S = 3, 6, 9, 11, 12, 14 — from combos (1,1,1), (2,1,1), (2,2,1), (3,1,1), (2,2,2), (3,2,1)",
+              "correct": true,
+              "feedback": "Nailed the enumeration. The tricky ones are S = 11 — (3,1,1) and S = 12 — (2,2,2). Students who skip S = 11 miscount which level is the 5th excited state."
+            },
+            {
+              "text": "$S = 3, 6, 9, 12, 14, 17 — skipped S = 11$",
+              "correct": false,
+              "feedback": "You skipped S = 11, which comes from (3,1,1) and its permutations. Missing one S value shifts all subsequent levels — so what you think is the 5th excited state is actually the 4th. Enumerate carefully."
+            },
+            {
+              "text": "S = 1, 2, 3, 4, 5, 6 — used n values instead of n²",
+              "correct": false,
+              "feedback": "You used n values directly instead of n². Each nᵢ starts at 1 (not 0), and S = n₁² + n₂² + n₃². So the minimum S = 1+1+1 = 3. Treating S as 1,2,3,... ignores the squared dependence."
+            }
+          ],
+          "tip": "Enumerate S systematically: increment one nᵢ at a time. Missing one level ruins the count."
+        },
+        {
+          "type": "connect",
+          "label": "FAST-TRACK THE SOLVE",
+          "icon": "🧩",
+          "prompt": "The 5th excited state has S = 14, from (n₁,n₂,n₃) = permutations of (3,2,1). How many permutations?",
+          "options": [
+            {
+              "text": "3! = 6 — all three quantum numbers are distinct",
+              "correct": true,
+              "feedback": "All three numbers (3, 2, 1) are different, so every arrangement is unique. 3! = 3×2×1 = 6 distinct states, all with the same energy. Degeneracy = 6."
+            },
+            {
+              "text": "3 — only 3 permutations like (2,1,1) type states",
+              "correct": false,
+              "feedback": "Three permutations comes from cases like (2,1,1) where two numbers are equal: 3!/2! = 3. But (3,2,1) has ALL different numbers, so every arrangement is distinct: 3! = 3×2×1 = 6."
+            },
+            {
+              "text": "1 — (3,2,1) is the only combination",
+              "correct": false,
+              "feedback": "(3,2,1) is one combination, but each rearrangement — (3,1,2), (2,3,1), (2,1,3), (1,3,2), (1,2,3) — is a different quantum state. All three quantum numbers label independent axes. 6 distinct states."
+            }
+          ],
+          "tip": "All distinct — 3! = 6. Two same — 3!/2! = 3. All same — 1. Memorize this pattern."
+        },
+        {
+          "type": "sanity",
+          "label": "SANITY CHECK",
+          "icon": "🧪",
+          "prompt": "Degeneracy = 6 for the 5th excited state. Looking at the pattern (1, 3, 3, 3, 1, 6...), does this make sense?",
+          "options": [
+            {
+              "text": "Yes — (3,2,1) has all distinct nᵢ, giving maximum permutations (3! = 6) for the first time",
+              "correct": true,
+              "feedback": "Exactly. Previous states had repeated quantum numbers — degeneracy capped at 3. (3,2,1) is the first combo with all distinct values, unlocking the full 3! = 6. Higher states can have even larger degeneracies when multiple combos share the same S."
+            },
+            {
+              "text": "No — degeneracy can't exceed 3 in a cubic box",
+              "correct": false,
+              "feedback": "There's no cap on degeneracy. Earlier states had repeated quantum numbers (like 2,1,1 — only 3 permutations). (3,2,1) is the first all-distinct combo, unlocking 3! = 6. Higher states can have even more."
+            },
+            {
+              "text": "No — 6 is too high; higher states should have lower degeneracy",
+              "correct": false,
+              "feedback": "Degeneracy generally increases with energy, not decreases. More ways exist to partition a larger sum of squares. The pattern 1, 3, 3, 3, 1, 6... will eventually include even higher degeneracies."
+            }
+          ],
+          "tip": "Degeneracy grows with energy. The first all-distinct combo always gives 6."
+        }
+      ]
+    }
+  }
+]

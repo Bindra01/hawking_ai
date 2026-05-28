@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model users {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String    @unique
+  name             String?
+  avatar_url       String?
+  total_xp         Int       @default(0)
+  current_streak   Int       @default(0)
+  longest_streak   Int       @default(0)
+  last_active_date DateTime? @db.Date
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  attempts         attempts[]
+}
+
+model problems {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title         String
+  subject       String
+  topic         String
+  difficulty    String
+  scenario      String
+  goal          String
+  final_answer  String
+  diagram_type  String?
+  solution_flow Json
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  attempts      attempts[]
+}
+
+model attempts {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String?  @db.Uuid
+  problem_id     String?  @db.Uuid
+  steps_correct  Int
+  steps_total    Int
+  xp_earned      Int
+  stars          Int
+  completed_at   DateTime @default(now()) @db.Timestamptz(6)
+  user           users?   @relation(fields: [user_id], references: [id])
+  problem        problems? @relation(fields: [problem_id], references: [id])
+}

@@ -1,26 +1,61 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "katex/dist/katex.min.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Nunito", sans-serif;
+
+  /* Base */
+  --color-bg-primary: #131327;
+  --color-bg-card: #1a1a2e;
+  --color-border: #2a2a40;
+  --color-border-option: #37374a;
+
+  /* Text */
+  --color-text-primary: #e5e5e5;
+  --color-text-secondary: #afafbf;
+  --color-text-muted: #6b6b80;
+
+  /* Accents */
+  --color-primary: #7c3aed;
+  --color-primary-shadow: #5b21b6;
+  --color-red: #ff4b4b;
+  --color-blue: #1cb0f6;
+  --color-orange: #ff9600;
+  --color-purple: #ce82ff;
+  --color-gold: #ffc800;
+
+  /* Step type colors */
+  --color-step-trap: #ff4b4b;
+  --color-step-identify: #ff9600;
+  --color-step-principle: #ce82ff;
+  --color-step-setup: #1cb0f6;
+  --color-step-connect: #ff4b4b;
+  --color-step-sanity: #7c3aed;
+  --color-step-why: #ff9600;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+html, body {
+  background: #131327;
+  color: #e5e5e5;
+  font-family: "Nunito", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* Duolingo-style button press effect */
+.btn-press {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.btn-press:active {
+  transform: translateY(3px);
+  box-shadow: none !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #1a1a2e; }
+::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 2px; }
