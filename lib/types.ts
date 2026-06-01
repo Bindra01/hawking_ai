@@ -1,6 +1,7 @@
 export type Subject = "mechanics" | "electrodynamics" | "thermodynamics" | "quantum_mechanics";
 export type Difficulty = "class_11" | "class_12" | "college";
 export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why";
+export type ProblemStatus = "draft" | "approved" | "published" | "rejected";
 
 export interface StepOption {
   text: string;
@@ -32,7 +33,15 @@ export interface Problem {
   final_answer: string;
   diagram_type?: string | null;
   solution_flow: SolutionFlow;
+  status: ProblemStatus;
   created_at: string;
+}
+
+export interface GenerateRequest {
+  subject: Subject;
+  topic: string;
+  difficulty: Difficulty;
+  count?: number;
 }
 
 export interface Attempt {

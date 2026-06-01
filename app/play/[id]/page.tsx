@@ -35,6 +35,7 @@ export default async function PlayPage({ params }: Props) {
         final_answer: problem.final_answer,
         diagram_type: problem.diagram_type,
         solution_flow: problem.solution_flow as unknown as Problem["solution_flow"],
+        status: problem.status as Problem["status"],
         created_at: problem.created_at.toISOString(),
       }}
     />
