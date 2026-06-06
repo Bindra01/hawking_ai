@@ -39,3 +39,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+lib/supabase-client.ts.backup
+lib/supabase-server.ts.backup

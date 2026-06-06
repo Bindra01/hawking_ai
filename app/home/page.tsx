@@ -15,6 +15,7 @@ export default function HomePage() {
   const [xp, setXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Update streak on every page load
@@ -23,10 +24,12 @@ export default function HomePage() {
     Promise.all([
       fetch("/api/profile").then((r) => r.json()),
       fetch("/api/attempts").then((r) => r.json()),
-    ]).then(([profile, attemptsData]) => {
+      fetch("/api/admin/check").then((r) => r.json()),
+    ]).then(([profile, attemptsData, adminCheck]) => {
       setXp(profile.total_xp ?? 0);
       setStreak(profile.current_streak ?? 0);
       setAttempts(Array.isArray(attemptsData) ? attemptsData : []);
+      setIsAdmin(adminCheck?.isAdmin ?? false);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -51,7 +54,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen" style={{ background: "#131327" }}>
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
-        <TopBar streak={streak} xp={xp} />
+        <TopBar streak={streak} xp={xp} isAdmin={isAdmin} />
 
         <div className="flex flex-col gap-4 pt-4 pb-8">
           <SubjectFilter active={subject} onChange={setSubject} />
