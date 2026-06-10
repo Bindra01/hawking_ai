@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { prisma } from "@/lib/prisma";
+import { shuffleStepOptions } from "@/lib/shuffle-options";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -30,5 +33,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json(problems);
+  // Shuffle options in each step so the correct answer isn't always first
+  const shuffled = problems.map((p) =>
+    shuffleStepOptions(p as unknown as Parameters<typeof shuffleStepOptions>[0])
+  );
+
+  return NextResponse.json(shuffled);
 }

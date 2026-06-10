@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase-server";
 import { prisma } from "@/lib/prisma";
 import PlayScreen from "@/components/PlayScreen";
 import { Problem } from "@/lib/types";
+import { shuffleStepOptions } from "@/lib/shuffle-options";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -22,22 +23,20 @@ export default async function PlayPage({ params }: Props) {
   const problem = await prisma.problems.findUnique({ where: { id } });
   if (!problem) notFound();
 
-  return (
-    <PlayScreen
-      problem={{
-        id: problem.id,
-        title: problem.title,
-        subject: problem.subject as Problem["subject"],
-        topic: problem.topic,
-        difficulty: problem.difficulty as Problem["difficulty"],
-        scenario: problem.scenario,
-        goal: problem.goal,
-        final_answer: problem.final_answer,
-        diagram_type: problem.diagram_type,
-        solution_flow: problem.solution_flow as unknown as Problem["solution_flow"],
-        status: problem.status as Problem["status"],
-        created_at: problem.created_at.toISOString(),
-      }}
-    />
-  );
+  const problemData = shuffleStepOptions({
+    id: problem.id,
+    title: problem.title,
+    subject: problem.subject as Problem["subject"],
+    topic: problem.topic,
+    difficulty: problem.difficulty as Problem["difficulty"],
+    scenario: problem.scenario,
+    goal: problem.goal,
+    final_answer: problem.final_answer,
+    diagram_type: problem.diagram_type,
+    solution_flow: problem.solution_flow as unknown as Problem["solution_flow"],
+    status: problem.status as Problem["status"],
+    created_at: problem.created_at.toISOString(),
+  });
+
+  return <PlayScreen problem={problemData} />;
 }
