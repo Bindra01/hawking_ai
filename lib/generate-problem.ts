@@ -244,5 +244,11 @@ export function validateAndNormalize(
     if (correctCount !== 1) {
       throw new Error(`Step ${i} must have exactly 1 correct option, got ${correctCount}`);
     }
+
+    // Shuffle options so the correct answer isn't always first
+    for (let j = step.options.length - 1; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [step.options[j], step.options[k]] = [step.options[k], step.options[j]];
+    }
   }
 }
