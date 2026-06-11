@@ -37,7 +37,10 @@ export default function ProfilePage() {
   const router = useRouter();
   useEffect(() => {
     fetch("/api/profile")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Unauthorized");
+        return r.json();
+      })
       .then((data) => {
         setStats(data);
         setLoading(false);
