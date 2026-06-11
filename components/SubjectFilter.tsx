@@ -17,12 +17,20 @@ interface SubjectFilterProps {
 
 export default function SubjectFilter({ active, onChange }: SubjectFilterProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
   function checkScroll() {
     const el = scrollRef.current;
     if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }
+
+  function scrollBy(direction: "left" | "right") {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction === "right" ? 120 : -120, behavior: "smooth" });
   }
 
   useEffect(() => {
@@ -32,12 +40,36 @@ export default function SubjectFilter({ active, onChange }: SubjectFilterProps) 
   }, []);
 
   return (
-    <div className="relative">
+    <div className="relative flex items-center">
+      {/* Left arrow */}
+      {canScrollLeft && (
+        <button
+          onClick={() => scrollBy("left")}
+          className="absolute left-0 z-10 flex items-center justify-center"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "#7c3aed",
+            color: "#fff",
+            border: "2px solid #5b21b6",
+            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.4)",
+            cursor: "pointer",
+            fontSize: 18,
+            fontWeight: 900,
+            marginLeft: 2,
+          }}
+          aria-label="Scroll left"
+        >
+          ‹
+        </button>
+      )}
+
       <div
         ref={scrollRef}
         onScroll={checkScroll}
         className="flex gap-2 overflow-x-auto pb-1 px-4"
-        style={{ scrollbarWidth: "none" }}
+        style={{ scrollbarWidth: "none", width: "100%" }}
       >
         {SUBJECTS.map(({ key, label }) => {
           const isActive = active === key;
@@ -61,24 +93,28 @@ export default function SubjectFilter({ active, onChange }: SubjectFilterProps) 
         })}
       </div>
 
-      {/* Scroll indicator: fade + arrow */}
+      {/* Right arrow */}
       {canScrollRight && (
-        <div
-          className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none"
+        <button
+          onClick={() => scrollBy("right")}
+          className="absolute right-0 z-10 flex items-center justify-center"
           style={{
-            background: "linear-gradient(to right, transparent, #131327 70%)",
-            width: 48,
-            paddingRight: 8,
-            justifyContent: "flex-end",
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: "#7c3aed",
+            color: "#fff",
+            border: "2px solid #5b21b6",
+            boxShadow: "0 2px 8px rgba(124, 58, 237, 0.4)",
+            cursor: "pointer",
+            fontSize: 18,
+            fontWeight: 900,
+            marginRight: 2,
           }}
+          aria-label="Scroll right"
         >
-          <span
-            className="text-sm animate-pulse"
-            style={{ color: "#7c3aed", fontWeight: 900 }}
-          >
-            ›
-          </span>
-        </div>
+          ›
+        </button>
       )}
     </div>
   );
