@@ -56,6 +56,7 @@ function makeValidProblem(): TestProblem {
             { text: "Correct answer choice", correct: true, feedback: "Yes, that is correct!" },
             { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("you used the wrong units"), distractor_type: "misconception" as const },
             { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("you confused velocity with acceleration"), distractor_type: "procedural_slip" as const },
+            { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("you applied a formula outside its valid range"), distractor_type: "half_right" as const },
           ],
           tip: "Watch out for traps",
         },
@@ -68,6 +69,7 @@ function makeValidProblem(): TestProblem {
             { text: "Correct answer choice", correct: true, feedback: "Yes, that is correct!" },
             { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("you set up the equation incorrectly"), distractor_type: "misconception" as const },
             { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("you forgot to include the angle"), distractor_type: "half_right" as const },
+            { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("you used the wrong coordinate system"), distractor_type: "procedural_slip" as const },
           ],
           tip: "Be careful",
         },
@@ -80,6 +82,7 @@ function makeValidProblem(): TestProblem {
             { text: "Correct answer choice", correct: true, feedback: "Yes, that is correct!" },
             { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("you missed the connection between equations"), distractor_type: "half_right" as const },
             { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("you applied the wrong simplification"), distractor_type: "procedural_slip" as const },
+            { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("you forgot to account for the boundary condition"), distractor_type: "misconception" as const },
           ],
           tip: "Link ideas",
         },
@@ -92,6 +95,7 @@ function makeValidProblem(): TestProblem {
             { text: "Correct answer choice", correct: true, feedback: "Yes, that is correct!" },
             { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("you identified the wrong variable as key"), distractor_type: "misconception" as const },
             { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("you misread the problem constraints"), distractor_type: "procedural_slip" as const },
+            { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("you confused the dependent and independent variables"), distractor_type: "half_right" as const },
           ],
           tip: "Lock it in",
         },
@@ -104,6 +108,7 @@ function makeValidProblem(): TestProblem {
             { text: "Correct answer choice", correct: true, feedback: "Yes, that is correct!" },
             { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("the units don't match your conclusion"), distractor_type: "misconception" as const },
             { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("the order of magnitude is way off"), distractor_type: "half_right" as const },
+            { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("the limiting case behavior is incorrect"), distractor_type: "procedural_slip" as const },
           ],
           tip: "Always check",
         },
@@ -186,7 +191,7 @@ describe("validateAndNormalize", () => {
     ).toThrow('Last step must be type "sanity"');
   });
 
-  it("throws when a step has wrong number of options (2 instead of 3)", () => {
+  it("throws when a step has wrong number of options (2 instead of 4)", () => {
     const problem = makeValidProblem();
     problem.solution_flow.steps[0].options = [
       { text: "A correct option", correct: true, feedback: "Yes, that is correct!" },
@@ -194,20 +199,33 @@ describe("validateAndNormalize", () => {
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow("Step 0 must have exactly 3 options, got 2");
+    ).toThrow("Step 0 must have exactly 4 options, got 2");
   });
 
-  it("throws when a step has 4 options", () => {
+  it("throws when a step has 5 options", () => {
     const problem = makeValidProblem();
     problem.solution_flow.steps[1].options = [
       { text: "A correct option", correct: true, feedback: "Yes, that is correct!" },
       { text: "B wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
       { text: "C wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "procedural_slip" as const },
       { text: "D wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "half_right" as const },
+      { text: "E wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow("Step 1 must have exactly 3 options, got 4");
+    ).toThrow("Step 1 must have exactly 4 options, got 5");
+  });
+
+  it("throws when a step has 3 options (too few)", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[1].options = [
+      { text: "A correct option", correct: true, feedback: "Yes, that is correct!" },
+      { text: "B wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
+      { text: "C wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "procedural_slip" as const },
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("Step 1 must have exactly 4 options, got 3");
   });
 
   it("throws when a step has zero correct options", () => {
@@ -216,6 +234,7 @@ describe("validateAndNormalize", () => {
       { text: "A wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
       { text: "B wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "procedural_slip" as const },
       { text: "C wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "half_right" as const },
+      { text: "D wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
@@ -228,6 +247,7 @@ describe("validateAndNormalize", () => {
       { text: "A correct option", correct: true, feedback: "Yes, that is correct!" },
       { text: "B correct option", correct: true, feedback: "Yes, that is also correct!" },
       { text: "C wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
+      { text: "D wrong option here", correct: false, feedback: wrongFeedback(), distractor_type: "procedural_slip" as const },
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
@@ -346,6 +366,7 @@ describe("validateAndNormalize", () => {
       { text: "Short", correct: true, feedback: "Yes, that is correct!" },
       { text: "This is a much much much much much much much longer wrong option answer text", correct: false, feedback: wrongFeedback(), distractor_type: "misconception" as const },
       { text: "Medium wrong answer", correct: false, feedback: wrongFeedback(), distractor_type: "procedural_slip" as const },
+      { text: "Another medium wrong", correct: false, feedback: wrongFeedback(), distractor_type: "half_right" as const },
     ];
 
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
