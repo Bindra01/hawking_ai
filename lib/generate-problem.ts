@@ -72,8 +72,8 @@ const EXAMPLE_CLASS_11 = {
         prompt: "Most students get this wrong because they plug in 47 directly as the temperature. What must you do first?",
         options: [
           { text: "Convert to Kelvin: T = 47 + 273 = 320 K", correct: true, feedback: "Right. Gas law temperatures are ALWAYS in Kelvin. T = 320 K." },
-          { text: "Use 47°C directly in the formula", correct: false, feedback: "Gas kinetic theory formulas require absolute temperature (Kelvin). 47°C = 320 K. Using Celsius gives a completely wrong answer." },
-          { text: "Convert to Fahrenheit first", correct: false, feedback: "Physics uses Kelvin for thermodynamic calculations, never Fahrenheit. Convert: T = 47 + 273 = 320 K." }
+          { text: "Use 47°C directly in the formula", correct: false, feedback: "Gas kinetic theory formulas require absolute temperature (Kelvin). 47°C = 320 K. Using Celsius gives a completely wrong answer because the gas law equations are derived assuming an absolute scale where zero means zero molecular energy.", distractor_type: "misconception" as const },
+          { text: "Convert to Fahrenheit first", correct: false, feedback: "Physics uses Kelvin for thermodynamic calculations, never Fahrenheit. The Fahrenheit scale has no physical significance in gas kinetics. Convert: T = 47 + 273 = 320 K.", distractor_type: "procedural_slip" as const }
         ],
         tip: "ALL gas law temperatures must be in Kelvin. Always convert first."
       },
@@ -84,8 +84,8 @@ const EXAMPLE_CLASS_11 = {
         prompt: "You need to equate RMS speeds of two different gases. What's the RMS speed formula?",
         options: [
           { text: "$v_{rms} = \\sqrt{3RT/M}$ where M is molar mass", correct: true, feedback: "Correct. R is universal gas constant, T in Kelvin, M is molar mass in kg/mol." },
-          { text: "$v_{rms} = \\sqrt{3kT/m}$ where m is total mass of gas", correct: false, feedback: "Close — m here should be the mass of ONE molecule, not total mass. Or use the molar version: $v_{rms} = \\sqrt{3RT/M}$." },
-          { text: "$v_{rms} = \\sqrt{2RT/M}$ (from Maxwell distribution)", correct: false, feedback: "That's the most probable speed, not RMS. RMS speed has a factor of 3, not 2: $v_{rms} = \\sqrt{3RT/M}$." }
+          { text: "$v_{rms} = \\sqrt{3kT/m}$ where m is total mass of gas", correct: false, feedback: "Close — m here should be the mass of ONE molecule, not total mass. The Boltzmann constant k pairs with single-molecule mass, while the gas constant R pairs with molar mass. Mixing these up gives an answer off by Avogadro's number. Use: $v_{rms} = \\sqrt{3RT/M}$.", distractor_type: "half_right" as const },
+          { text: "$v_{rms} = \\sqrt{2RT/M}$ (from Maxwell distribution)", correct: false, feedback: "That's the most probable speed, not RMS. The Maxwell-Boltzmann distribution gives three characteristic speeds: most probable (√(2RT/M)), mean (√(8RT/πM)), and RMS (√(3RT/M)). The factors 2, 8/π, and 3 come from different moments of the distribution. RMS speed has factor 3: $v_{rms} = \\sqrt{3RT/M}$.", distractor_type: "misconception" as const }
         ],
         tip: "RMS speed: √(3RT/M). Most probable: √(2RT/M). Mean: √(8RT/πM)."
       },
@@ -96,8 +96,8 @@ const EXAMPLE_CLASS_11 = {
         prompt: "Set $v_{rms}$(O₂) = $v_{rms}$(H₂): $\\sqrt{3R \\times 320/32} = \\sqrt{3RT_{H_2}/2}$. What simplifies?",
         options: [
           { text: "3R cancels. 320/32 = T/2, so T = 2 × 10 = 20 K", correct: true, feedback: "Clean. The 3R and square root cancel when you equate, leaving 320/32 = T/2." },
-          { text: "T = 320 × 2/32 = 640 K", correct: false, feedback: "You multiplied instead of dividing correctly. From 320/32 = T/2: T = 2 × 320/32 = 2 × 10 = 20 K." },
-          { text: "T = 320 × 32/2 = 5120 K", correct: false, feedback: "You flipped the ratio. O₂ (M=32) is heavier than H₂ (M=2), so H₂ needs a MUCH lower temperature. T = 20 K." }
+          { text: "T = 320 × 2/32 = 640 K", correct: false, feedback: "You multiplied instead of dividing correctly. When you cross-multiply 320/32 = T/2, you get T = 2 × (320/32) = 2 × 10 = 20 K. The error is in the order of operations — divide first, then multiply. Double-check by substituting back: 320/32 = 10, and 20/2 = 10. ✓", distractor_type: "procedural_slip" as const },
+          { text: "T = 320 × 32/2 = 5120 K", correct: false, feedback: "You flipped the ratio. O₂ (M=32) is heavier than H₂ (M=2), so H₂ needs a MUCH lower temperature to match the same RMS speed. Since v_rms ∝ √(T/M), a 16× lighter molecule needs 16× lower temperature for the same speed. T = 20 K.", distractor_type: "misconception" as const }
         ],
         tip: "When equating speeds, square both sides first to eliminate the square root."
       },
@@ -108,8 +108,8 @@ const EXAMPLE_CLASS_11 = {
         prompt: "T(H₂) = 20 K. But the question asks for the answer in °C. What is it?",
         options: [
           { text: "20 - 273 = -253°C", correct: true, feedback: "Correct. Convert back: °C = K - 273." },
-          { text: "20 + 273 = 293°C", correct: false, feedback: "You added instead of subtracting. To convert K → °C: subtract 273. So 20 - 273 = -253°C." },
-          { text: "-20°C (just negate the Kelvin value)", correct: false, feedback: "Negating doesn't convert units. K → °C requires subtracting 273: 20 - 273 = -253°C." }
+          { text: "20 + 273 = 293°C", correct: false, feedback: "You added instead of subtracting. The conversion from Kelvin to Celsius always subtracts 273, because 0°C = 273 K. Going the other direction (°C → K) is when you add. So 20 K = 20 - 273 = -253°C.", distractor_type: "procedural_slip" as const },
+          { text: "-20°C (just negate the Kelvin value)", correct: false, feedback: "Negating doesn't convert units. The Kelvin and Celsius scales are offset by 273, not by a sign flip. K → °C requires subtracting 273: 20 - 273 = -253°C. The negative sign in the answer comes from the subtraction, not from negating the Kelvin value.", distractor_type: "half_right" as const }
         ],
         tip: "K → °C: subtract 273. °C → K: add 273. Never just negate."
       },
@@ -120,8 +120,8 @@ const EXAMPLE_CLASS_11 = {
         prompt: "H₂ is 16× lighter than O₂ but needs the same RMS speed. -253°C (= 20 K) is near absolute zero. Does this make sense?",
         options: [
           { text: "Yes — lighter molecules move faster at the same T, so H₂ needs very low T to match heavy O₂", correct: true, feedback: "Exactly. Since v ∝ √(T/M), a 16× lighter molecule needs 16× lower temperature for the same speed." },
-          { text: "No — temperature can't be that low for a real gas", correct: false, feedback: "The math is correct even if H₂ would liquefy. The question asks for the temperature, not whether it's physically achievable." },
-          { text: "No — lighter molecules should need higher temperature", correct: false, feedback: "Opposite! Lighter molecules are FASTER at the same temperature. To SLOW them down to match O₂, you need very low T." }
+          { text: "No — temperature can't be that low for a real gas", correct: false, feedback: "The math is correct even if H₂ would liquefy at this temperature. The question asks for the temperature value, not whether it's physically achievable in practice. In JEE problems, ideal gas assumptions apply unless stated otherwise.", distractor_type: "half_right" as const },
+          { text: "No — lighter molecules should need higher temperature", correct: false, feedback: "Opposite! Lighter molecules are FASTER at the same temperature (v_rms ∝ 1/√M). To SLOW them down to match the speed of heavier O₂, you need a very low temperature. Think of it as: less mass = less thermal energy needed for the same speed.", distractor_type: "misconception" as const }
         ],
         tip: "v_rms ∝ √(T/M). Lighter gas = faster at same T = needs lower T to match heavier gas."
       }
@@ -147,8 +147,8 @@ const EXAMPLE_COLLEGE = {
         prompt: "Circular orbit in a central force with given U(r) and angular momentum L. What two conditions pin down the orbit radius?",
         options: [
           { text: "Force balance (F = mv²/r) and angular momentum constraint (L = mvr)", correct: true, feedback: "Exactly. Two unknowns (v and r), two equations. This always works for circular orbits in central forces." },
-          { text: "Minimize total energy and set kinetic energy equal to potential", correct: false, feedback: "KE = PE isn't a general rule — it holds for inverse-square forces (virial theorem) but not for U = kr². Use force balance + angular momentum." },
-          { text: "Set gravitational force equal to centrifugal force", correct: false, feedback: "This isn't gravity — there's no GM/r² force here. U = kr² gives F = -2kr, a completely different force law." }
+          { text: "Minimize total energy and set kinetic energy equal to potential", correct: false, feedback: "The virial relation depends on the potential: for inverse-square forces K = -U/2, for harmonic U = kr² it's K = U. You can't blindly apply one to the other. Use force balance + angular momentum conservation.", distractor_type: "misconception" as const },
+          { text: "Set gravitational force equal to centrifugal force", correct: false, feedback: "This isn't gravity — there's no GM/r² force here. U = kr² gives F = -2kr, a completely different force law. The centripetal acceleration condition is correct in principle, but you need to use the actual force from this potential, not assume it's gravitational.", distractor_type: "half_right" as const }
         ],
         tip: "Circular orbit = force balance + one constraint (usually angular momentum)."
       },
@@ -159,8 +159,8 @@ const EXAMPLE_COLLEGE = {
         prompt: "How do you get the force from U(r) = kr²?",
         options: [
           { text: "F = -dU/dr = -2kr (force is the negative gradient of potential)", correct: true, feedback: "Right. F = -dU/dr is the fundamental relation. For U = kr²: F = -2kr (restoring force, directed inward)." },
-          { text: "F = U/r = kr (just divide by r)", correct: false, feedback: "F = U/r is dimensionally coincidental but physically wrong. Force is the negative gradient: F = -dU/dr = -2kr." },
-          { text: "F = -dU/dt (differentiate with respect to time)", correct: false, feedback: "dU/dt gives power (rate of energy change), not force. Force comes from the spatial derivative: F = -dU/dr." }
+          { text: "F = U/r = kr (just divide by r)", correct: false, feedback: "F = U/r is dimensionally coincidental but physically wrong. Force is always the negative gradient of potential energy: F = -dU/dr. Dividing potential by distance has no physical basis — it confuses the relationship between force and potential. The correct derivative gives F = -2kr.", distractor_type: "procedural_slip" as const },
+          { text: "F = -dU/dt (differentiate with respect to time)", correct: false, feedback: "dU/dt gives power (rate of energy change), not force. Force comes from the spatial derivative: F = -dU/dr. Differentiating with respect to time would require knowledge of the trajectory r(t), which is what we're trying to find. Always differentiate w.r.t. position for force.", distractor_type: "misconception" as const }
         ],
         tip: "Force from potential: F = -dU/dr. Always differentiate w.r.t. position, not time."
       },
@@ -171,8 +171,8 @@ const EXAMPLE_COLLEGE = {
         prompt: "For a circular orbit: |F| = mv²/r gives 2kr = mv²/r. Using L = mvr → v = L/(mr), substitute into the force equation. What do you get?",
         options: [
           { text: "$2kr = \\frac{L^2}{mr^3}$, so $r^4 = \\frac{L^2}{2mk}$", correct: true, feedback: "Perfect substitution. v = L/(mr) → v² = L²/(m²r²). Then 2kr = m·L²/(m²r³) = L²/(mr³)." },
-          { text: "$2kr = \\frac{L}{mr^2}$, so $r^3 = \\frac{L}{2mk}$", correct: false, feedback: "You forgot to square v. v = L/(mr) means v² = L²/(m²r²), not v = L/(mr²). Re-substitute carefully." },
-          { text: "$2kr² = L^2/m$, so $r^2 = \\frac{L^2}{2mk}$", correct: false, feedback: "Check your algebra. The centripetal term is mv²/r = L²/(mr³), not L²/(mr). The r powers matter." }
+          { text: "$2kr = \\frac{L}{mr^2}$, so $r^3 = \\frac{L}{2mk}$", correct: false, feedback: "You forgot to square v. When substituting v = L/(mr) into mv²/r, you must use v² = L²/(m²r²), not v = L/(mr²). Forgetting to square is a common algebraic slip that changes the power of r in the final answer from r⁴ to r³. Re-substitute carefully.", distractor_type: "procedural_slip" as const },
+          { text: "$2kr² = L^2/m$, so $r^2 = \\frac{L^2}{2mk}$", correct: false, feedback: "Check your algebra. The centripetal term is mv²/r = L²/(mr³), not L²/(mr). When you move terms around, track the powers of r carefully: 2kr = L²/(mr³) gives 2mkr⁴ = L², so r⁴ = L²/(2mk). The r powers matter for the correct exponent in the final answer.", distractor_type: "procedural_slip" as const }
         ],
         tip: "When substituting L = mvr, always square v before plugging into F = mv²/r."
       },
@@ -183,8 +183,8 @@ const EXAMPLE_COLLEGE = {
         prompt: "From r⁴ = L²/(2mk), what is r?",
         options: [
           { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$", correct: true, feedback: "Clean. Fourth root of both sides." },
-          { text: "$r = \\sqrt{\\frac{L^2}{2mk}}$", correct: false, feedback: "That's the square root (power 1/2), but you need the fourth root (power 1/4) since r⁴ = L²/(2mk)." },
-          { text: "$r = \\frac{L}{\\sqrt{2mk}}$", correct: false, feedback: "This would be correct if r² = L²/(2mk), but we have r⁴. Take the fourth root: r = (L²/2mk)^(1/4)." }
+          { text: "$r = \\sqrt{\\frac{L^2}{2mk}}$", correct: false, feedback: "That's the square root (power 1/2), but you need the fourth root (power 1/4) since r⁴ = L²/(2mk). The exponent rule is: if r^n = X, then r = X^(1/n). Here n = 4, so you need the 1/4 power, not 1/2. This is a common error when dealing with higher-power equations.", distractor_type: "procedural_slip" as const },
+          { text: "$r = \\frac{L}{\\sqrt{2mk}}$", correct: false, feedback: "This would be correct if r² = L²/(2mk), but we have r⁴. You've effectively taken the square root twice on the left (r⁴ → r) but only once on the right (L²/(2mk) → L/√(2mk)). Take the fourth root consistently: r = (L²/2mk)^(1/4).", distractor_type: "half_right" as const }
         ],
         tip: "r^n = X → r = X^(1/n). Don't confuse square root with fourth root."
       },
@@ -195,13 +195,89 @@ const EXAMPLE_COLLEGE = {
         prompt: "$r = (L^2/2mk)^{1/4}$. If you increase k (stiffer potential), what happens to the orbit radius? Does this match intuition?",
         options: [
           { text: "r decreases — stiffer potential pulls the particle closer, which makes sense", correct: true, feedback: "Correct. k in the denominator means larger k → smaller r. A stronger restoring force confines the orbit." },
-          { text: "r increases — stronger force means the particle moves outward", correct: false, feedback: "Stronger restoring force pulls inward, not outward. Think of a stiffer spring — it keeps the mass closer to center." },
-          { text: "r stays the same — orbit radius depends only on L and m", correct: false, feedback: "k appears in the formula. The potential strength directly affects the orbit size. Stiffer potential = tighter orbit." }
+          { text: "r increases — stronger force means the particle moves outward", correct: false, feedback: "Stronger restoring force pulls inward, not outward. Think of a stiffer spring — it keeps the mass closer to center. In the formula, k is in the denominator, confirming larger k → smaller r. Physical intuition and math agree.", distractor_type: "misconception" as const },
+          { text: "r stays the same — orbit radius depends only on L and m", correct: false, feedback: "k appears explicitly in the formula: r = (L²/2mk)^(1/4). The potential strength directly affects the orbit size. Ignoring a parameter that appears in the answer is a sign-check error — always verify which variables appear in your final expression.", distractor_type: "half_right" as const }
         ],
         tip: "Always check limiting cases: what happens when parameters increase or decrease?"
       }
     ]
   }
+};
+
+// ─── MISCONCEPTION CATALOG ──────────────────────────────────────────────────
+
+const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; misconception: string; distractorPattern: string}>>> = {
+  mechanics: {
+    "Newton's Laws": [
+      { id: "force-for-motion", misconception: "Continuous force is needed to maintain constant velocity", distractorPattern: "Option implies net force in direction of motion" },
+      { id: "action-reaction-cancel", misconception: "Action-reaction forces cancel each other", distractorPattern: "Option says forces cancel so object doesn't move" },
+      { id: "centripetal-separate-force", misconception: "Centripetal force is a separate force added to the FBD", distractorPattern: "Option adds Fc as an extra force alongside tension/gravity" },
+    ],
+    "Kinematics": [
+      { id: "velocity-acceleration-same", misconception: "Velocity and acceleration are always in the same direction", distractorPattern: "Option assumes deceleration means negative velocity" },
+      { id: "zero-velocity-zero-accel", misconception: "Zero velocity means zero acceleration", distractorPattern: "Option says acceleration is zero at the highest point of projectile" },
+    ],
+    "Rotational Motion": [
+      { id: "torque-equals-force", misconception: "Torque is the same as force", distractorPattern: "Option ignores the moment arm" },
+      { id: "angular-momentum-always-conserved", misconception: "Angular momentum is always conserved", distractorPattern: "Option assumes L is conserved even with external torque" },
+    ],
+    "Work Energy": [
+      { id: "ke-proportional-v", misconception: "KE doubles when speed doubles", distractorPattern: "Option uses KE ∝ v instead of KE ∝ v²" },
+      { id: "work-equals-fd", misconception: "Work is always F×d regardless of angle", distractorPattern: "Option ignores cos θ in W = Fd cos θ" },
+    ],
+    "Gravitation": [
+      { id: "g-zero-in-orbit", misconception: "Gravity is zero in orbit (weightlessness = no gravity)", distractorPattern: "Option says gravitational force vanishes in orbit" },
+    ],
+    "Central Forces": [
+      { id: "virial-wrong-relation", misconception: "Applying the virial relation from one potential type to another (e.g., K = -U/2 from inverse-square to harmonic U = kr² where K = U)", distractorPattern: "Option uses the wrong virial relation for the given potential" },
+    ],
+  },
+  thermodynamics: {
+    "Kinetic Theory": [
+      { id: "temp-celsius-in-gas-law", misconception: "Using Celsius directly in gas law formulas", distractorPattern: "Option plugs in °C instead of converting to Kelvin" },
+      { id: "rms-vs-avg-speed", misconception: "RMS speed equals average speed", distractorPattern: "Option uses √(8RT/πM) instead of √(3RT/M) or vice versa" },
+    ],
+    "Thermodynamic Processes": [
+      { id: "adiabatic-constant-temp", misconception: "Adiabatic (Q=0) means constant temperature", distractorPattern: "Option assumes T is constant when Q=0" },
+      { id: "work-zero-in-cycle", misconception: "Work done in a cycle is zero because ΔV=0", distractorPattern: "Option says W=0 for cyclic process" },
+      { id: "heat-temperature-same", misconception: "Heat and temperature are the same quantity", distractorPattern: "Option equates Q with T" },
+    ],
+    "Carnot Cycle": [
+      { id: "efficiency-ratio-celsius", misconception: "Using Celsius temperatures in Carnot efficiency formula", distractorPattern: "Option computes η = 1 - Tc/Th with °C values" },
+    ],
+  },
+  electrodynamics: {
+    "Electrostatics": [
+      { id: "e-zero-means-v-zero", misconception: "E=0 inside conductor means V=0", distractorPattern: "Option says potential is zero where field vanishes" },
+      { id: "field-lines-cross", misconception: "Electric field lines can intersect", distractorPattern: "Option shows or implies crossing field lines" },
+    ],
+    "Current Electricity": [
+      { id: "current-used-up", misconception: "Current is 'used up' by resistors", distractorPattern: "Option says current decreases after passing through a resistor in series" },
+      { id: "parallel-same-current", misconception: "Resistors in parallel have the same current", distractorPattern: "Option assumes equal current through unequal parallel resistors" },
+    ],
+    "Electromagnetic Induction": [
+      { id: "lenz-same-direction", misconception: "Induced current creates field in same direction as flux change", distractorPattern: "Option says induced field reinforces the change" },
+    ],
+    "Electromagnetic Waves": [
+      { id: "em-wave-medium-needed", misconception: "EM waves need a medium to propagate", distractorPattern: "Option references medium properties for EM wave speed" },
+    ],
+    "Gauss Law": [
+      { id: "gauss-any-surface", misconception: "Gauss's law only works with symmetric charge distributions", distractorPattern: "Option says Gauss's law cannot be applied here" },
+    ],
+  },
+  quantum_mechanics: {
+    "De Broglie Wavelength": [
+      { id: "debroglie-only-electrons", misconception: "de Broglie wavelength applies only to electrons", distractorPattern: "Option says macroscopic objects don't have wavelength" },
+      { id: "debroglie-uses-c", misconception: "Using speed of light instead of particle speed in λ = h/mv", distractorPattern: "Option substitutes c for v" },
+    ],
+    "Quantum Mechanics": [
+      { id: "bohr-all-atoms", misconception: "Bohr model works for all atoms", distractorPattern: "Option applies Bohr radius formula to multi-electron atom without modification" },
+      { id: "energy-levels-equal-spacing", misconception: "Energy levels are equally spaced", distractorPattern: "Option assumes ΔE is constant between levels" },
+    ],
+    "Wave-Particle Duality": [
+      { id: "photon-has-mass", misconception: "Photons have rest mass", distractorPattern: "Option uses E = mc² with rest mass for photon" },
+    ],
+  },
 };
 
 // ─── DIFFICULTY-SPECIFIC INSTRUCTIONS ────────────────────────────────────────
@@ -251,35 +327,90 @@ interface GeneratedProblem {
         text: string;
         correct: boolean;
         feedback: string;
+        distractor_type?: "misconception" | "procedural_slip" | "half_right";
       }>;
       tip: string;
     }>;
   };
 }
 
-export async function generateProblem(
-  subject: string,
-  topic: string,
-  difficulty: string
-): Promise<GeneratedProblem> {
-  const difficultyLabel: Record<string, string> = {
-    class_11: "Class 11 (JEE Mains prep)",
-    class_12: "Class 12 (JEE Mains/Advanced prep)",
-    college: "College / JEE Advanced level",
-  };
+const MAX_RETRIES = 2;
 
+// ─── MISCONCEPTION LOOKUP ───────────────────────────────────────────────────
+
+function lookupMisconceptions(subject: string, topic: string): string {
+  // Normalize the subject key: lowercase, replace spaces/hyphens
+  const normalizeKey = (s: string) => s.toLowerCase().replace(/[-\s]+/g, " ").trim();
+
+  // Find the subject entry
+  const subjectKey = Object.keys(MISCONCEPTIONS_BY_TOPIC).find(
+    (k) => normalizeKey(k) === normalizeKey(subject)
+  );
+  if (!subjectKey) return "";
+
+  const subjectMisconceptions = MISCONCEPTIONS_BY_TOPIC[subjectKey];
+
+  // Try exact topic match
+  if (subjectMisconceptions[topic]) {
+    return formatMisconceptions(subjectMisconceptions[topic]);
+  }
+
+  // Try normalized match (lowercase, strip hyphens)
+  const normalizedTopic = normalizeKey(topic);
+  const normalizedMatch = Object.keys(subjectMisconceptions).find(
+    (k) => normalizeKey(k) === normalizedTopic
+  );
+  if (normalizedMatch) {
+    return formatMisconceptions(subjectMisconceptions[normalizedMatch]);
+  }
+
+  // Try partial match: either direction substring
+  const partialMatch = Object.keys(subjectMisconceptions).find(
+    (k) => normalizeKey(k).includes(normalizedTopic) || normalizedTopic.includes(normalizeKey(k))
+  );
+  if (partialMatch) {
+    return formatMisconceptions(subjectMisconceptions[partialMatch]);
+  }
+
+  // Fall back to ALL misconceptions for this subject as general reference
+  const allMisconceptions = Object.values(subjectMisconceptions).flat();
+  if (allMisconceptions.length > 0) {
+    return formatMisconceptions(allMisconceptions);
+  }
+
+  return "";
+}
+
+function formatMisconceptions(items: Array<{id: string; misconception: string; distractorPattern: string}>): string {
+  return items
+    .map((m) => `- [${m.id}] ${m.misconception}\n  Distractor pattern: ${m.distractorPattern}`)
+    .join("\n");
+}
+
+// ─── SYSTEM PROMPT BUILDER ──────────────────────────────────────────────────
+
+function buildSystemPrompt(difficulty: string, subject: string, topic: string): string {
   const difficultyInstructions = DIFFICULTY_INSTRUCTIONS[difficulty] || DIFFICULTY_INSTRUCTIONS.class_11;
+  const misconceptionSection = lookupMisconceptions(subject, topic);
 
-  // Pick the right example based on difficulty
-  const example = difficulty === "college" ? EXAMPLE_COLLEGE : EXAMPLE_CLASS_11;
+  let misconceptionBlock = "";
+  if (misconceptionSection) {
+    misconceptionBlock = `
 
-  const systemPrompt = `You are an expert JEE/NEET physics teacher with 20 years of experience. You create problems for Hawking — a Duolingo-style physics app where students solve problems through guided thinking steps.
+KNOWN STUDENT MISCONCEPTIONS for this topic:
+${misconceptionSection}
+
+When creating wrong options, reference these misconceptions. Each wrong option MUST map to one of these documented errors, a procedural slip, or a half-right answer.`;
+  }
+
+  return `You are an expert JEE/NEET physics teacher with 20 years of experience. You create problems for Hawking — a Duolingo-style physics app where students solve problems through guided thinking steps.
 
 Your job is to generate ONE physics problem that teaches students HOW to think, not just WHAT the answer is. Every step should build on the previous one, creating a logical chain from problem to solution.
 
 ${STEP_TYPE_GUIDE}
 
 ${difficultyInstructions}
+${misconceptionBlock}
 
 CRITICAL QUALITY RULES:
 
@@ -293,18 +424,21 @@ CRITICAL QUALITY RULES:
    - The student should feel like they're being guided by an expert tutor, not quizzed randomly.
    - Never ask a step that doesn't contribute to reaching the final answer.
    - The first step should address the biggest obstacle (usually the trap or identifying the key insight).
+   - Cognitive scaffolding: use the "fading" principle — give more support in early steps, less in later steps. Each step should require exactly one decision from the student.
 
 3. WRONG ANSWER OPTIONS — THIS IS THE MOST IMPORTANT PART:
    - Wrong options must be PLAUSIBLE mistakes that real students actually make.
+   - Each wrong option MUST include a "distractor_type" field with one of: "misconception", "procedural_slip", or "half_right".
+   - Wrong option text must be similar length to correct option text (prevent "longest answer is correct" pattern).
    - Each wrong option's feedback MUST:
      a) Name the specific error ("You used X instead of Y")
      b) Explain WHY it's wrong ("This fails because...")
      c) Redirect toward the correct approach ("Instead, use...")
-   - Wrong feedback should be 2-3 sentences. Never just say "incorrect."
+   - Wrong feedback MUST be minimum 3 sentences and 40+ words. Never just say "incorrect."
    - The two wrong options should represent DIFFERENT types of errors.
 
 4. CORRECT ANSWER FEEDBACK:
-   - Brief and encouraging (1-2 sentences).
+   - 1-2 sentences, concise and encouraging.
    - Reinforce why this is the right approach.
 
 5. TIPS:
@@ -321,7 +455,26 @@ CRITICAL QUALITY RULES:
    - "goal": "Find: [answer]" format
    - "final_answer": The numerical/symbolic answer
    - Last step MUST be type "sanity"
-   - Each step has exactly 3 options: 1 correct, 2 wrong`;
+   - Each step has exactly 3 options: 1 correct, 2 wrong
+   - Each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
+   - Each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
+}
+
+export async function generateProblem(
+  subject: string,
+  topic: string,
+  difficulty: string
+): Promise<GeneratedProblem> {
+  const difficultyLabel: Record<string, string> = {
+    class_11: "Class 11 (JEE Mains prep)",
+    class_12: "Class 12 (JEE Mains/Advanced prep)",
+    college: "College / JEE Advanced level",
+  };
+
+  const systemPrompt = buildSystemPrompt(difficulty, subject, topic);
+
+  // Pick the right example based on difficulty
+  const example = difficulty === "college" ? EXAMPLE_COLLEGE : EXAMPLE_CLASS_11;
 
   const userPrompt = `Generate ONE physics problem:
 - Subject: ${subject}
@@ -341,41 +494,55 @@ ${JSON.stringify(example, null, 2)}
 
 Now generate a NEW, ORIGINAL problem. Return ONLY valid JSON — no markdown, no code fences, no explanation. Just the JSON object.`;
 
-  let response;
-  try {
-    response = await getClient().chat.completions.create({
-      model: "gpt-4o",
-      max_tokens: 8192,
-      temperature: 0.7,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`OpenAI API call failed: ${msg}`);
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    let response;
+    try {
+      response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 8192,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`OpenAI API call failed: ${msg}`);
+    }
+
+    const text = response.choices[0]?.message?.content ?? "";
+
+    // Extract JSON from the response (handle potential markdown wrapping)
+    let jsonStr = text.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    let problem: GeneratedProblem;
+    try {
+      problem = JSON.parse(jsonStr);
+    } catch {
+      lastError = new Error(`Failed to parse LLM response as JSON. Response started with: ${jsonStr.substring(0, 200)}`);
+      if (attempt < MAX_RETRIES) continue;
+      throw lastError;
+    }
+
+    try {
+      // Validate structure and normalize fields
+      validateAndNormalize(problem, subject, topic, difficulty);
+      return problem;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES) continue;
+      throw lastError;
+    }
   }
 
-  const text = response.choices[0]?.message?.content ?? "";
-
-  // Extract JSON from the response (handle potential markdown wrapping)
-  let jsonStr = text.trim();
-  if (jsonStr.startsWith("```")) {
-    jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-  }
-
-  let problem: GeneratedProblem;
-  try {
-    problem = JSON.parse(jsonStr);
-  } catch {
-    throw new Error(`Failed to parse LLM response as JSON. Response started with: ${jsonStr.substring(0, 200)}`);
-  }
-
-  // Validate structure and normalize fields
-  validateAndNormalize(problem, subject, topic, difficulty);
-
-  return problem;
+  // Should not reach here, but satisfy TypeScript
+  throw lastError ?? new Error("Generation failed after retries");
 }
 
 // ─── VALIDATION ──────────────────────────────────────────────────────────────
@@ -465,7 +632,7 @@ export function validateAndNormalize(
       throw new Error(`Step ${i} must have exactly 1 correct option, got ${correctCount}`);
     }
 
-    // Validate feedback quality — each wrong option must have substantive feedback
+    // Validate feedback quality — general check first (15 chars minimum)
     for (const opt of step.options) {
       if (!opt.text || opt.text.trim().length < 5) {
         throw new Error(`Step ${i} has an option with empty or too-short text`);
@@ -473,6 +640,41 @@ export function validateAndNormalize(
       if (!opt.feedback || opt.feedback.trim().length < 15) {
         throw new Error(`Step ${i} has an option with empty or too-short feedback`);
       }
+    }
+
+    // Split feedback validation: stricter thresholds by correctness
+    for (const opt of step.options) {
+      if (!opt.correct) {
+        // Wrong options: minimum 50 chars
+        if (opt.feedback.trim().length < 50) {
+          throw new Error(
+            `Step ${i} has a wrong option with feedback below 50 chars: "${opt.feedback.substring(0, 40)}..."`
+          );
+        }
+        // Check distractor_type exists on wrong options — warn only, don't throw
+        if (!opt.distractor_type) {
+          console.warn(
+            `Step ${i}: wrong option missing distractor_type: "${opt.text.substring(0, 40)}..."`
+          );
+        }
+      } else {
+        // Correct options: minimum 20 chars
+        if (opt.feedback.trim().length < 20) {
+          throw new Error(
+            `Step ${i} has a correct option with feedback below 20 chars: "${opt.feedback.substring(0, 20)}..."`
+          );
+        }
+      }
+    }
+
+    // Check option text length balance: warn if any option >3x longer than shortest
+    const optionLengths = step.options.map((o: { text: string }) => o.text.trim().length);
+    const shortest = Math.min(...optionLengths);
+    const longest = Math.max(...optionLengths);
+    if (shortest > 0 && longest > shortest * 3) {
+      console.warn(
+        `Step ${i}: option text length imbalance (shortest=${shortest}, longest=${longest}, ratio=${(longest / shortest).toFixed(1)}x)`
+      );
     }
 
     // Shuffle options so the correct answer isn't always first
@@ -483,18 +685,119 @@ export function validateAndNormalize(
   }
 }
 
-// ─── XP CALCULATION ──────────────────────────────────────────────────────────
+// ─── REGENERATE STEPS ───────────────────────────────────────────────────────
 
-export function calcXP(stepsCorrect: number, stepsTotal: number): number {
-  const base = stepsCorrect * 10;
-  const bonus = stepsCorrect === stepsTotal ? 30 : 0;
-  return base + bonus;
+export interface RegenerateStepsInput {
+  title: string;
+  subject: string;
+  topic: string;
+  difficulty: string;
+  scenario: string;
+  goal: string;
+  final_answer: string;
 }
 
-export function calcStars(stepsCorrect: number, stepsTotal: number): number {
-  const pct = stepsCorrect / stepsTotal;
-  if (pct === 1) return 3;
-  if (pct >= 0.6) return 2;
-  if (pct >= 0.3) return 1;
-  return 0;
+export async function regenerateSteps(
+  input: RegenerateStepsInput
+): Promise<GeneratedProblem["solution_flow"]> {
+  const systemPrompt = buildSystemPrompt(input.difficulty, input.subject, input.topic);
+  const exampleProblem = input.difficulty === "college" ? EXAMPLE_COLLEGE : EXAMPLE_CLASS_11;
+
+  const userPrompt = `Here is an existing physics problem. Regenerate ONLY the step-by-step solution breakdown. Keep the same problem statement and answer.
+
+Problem:
+- Title: ${input.title}
+- Subject: ${input.subject}
+- Topic: ${input.topic}
+- Difficulty: ${input.difficulty}
+- Scenario: ${input.scenario}
+- Goal: ${input.goal}
+- Final Answer: ${input.final_answer}
+
+Here is an example of the step format you must follow:
+
+${JSON.stringify(exampleProblem.solution_flow, null, 2)}
+
+Generate a NEW set of steps for this problem. Return ONLY a JSON object with this shape:
+{ "steps": [ ... ] }
+
+Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    let response;
+    try {
+      response = await getClient().chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 8192,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`OpenAI API call failed: ${msg}`);
+    }
+
+    const text = response.choices[0]?.message?.content ?? "";
+
+    let jsonStr = text.trim();
+    if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      lastError = new Error(`Failed to parse LLM response as JSON. Response started with: ${jsonStr.substring(0, 200)}`);
+      if (attempt < MAX_RETRIES) continue;
+      throw lastError;
+    }
+
+    // Normalize response shape: handle bare array, { solution_flow: { steps } }, or { steps: [...] }
+    let steps: GeneratedProblem["solution_flow"]["steps"];
+    if (Array.isArray(parsed)) {
+      steps = parsed;
+    } else if (parsed.solution_flow?.steps) {
+      steps = parsed.solution_flow.steps;
+    } else if (parsed.steps) {
+      steps = parsed.steps;
+    } else {
+      lastError = new Error("Response does not contain steps in a recognized format");
+      if (attempt < MAX_RETRIES) continue;
+      throw lastError;
+    }
+
+    const solutionFlow = { steps };
+
+    // Validate via validateAndNormalize on a synthetic problem object
+    const syntheticProblem: GeneratedProblem = {
+      title: input.title,
+      subject: input.subject,
+      topic: input.topic,
+      difficulty: input.difficulty,
+      scenario: input.scenario,
+      goal: input.goal,
+      final_answer: input.final_answer,
+      diagram_type: null,
+      solution_flow: solutionFlow,
+    };
+
+    try {
+      validateAndNormalize(syntheticProblem, input.subject, input.topic, input.difficulty);
+      return syntheticProblem.solution_flow;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES) continue;
+      throw lastError;
+    }
+  }
+
+  // Should not reach here, but satisfy TypeScript
+  throw lastError ?? new Error("Step regeneration failed after retries");
 }
