@@ -11,6 +11,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { regenerateSteps, RegenerateStepsInput } from "../lib/generate-problem";
+import { Step, getStepFormat } from "../lib/types";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -80,7 +81,7 @@ function sleep(ms: number): Promise<void> {
 
 function auditSolutionFlow(
   problem: ProblemRow,
-  newFlow: { steps: Array<{ type: string; options: Array<{ correct: boolean; feedback: string; distractor_type?: string; text: string }> }> }
+  newFlow: { steps: Step[] }
 ): AuditResult {
   const oldFlow = problem.solution_flow as { steps: Array<{ type: string }> };
   const result: AuditResult = {
@@ -109,30 +110,115 @@ function auditSolutionFlow(
 
   for (let i = 0; i < newFlow.steps.length; i++) {
     const step = newFlow.steps[i];
+    const format = getStepFormat(step);
 
-    // Check distractor_type on wrong options
-    for (const opt of step.options) {
-      if (!opt.correct && !opt.distractor_type) {
-        result.issues.push(`Step ${i}: wrong option missing distractor_type`);
-      }
-    }
-
-    // Check wrong feedback length (aligned with validateAndNormalize threshold of 50 chars)
-    for (const opt of step.options) {
-      if (!opt.correct) {
-        const len = opt.feedback.trim().length;
-        if (len < 50) {
-          result.issues.push(`Step ${i}: wrong feedback only ${len} chars (need 50+)`);
+    switch (format) {
+      case "mcq": {
+        const options = step.options;
+        if (!options || options.length !== 4) {
+          result.issues.push(`Step ${i} (mcq): expected 4 options, got ${options?.length ?? 0}`);
+          result.passed = false;
+          break;
+        }
+        const correctCount = options.filter((o) => o.correct).length;
+        if (correctCount !== 1) {
+          result.issues.push(`Step ${i} (mcq): expected exactly 1 correct option, got ${correctCount}`);
           result.passed = false;
         }
+        for (const opt of options) {
+          // Check distractor_type on wrong options
+          if (!opt.correct && !opt.distractor_type) {
+            result.issues.push(`Step ${i} (mcq): wrong option missing distractor_type`);
+          }
+          // Check wrong feedback length (aligned with validateAndNormalize threshold of 50 chars)
+          if (!opt.correct) {
+            const len = opt.feedback.trim().length;
+            if (len < 50) {
+              result.issues.push(`Step ${i} (mcq): wrong feedback only ${len} chars (need 50+)`);
+              result.passed = false;
+            }
+          }
+        }
+        break;
+      }
+      case "claim": {
+        const claim = step.claim;
+        if (!claim) {
+          result.issues.push(`Step ${i} (claim): missing claim object`);
+          result.passed = false;
+          break;
+        }
+        if (!claim.statement || !claim.statement.trim()) {
+          result.issues.push(`Step ${i} (claim): missing statement`);
+          result.passed = false;
+        }
+        if (typeof claim.isTrap !== "boolean") {
+          result.issues.push(`Step ${i} (claim): isTrap is not a boolean`);
+          result.passed = false;
+        }
+        if (!claim.feedbackTrap || !claim.feedbackTrap.trim()) {
+          result.issues.push(`Step ${i} (claim): missing feedbackTrap`);
+          result.passed = false;
+        }
+        if (!claim.feedbackSound || !claim.feedbackSound.trim()) {
+          result.issues.push(`Step ${i} (claim): missing feedbackSound`);
+          result.passed = false;
+        }
+        break;
+      }
+      case "multiselect": {
+        const ms = step.multiselect;
+        if (!ms || !Array.isArray(ms.items) || ms.items.length === 0) {
+          result.issues.push(`Step ${i} (multiselect): missing items`);
+          result.passed = false;
+          break;
+        }
+        const mattersCount = ms.items.filter((it) => it.matters === true).length;
+        const notMattersCount = ms.items.filter((it) => it.matters === false).length;
+        if (mattersCount < 1) {
+          result.issues.push(`Step ${i} (multiselect): needs >=1 item that matters`);
+          result.passed = false;
+        }
+        if (notMattersCount < 1) {
+          result.issues.push(`Step ${i} (multiselect): needs >=1 item that does not matter`);
+          result.passed = false;
+        }
+        break;
+      }
+      case "build": {
+        const build = step.build;
+        if (!build) {
+          result.issues.push(`Step ${i} (build): missing build object`);
+          result.passed = false;
+          break;
+        }
+        if (!Array.isArray(build.tiles) || build.tiles.length === 0) {
+          result.issues.push(`Step ${i} (build): missing tiles`);
+          result.passed = false;
+        }
+        if (!Array.isArray(build.accepted) || build.accepted.length < 1) {
+          result.issues.push(`Step ${i} (build): needs >=1 accepted arrangement`);
+          result.passed = false;
+        }
+        if (!Array.isArray(build.distractors) || build.distractors.length < 1) {
+          result.issues.push(`Step ${i} (build): needs >=1 distractor`);
+          result.passed = false;
+        }
+        break;
       }
     }
   }
 
-  // Check if final answer is referenced in the step chain
+  // Check if final answer is referenced in the step chain (mcq correct options only;
+  // other formats derive the answer implicitly so this remains a soft warning).
   const finalAnswer = problem.final_answer.toLowerCase().trim();
   const allCorrectTexts = newFlow.steps
-    .flatMap((s) => s.options.filter((o) => o.correct).map((o) => o.text.toLowerCase() + " " + o.feedback.toLowerCase()));
+    .filter((s) => getStepFormat(s) === "mcq")
+    .flatMap((s) =>
+      (s.options ?? [])
+        .filter((o) => o.correct)
+        .map((o) => o.text.toLowerCase() + " " + o.feedback.toLowerCase())
+    );
   const answerReferenced = allCorrectTexts.some((t) => {
     // Check for numeric/symbolic containment (fuzzy)
     const shortAnswer = finalAnswer.replace(/[^a-z0-9./-]/g, "");
@@ -231,7 +317,7 @@ async function main() {
       };
 
       const newFlow = await regenerateSteps(input);
-      const audit = auditSolutionFlow(problem, newFlow as { steps: Array<{ type: string; options: Array<{ correct: boolean; feedback: string; distractor_type?: string; text: string }> }> });
+      const audit = auditSolutionFlow(problem, newFlow as unknown as { steps: Step[] });
       results.push(audit);
 
       if (audit.passed) {

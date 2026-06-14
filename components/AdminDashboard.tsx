@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import MathText from "@/components/MathText";
 import { TOPIC_SUGGESTIONS } from "@/lib/constants";
+import { Step, getStepFormat } from "@/lib/types";
 
 interface Problem {
   id: string;
@@ -15,16 +16,20 @@ interface Problem {
   final_answer: string;
   status: string;
   solution_flow: {
-    steps: Array<{
-      type: string;
-      label: string;
-      icon: string;
-      prompt: string;
-      options: Array<{ text: string; correct: boolean; feedback: string }>;
-      tip: string;
-    }>;
+    steps: Step[];
   };
   created_at: string;
+}
+
+interface Student {
+  id: string;
+  email: string;
+  name: string | null;
+  total_xp: number;
+  current_streak: number;
+  last_login: string | null;
+  created_at: string;
+  problems_attempted: number;
 }
 
 const SUBJECTS = [
@@ -48,6 +53,9 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }
 };
 
 export default function AdminPage() {
+  // Active dashboard tab
+  const [tab, setTab] = useState<"problems" | "students">("problems");
+
   // Generation form state
   const [subject, setSubject] = useState("mechanics");
   const [topic, setTopic] = useState("");
@@ -61,6 +69,10 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Students list state
+  const [students, setStudents] = useState<Student[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(true);
 
   const fetchProblems = useCallback(async () => {
     setLoading(true);
@@ -80,6 +92,24 @@ export default function AdminPage() {
   useEffect(() => {
     fetchProblems();
   }, [fetchProblems]);
+
+  const fetchStudents = useCallback(async () => {
+    setStudentsLoading(true);
+    try {
+      const res = await fetch("/api/admin/students");
+      const data = await res.json();
+      setStudents(Array.isArray(data) ? data : []);
+    } catch {
+      setStudents([]);
+    }
+    setStudentsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (tab === "students") {
+      fetchStudents();
+    }
+  }, [tab, fetchStudents]);
 
   async function handleGenerate() {
     if (!topic.trim()) {
@@ -134,10 +164,12 @@ export default function AdminPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black" style={{ color: "#e5e5e5" }}>
-              Problem Generator
+              {tab === "problems" ? "Problem Generator" : "Students"}
             </h1>
             <p className="text-sm mt-1" style={{ color: "#6b6b80" }}>
-              AI-powered physics problem creation
+              {tab === "problems"
+                ? "AI-powered physics problem creation"
+                : "Registered students and their activity"}
             </p>
           </div>
           <a
@@ -149,6 +181,34 @@ export default function AdminPage() {
           </a>
         </div>
 
+        {/* Tab switcher */}
+        <div className="flex gap-2">
+          {([
+            { key: "problems", label: "Problems" },
+            { key: "students", label: "Students" },
+          ] as const).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="px-4 py-2 rounded-xl text-sm font-black"
+              style={{
+                background: tab === t.key ? "#7c3aed" : "#1a1a2e",
+                color: tab === t.key ? "#fff" : "#afafbf",
+                border: tab === t.key ? "none" : "2px solid #2a2a40",
+                cursor: "pointer",
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "students" && (
+          <StudentsList students={students} loading={studentsLoading} />
+        )}
+
+        {tab === "problems" && (
+        <>
         {/* Generation Form */}
         <div
           className="rounded-2xl p-5 flex flex-col gap-4"
@@ -345,7 +405,179 @@ export default function AdminPage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
+    </div>
+  );
+}
+
+// Formats an ISO date string as a short, human-readable date. Returns "—" for
+// null/invalid values so empty cells read cleanly in the roster.
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+// Admin-only roster of registered students and their activity.
+function StudentsList({ students, loading }: { students: Student[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: "#1a1a2e" }} />
+        ))}
+      </div>
+    );
+  }
+
+  if (students.length === 0) {
+    return (
+      <p className="text-center py-8 text-sm font-semibold" style={{ color: "#6b6b80" }}>
+        No students yet
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="text-sm font-black uppercase" style={{ color: "#7c3aed", letterSpacing: "1.5px" }}>
+        Students ({students.length})
+      </h2>
+      <div className="flex flex-col gap-3">
+        {students.map((s) => (
+          <div
+            key={s.id}
+            className="rounded-2xl p-4 flex flex-col gap-2"
+            style={{ background: "#1a1a2e", border: "2px solid #2a2a40" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-black truncate" style={{ color: "#e5e5e5" }}>
+                  {s.name || "Unnamed"}
+                </span>
+                <span className="text-xs truncate" style={{ color: "#afafbf" }}>
+                  {s.email}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-base">⚡</span>
+                <span className="text-sm font-black" style={{ color: "#ffc800" }}>
+                  {s.total_xp} XP
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs" style={{ color: "#6b6b80" }}>
+              <span>🔥 {s.current_streak} day streak</span>
+              <span>📝 {s.problems_attempted} attempted</span>
+              <span>Joined {formatDate(s.created_at)}</span>
+              <span>Last login {formatDate(s.last_login)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Read-only, format-aware preview of a single solution step for the admin list.
+function StepPreview({ step }: { step: Step }) {
+  const format = getStepFormat(step);
+
+  if (format === "claim" && step.claim) {
+    const { statement, isTrap } = step.claim;
+    return (
+      <div className="flex flex-col gap-1.5 mt-2">
+        <MathText
+          text={statement}
+          className="text-xs italic"
+          style={{ color: "#e5e5e5" }}
+        />
+        <div className="flex flex-col gap-1">
+          <div className="flex items-start gap-1.5">
+            <span className="text-xs mt-0.5" style={{ color: isTrap ? "#ff4b4b" : "#34d399" }}>
+              {isTrap ? "✗" : "✓"}
+            </span>
+            <span className="text-xs" style={{ color: isTrap ? "#afafbf" : "#34d399" }}>
+              SOUND RIGHT
+            </span>
+          </div>
+          <div className="flex items-start gap-1.5">
+            <span className="text-xs mt-0.5" style={{ color: isTrap ? "#34d399" : "#ff4b4b" }}>
+              {isTrap ? "✓" : "✗"}
+            </span>
+            <span className="text-xs" style={{ color: isTrap ? "#34d399" : "#afafbf" }}>
+              IT&apos;S A TRAP
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (format === "multiselect" && step.multiselect) {
+    return (
+      <div className="flex flex-col gap-1 mt-2">
+        {step.multiselect.items.map((item, j) => (
+          <div key={j} className="flex items-start gap-1.5">
+            <span className="text-xs mt-0.5" style={{ color: item.matters ? "#34d399" : "#ff4b4b" }}>
+              {item.matters ? "✓" : "✗"}
+            </span>
+            <MathText
+              text={item.text}
+              className="text-xs"
+              style={{ color: item.matters ? "#34d399" : "#afafbf" }}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (format === "build" && step.build) {
+    const { tiles, accepted } = step.build;
+    return (
+      <div className="flex flex-col gap-1.5 mt-2">
+        <div className="flex flex-wrap gap-1">
+          {tiles.map((tile, j) => (
+            <span
+              key={j}
+              className="px-2 py-0.5 rounded-md text-xs"
+              style={{ background: "#1a1a2e", border: "1px solid #2a2a40", color: "#e5e5e5" }}
+            >
+              <MathText text={tile} className="text-xs" />
+            </span>
+          ))}
+        </div>
+        {accepted[0] && (
+          <div className="flex items-start gap-1.5">
+            <span className="text-xs mt-0.5" style={{ color: "#34d399" }}>✓</span>
+            <span className="text-xs" style={{ color: "#34d399" }}>
+              <MathText text={accepted[0].join("  ")} className="text-xs" />
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // mcq (and legacy) — unchanged options rendering.
+  return (
+    <div className="flex flex-col gap-1 mt-2">
+      {(step.options ?? []).map((opt, j) => (
+        <div key={j} className="flex items-start gap-1.5">
+          <span className="text-xs mt-0.5" style={{ color: opt.correct ? "#34d399" : "#ff4b4b" }}>
+            {opt.correct ? "✓" : "✗"}
+          </span>
+          <MathText
+            text={opt.text}
+            className="text-xs"
+            style={{ color: opt.correct ? "#34d399" : "#afafbf" }}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -455,20 +687,7 @@ function ProblemRow({
                     className="text-sm font-semibold leading-snug"
                     style={{ color: "#e5e5e5" }}
                   />
-                  <div className="flex flex-col gap-1 mt-2">
-                    {step.options.map((opt, j) => (
-                      <div key={j} className="flex items-start gap-1.5">
-                        <span className="text-xs mt-0.5" style={{ color: opt.correct ? "#34d399" : "#ff4b4b" }}>
-                          {opt.correct ? "✓" : "✗"}
-                        </span>
-                        <MathText
-                          text={opt.text}
-                          className="text-xs"
-                          style={{ color: opt.correct ? "#34d399" : "#afafbf" }}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <StepPreview step={step} />
                   {step.tip && (
                     <p className="text-xs mt-2 italic" style={{ color: "#ffc800" }}>
                       Tip: {step.tip}

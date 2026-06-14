@@ -16,15 +16,19 @@ describe("isAdmin", () => {
     expect(isAdmin(undefined)).toBe(false);
   });
 
-  it("returns true for any email when ADMIN_EMAILS is not set", () => {
+  it("returns false for any email when ADMIN_EMAILS is not set (fail-closed)", () => {
     delete process.env.ADMIN_EMAILS;
-    expect(isAdmin("anyone@example.com")).toBe(true);
+    expect(isAdmin("anyone@example.com")).toBe(false);
   });
 
-  it("returns false for any email when ADMIN_EMAILS is empty string", () => {
-    // Empty string is falsy, so no allowlist = allow all
+  it("returns false for any email when ADMIN_EMAILS is empty string (fail-closed)", () => {
     process.env.ADMIN_EMAILS = "";
-    expect(isAdmin("anyone@example.com")).toBe(true);
+    expect(isAdmin("anyone@example.com")).toBe(false);
+  });
+
+  it("returns false when ADMIN_EMAILS is only whitespace/commas (fail-closed)", () => {
+    process.env.ADMIN_EMAILS = " , , ";
+    expect(isAdmin("anyone@example.com")).toBe(false);
   });
 
   it("returns true for an email in the allowlist", () => {

@@ -3,19 +3,114 @@ export type Difficulty = "class_11" | "class_12" | "college";
 export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why";
 export type ProblemStatus = "draft" | "approved" | "published" | "rejected";
 
+/**
+ * The interaction mechanic a step renders with. Derived deterministically from
+ * the step's `type` (see `formatForType`) — the LLM never picks this directly.
+ */
+export type StepFormat = "mcq" | "claim" | "multiselect" | "build";
+
 export interface StepOption {
   text: string;
   correct: boolean;
   feedback: string;
+  distractor_type?: "misconception" | "procedural_slip" | "half_right";
+}
+
+/** Claim-or-Trap mechanic: one bold statement, the student taps "sound right" or "it's a trap". */
+export interface ClaimData {
+  statement: string;
+  /** When true, the correct answer is "IT'S A TRAP". */
+  isTrap: boolean;
+  /** Feedback shown when the student taps "IT'S A TRAP". */
+  feedbackTrap: string;
+  /** Feedback shown when the student taps "SOUND RIGHT". */
+  feedbackSound: string;
+}
+
+export interface MultiSelectItem {
+  text: string;
+  /** Whether this quantity actually matters for the problem. */
+  matters: boolean;
+}
+
+/** Multi-select mechanic: tap the quantities/items that actually matter. */
+export interface MultiSelectData {
+  items: MultiSelectItem[];
+  feedbackCorrect: string;
+  feedbackWrong: string;
+}
+
+/** Build mechanic: tap tiles into order to construct the equation/setup. */
+export interface BuildData {
+  /** Tray tokens (LaTeX/text). Must be unique; includes distractor tiles. */
+  tiles: string[];
+  /** One or more accepted ordered arrangements; each is a subset of `tiles`. */
+  accepted: string[][];
+  /** Misconception feedback keyed to specific distractor tiles. */
+  distractors: { tile: string; feedback: string }[];
+  feedbackCorrect: string;
+  feedbackWrong: string;
 }
 
 export interface Step {
   type: StepType;
+  /** Optional; when absent the renderer resolves it via `getStepFormat`. */
+  format?: StepFormat;
   label: string;
   icon: string;
   prompt: string;
-  options: StepOption[];
+  /** Present for `mcq` steps (exactly 4 options). */
+  options?: StepOption[];
+  claim?: ClaimData;
+  multiselect?: MultiSelectData;
+  build?: BuildData;
   tip: string;
+}
+
+export const VALID_STEP_TYPES: StepType[] = [
+  "trap",
+  "identify",
+  "principle",
+  "setup",
+  "connect",
+  "why",
+  "sanity",
+];
+
+/**
+ * Canonical step-type → format map. Used by the generator and by validation,
+ * which always overwrites `step.format` from the step's `type`.
+ */
+export function formatForType(type: StepType): StepFormat {
+  switch (type) {
+    case "trap":
+      return "claim";
+    case "identify":
+      return "multiselect";
+    case "setup":
+      return "build";
+    case "principle":
+    case "connect":
+    case "why":
+    case "sanity":
+      return "mcq";
+    default:
+      return "mcq";
+  }
+}
+
+/**
+ * Shape-aware runtime resolver. Reads the data actually present on a step so
+ * that legacy/unregenerated MCQ steps (which have `options` but no `format`)
+ * still render as `mcq` instead of being mis-resolved from their `type`.
+ */
+export function getStepFormat(step: Step): StepFormat {
+  if (step.format) return step.format;
+  if (step.claim) return "claim";
+  if (step.multiselect) return "multiselect";
+  if (step.build) return "build";
+  if (step.options && step.options.length > 0) return "mcq";
+  return VALID_STEP_TYPES.includes(step.type) ? formatForType(step.type) : "mcq";
 }
 
 export interface SolutionFlow {

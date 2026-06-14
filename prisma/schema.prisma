@@ -17,6 +17,7 @@ model users {
   current_streak   Int       @default(0)
   longest_streak   Int       @default(0)
   last_active_date DateTime? @db.Date
+  last_login       DateTime? @db.Timestamptz(6)
   created_at       DateTime  @default(now()) @db.Timestamptz(6)
   attempts         attempts[]
 }

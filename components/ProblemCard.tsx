@@ -9,7 +9,7 @@ const STEP_ICONS: Record<string, string> = {
   principle: "⚡",
   setup: "🔧",
   sanity: "🧪",
-  connect: "🔗",
+  connect: "🧩",
   why: "💡",
 };
 
