@@ -28,7 +28,10 @@ STEP TYPES — choose the right ones based on the problem's structure:
 
 1. "trap" (⚠️ SPOT THE TRAP)
    Purpose: Expose the #1 mistake students make on this problem type.
-   The trap must be a REAL, SPECIFIC mistake — not a generic warning.
+   USE ONLY WHEN A REAL, SPECIFIC TRAP EXISTS. Not every problem is a trick/trap
+   problem — if there is no genuine, classic trap, do NOT invent one; use an
+   identify/principle step instead.
+   When you do use it, the trap must be a REAL, SPECIFIC mistake — not a generic warning.
    Use varied, creative hooks — do NOT always say "Most students get this wrong because..."
    Example hooks: "Before you start calculating, there's a hidden assumption here...", "This problem looks straightforward, but there's a catch...", "What's the first thing you'd instinctively do? That might be wrong..."
    Example traps: using wrong formula, forgetting unit conversion, confusing similar concepts, applying a formula outside its valid range.
@@ -58,31 +61,64 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Verify the answer makes physical sense. ALWAYS the LAST step.
    Check: units, limiting cases, order of magnitude, physical intuition.
 
-FIRST STEP VARIETY:
-Problems should NOT always start with a "trap" step. Vary the opening step type based on what best hooks the student into the problem. Good openers include:
-- "trap" — but with varied phrasing, NOT always "Most students get this wrong..." Use creative hooks like:
-  "Before you start calculating, there's a hidden assumption here..."
-  "This problem looks straightforward, but there's a catch..."
-  "What's the first thing you'd instinctively do? That might be wrong..."
-- "identify" — "What's the key insight that unlocks this problem?", "Before diving into equations, what's really going on here?"
-- "principle" — "Which physics framework should you reach for?", "Two laws seem to apply here. Which one actually works?"
-- "why" — "Before solving, let's build intuition. What should the answer look like?"
-Pick the best opener based on the problem's structure, not by defaulting to trap every time.
+FIRST STEP VARIETY — OPEN ON "HOW DO I START / WHAT'S THE KEY?":
+The opening step's real job is to make the student think about HOW to approach the
+problem — the KEY to cracking it. Almost every physics problem has a key: a key
+formula, a key equation, a key concept, or a governing principle. The opener should
+surface that "way in", NOT default to a trap. Many problems are NOT trick/trap
+problems at all — do NOT force trap framing onto them.
+
+Pick the opener type that matches what THIS problem actually demands:
+- "identify" — surface the key insight / what actually matters: "What's the key
+  quantity that unlocks this problem?", "Before diving into equations, what is the
+  problem really asking for?"
+- "principle" — surface the governing law/equation to reach for first: "Which
+  principle governs this situation?", "Two laws seem to apply — which one actually
+  controls the answer here?"
+- "trap" — ONLY when a real, specific trap genuinely exists for this problem. Use
+  varied phrasing, never the canned "Most students get this wrong...". e.g.
+  "Your gut says the field is strongest in the middle — but is it?"
+- "why" — when intuition is the hook: "Before solving, what should the answer look
+  like in the limit?"
+Default toward identify/principle openers (the "key" framing). Use trap openers
+only when the problem truly has a classic trap — not as a habit.
 `;
 
 // ─── PER-FORMAT CONTENT + HOOK + DISTRACTOR RULES ────────────────────────────
 
 const PER_FORMAT_GUIDE = `
-STEP 1 HOOK (HARD REQUIREMENT):
-The FIRST step's "prompt" MUST open with a punchy, problem-specific line that
-names what the student would INSTINCTIVELY (and wrongly) do on THIS exact problem,
-and creates tension ("...but that's exactly the trap", "...and that's where most
-people lose the marks"). It must be at least 40 characters and must be DIFFERENT
-for every problem — there is NO fixed canned sentence. Do NOT reuse a template
-like "Most students get this wrong because...". Write a fresh, specific opener
-that could only belong to THIS problem.
-(The FIRST STEP VARIETY rule above still applies: the opener may be a trap,
-identify, principle, or why step — do NOT force a trap-first opener.)
+EVERY STEP — REQUIRED FIELDS (ALL FORMATS):
+Regardless of format (claim, multiselect, build, or options), EVERY step object
+MUST include ALL of these top-level fields: "type", "label", "icon", "prompt",
+and "tip". The "tip" field is MANDATORY on every single step — a one-sentence
+rule-of-thumb the student can reuse. Do NOT omit "tip" on trap/identify/setup
+steps just because they carry a claim/multiselect/build object. A step missing
+"tip" is INVALID and will be rejected.
+
+STEP 1 HOOK (HARD REQUIREMENT) — FRAME THE "HOW DO I START?" MOMENT:
+The FIRST step's "prompt" MUST open with a punchy, problem-specific line that makes
+the student think about HOW TO APPROACH this problem — what the KEY to cracking it
+is. Almost every physics problem has a "key": the key formula, the key equation,
+the key concept, or the governing principle (sometimes a formula AND an equation,
+sometimes a principle). The opener's job is to make the student commit to a way IN.
+It must be at least 40 characters, must be DIFFERENT for every problem, and must be
+specific enough that it could only belong to THIS problem. There is NO fixed canned
+sentence — do NOT reuse a template like "Most students get this wrong because...".
+
+NOT EVERY PROBLEM IS A TRAP/TRICK PROBLEM. Do NOT default to "what would you
+instinctively (and wrongly) do" or "...that's exactly the trap" framing. Only use
+trap/instinct/"lose the marks" tension when the opener is genuinely a "trap" step
+(type "trap") AND a real, specific trap actually exists for this problem.
+
+Choose the opener that best matches what this problem actually demands:
+- If the hard part is REACHING for the right tool → open on the KEY: "What's the
+  governing principle / key equation you reach for first here?" (identify / principle).
+- If the hard part is SEPARATING signal from noise → open on what matters
+  (identify / multiselect).
+- If there IS a classic, specific trap → open on it (trap / claim) with fresh
+  tension wording.
+The unifying goal: by the end of step 1 the student has consciously chosen HOW to
+start, not just answered a quiz question.
 
 SAME-FAMILY DISTRACTORS (HARD REQUIREMENT):
 Every wrong option, wrong tile, and non-mattering item MUST be a mistake a
@@ -400,24 +436,25 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
 - Use 5 steps. Focus on building correct problem-solving habits.
-- Start with the step type that best hooks the student into the problem.
-- The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
+- Open on the KEY: start with the opener (identify or principle) that makes the student think about how to approach this problem. Use a trap opener only if this problem has a genuine, classic trap.
+- If a trap step is present, it should target the most common beginner mistake (wrong units, wrong formula, sign errors).
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Recommended step pattern: identify/trap/principle → principle → setup → connect → sanity`,
+- Recommended step pattern: identify/principle (the "key") → principle → setup → connect → sanity. Insert a trap step only when a real trap exists.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
 - Use 5 steps. Problems should require multi-step reasoning.
-- Start with the step type that best hooks the student into the problem.
-- The trap step should target a subtle conceptual error (not just arithmetic).
+- Open on the KEY: start with the opener (identify or principle) that makes the student think about how to approach this problem. Use a trap opener only if this problem has a genuine, classic trap.
+- If a trap step is present, it should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: identify/trap/principle → identify → setup → connect → sanity`,
+- Recommended step pattern: identify/principle (the "key") → identify → setup → connect → sanity. Insert a trap step only when a real trap exists.`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
 - Use 5-6 steps. Problems should require deep physical insight.
+- Open on the KEY: start with the opener (identify or principle) that surfaces the governing principle or key insight. Use a trap opener only if this problem has a genuine, sophisticated trap.
 - Include a "why" step to explain the deeper physics behind a key result.
-- The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
+- If a trap step is present, it should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
 - Recommended step pattern: identify → principle → setup → connect → why → sanity`,
@@ -589,7 +626,7 @@ CRITICAL QUALITY RULES:
    - Steps must form a logical narrative. Each step's answer feeds into the next step.
    - The student should feel like they're being guided by an expert tutor, not quizzed randomly.
    - Never ask a step that doesn't contribute to reaching the final answer.
-   - The first step should address the biggest obstacle (usually the trap or identifying the key insight).
+   - The first step should make the student think about how to START — surfacing the KEY (the key formula, equation, concept, or governing principle). Only frame it as a trap when this problem genuinely has one.
    - Cognitive scaffolding: use the "fading" principle — give more support in early steps, less in later steps. Each step should require exactly one decision from the student.
 
 3. WRONG ANSWER OPTIONS — THIS IS THE MOST IMPORTANT PART:

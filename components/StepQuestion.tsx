@@ -101,7 +101,7 @@ export default function StepQuestion({
       case "multiselect":
         return <MultiSelectStep {...childProps} />;
       case "build":
-        return <BuildStep {...childProps} />;
+        return <BuildStep {...childProps} isCorrect={isCorrect} />;
       case "mcq":
       default:
         return <McqStep {...childProps} />;
