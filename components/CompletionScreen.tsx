@@ -6,13 +6,21 @@ import Confetti from "./Confetti";
 import { useRouter } from "next/navigation";
 import MathText from "./MathText";
 
+export interface JourneyStep {
+  icon: string;
+  label: string;
+  tip: string;
+  correct: boolean;
+}
+
 interface CompletionScreenProps {
   stars: number;
   correct: number;
   total: number;
   xpEarned: number;
+  goal: string;
   finalAnswer: string;
-  takeaways: string[];
+  journey: JourneyStep[];
 }
 
 export default function CompletionScreen({
@@ -20,9 +28,11 @@ export default function CompletionScreen({
   correct,
   total,
   xpEarned,
+  goal,
   finalAnswer,
-  takeaways,
+  journey,
 }: CompletionScreenProps) {
+  const missed = journey.filter((s) => !s.correct);
   const [showConfetti, setShowConfetti] = useState(true);
   const router = useRouter();
 
@@ -97,26 +107,102 @@ export default function CompletionScreen({
         />
       </motion.div>
 
-      {/* Takeaways */}
-      {takeaways.length > 0 && (
+      {/* Solution Story — replays the whole journey as one connected method,
+          so the student sees how the steps chained from the goal to the answer
+          rather than as isolated questions. */}
+      {journey.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.1 }}
-          className="w-full rounded-2xl p-4 flex flex-col gap-2"
-          style={{ background: "#1e1a0e", border: "2px solid #ffc800" }}
+          className="w-full rounded-2xl p-4 flex flex-col gap-3"
+          style={{ background: "#1a1a2e", border: "2px solid #2a2a40" }}
         >
-          <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#ffc800", letterSpacing: "1.5px" }}>
-            Key Takeaways
+          <p className="text-xs font-black uppercase tracking-widest" style={{ color: "#afafbf", letterSpacing: "1.5px" }}>
+            How you cracked it
           </p>
-          {takeaways.map((t, i) => (
+
+          <div className="flex items-start gap-2">
+            <span className="text-sm mt-0.5">🎯</span>
+            <MathText
+              text={goal}
+              className="text-sm font-semibold leading-snug"
+              style={{ color: "#afafbf" }}
+            />
+          </div>
+
+          <div className="flex flex-col">
+            {journey.map((s, i) => (
+              <div key={i} className="flex gap-3">
+                {/* Timeline rail */}
+                <div className="flex flex-col items-center">
+                  <div
+                    className="flex items-center justify-center rounded-full shrink-0"
+                    style={{
+                      width: 26,
+                      height: 26,
+                      fontSize: "12px",
+                      background: s.correct ? "#1e2a14" : "#2a1414",
+                      border: `2px solid ${s.correct ? "#58cc02" : "#ff4b4b"}`,
+                    }}
+                  >
+                    {s.correct ? "✓" : "✗"}
+                  </div>
+                  {i < journey.length - 1 && (
+                    <div className="w-0.5 flex-1 my-1" style={{ background: "#2a2a40", minHeight: 18 }} />
+                  )}
+                </div>
+                {/* Step content */}
+                <div className="flex flex-col pb-3">
+                  <span
+                    className="text-xs font-black uppercase"
+                    style={{ color: s.correct ? "#58cc02" : "#ff4b4b", letterSpacing: "0.8px", fontSize: "10px" }}
+                  >
+                    {s.icon} {s.label}
+                  </span>
+                  {s.tip && (
+                    <MathText
+                      text={s.tip}
+                      className="text-sm font-medium leading-snug mt-0.5"
+                      style={{ color: "#e5e5e5" }}
+                    />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Where you stumbled / what to improve — only when steps were missed.
+          Surfaces the exact misses + their fixes so the recap doubles as
+          targeted metacognition. */}
+      {missed.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+          className="w-full rounded-2xl p-4 flex flex-col gap-2"
+          style={{ background: "#2a1414", border: "2px solid #ff4b4b" }}
+        >
+          <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: "#ff7b7b", letterSpacing: "1.5px" }}>
+            Where to improve
+          </p>
+          {missed.map((s, i) => (
             <div key={i} className="flex items-start gap-2">
-              <span className="text-sm mt-0.5">💡</span>
-              <MathText
-                text={t}
-                className="text-sm font-semibold leading-relaxed"
-                style={{ color: "#e5e5e5" }}
-              />
+              <span className="text-sm mt-0.5">🔁</span>
+              <div className="flex flex-col">
+                <span className="text-xs font-black uppercase" style={{ color: "#ff7b7b", letterSpacing: "0.5px", fontSize: "10px" }}>
+                  {s.label}
+                </span>
+                {s.tip && (
+                  <MathText
+                    text={s.tip}
+                    className="text-sm font-semibold leading-relaxed mt-0.5"
+                    style={{ color: "#e5e5e5" }}
+                  />
+                )}
+              </div>
             </div>
           ))}
         </motion.div>

@@ -5,24 +5,28 @@
  * that are allowed to access admin routes. Example:
  *   ADMIN_EMAILS=alice@example.com,bob@example.com
  *
- * If ADMIN_EMAILS is not set, ALL authenticated users are treated as admins
- * (useful during development, but should be locked down in production).
+ * SECURITY: This check is fail-closed. If ADMIN_EMAILS is not set (or is empty),
+ * NO user is treated as an admin — admin routes and the admin UI are locked for
+ * everyone. This is intentional so that a missing/blank config never silently
+ * grants admin access to all students.
  */
 export function isAdmin(email: string | undefined): boolean {
   if (!email) return false;
 
   const allowlist = process.env.ADMIN_EMAILS;
-  if (!allowlist) {
-    // No allowlist configured — allow all authenticated users (dev mode)
-    if (process.env.NODE_ENV === "production") {
-      console.warn(
-        "ADMIN_EMAILS is not set — all authenticated users have admin access. " +
-        "Set ADMIN_EMAILS in your environment to restrict admin access in production."
-      );
-    }
-    return true;
+  const admins = (allowlist ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
+
+  if (admins.length === 0) {
+    // No admins configured — fail closed: nobody is an admin.
+    console.warn(
+      "ADMIN_EMAILS is not set — admin access is disabled for everyone. " +
+      "Set ADMIN_EMAILS in your environment to grant admin access."
+    );
+    return false;
   }
 
-  const admins = allowlist.split(",").map((e) => e.trim().toLowerCase());
   return admins.includes(email.toLowerCase());
 }

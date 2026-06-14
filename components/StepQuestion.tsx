@@ -2,10 +2,15 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Step, StepOption } from "@/lib/types";
+import { Step, getStepFormat } from "@/lib/types";
+import { isAnswerReady, evaluateStep, type Answer } from "@/lib/step-eval";
 import FeedbackCard from "./FeedbackCard";
 import TipCard from "./TipCard";
 import MathText from "./MathText";
+import McqStep from "./steps/McqStep";
+import ClaimStep from "./steps/ClaimStep";
+import MultiSelectStep from "./steps/MultiSelectStep";
+import BuildStep from "./steps/BuildStep";
 
 const STEP_COLORS: Record<string, string> = {
   trap: "#ff4b4b",
@@ -42,19 +47,31 @@ export default function StepQuestion({
   isLast,
   onNext,
 }: StepQuestionProps) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [answer, setAnswer] = useState<Answer | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const [shake, setShake] = useState(false);
+  const [result, setResult] = useState<{ correct: boolean; feedback: string } | null>(
+    null
+  );
 
   const color = STEP_COLORS[step.type] ?? "#afafbf";
   const bg = STEP_BG[step.type] ?? "#1a1a2e";
+  const format = getStepFormat(step);
+
+  const ready = isAnswerReady(step, answer);
+
+  function handleAnswerChange(next: Answer) {
+    if (submitted) return;
+    setAnswer(next);
+  }
 
   function handleCheck() {
-    if (selected === null) return;
+    if (!ready || answer === null) return;
+    const evaluated = evaluateStep(step, answer);
+    setResult(evaluated);
     setSubmitted(true);
-    const correct = step.options[selected].correct;
-    if (!correct) {
+    if (!evaluated.correct) {
       setShake(true);
       setTimeout(() => setShake(false), 420);
     }
@@ -65,12 +82,31 @@ export default function StepQuestion({
       setShowTip(true);
       return;
     }
-    const correct = selected !== null && step.options[selected].correct;
-    onNext(correct);
+    onNext(result?.correct ?? false);
   }
 
-  const isCorrect = submitted && selected !== null && step.options[selected].correct;
-  const selectedOption: StepOption | null = selected !== null ? step.options[selected] : null;
+  const isCorrect = submitted && (result?.correct ?? false);
+
+  function renderStep() {
+    const childProps = {
+      step,
+      answer,
+      submitted,
+      color,
+      onAnswerChange: handleAnswerChange,
+    };
+    switch (format) {
+      case "claim":
+        return <ClaimStep {...childProps} />;
+      case "multiselect":
+        return <MultiSelectStep {...childProps} />;
+      case "build":
+        return <BuildStep {...childProps} />;
+      case "mcq":
+      default:
+        return <McqStep {...childProps} />;
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 pb-4">
@@ -100,78 +136,13 @@ export default function StepQuestion({
         />
       </motion.div>
 
-      {/* Options */}
-      <div className="flex flex-col gap-3 mt-1">
-        {step.options.map((option, i) => {
-          let borderColor = "#37374a";
-          let bg = "#1a1a2e";
-          let textColor = "#e5e5e5";
-          let radioFill = "transparent";
-          let indicator = "";
-
-          if (submitted) {
-            if (option.correct) {
-              borderColor = "#7c3aed";
-              bg = "#1a0829";
-              radioFill = "#7c3aed";
-              indicator = "✓";
-            } else if (i === selected && !option.correct) {
-              borderColor = "#ff4b4b";
-              bg = "#2e1a1a";
-              radioFill = "#ff4b4b";
-              indicator = "✗";
-              textColor = "#ff4b4b";
-            }
-          } else if (i === selected) {
-            borderColor = color;
-            radioFill = color;
-          }
-
-          return (
-            <button
-              key={i}
-              onClick={() => !submitted && setSelected(i)}
-              disabled={submitted}
-              className="flex items-center gap-3 text-left w-full p-4 rounded-2xl transition-all"
-              style={{
-                background: bg,
-                border: `2px solid ${borderColor}`,
-                cursor: submitted ? "default" : "pointer",
-              }}
-            >
-              {/* Radio circle */}
-              <div
-                className="shrink-0 flex items-center justify-center"
-                style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: "50%",
-                  border: `2.5px solid ${borderColor}`,
-                  background: radioFill,
-                  color: "#fff",
-                  fontSize: 12,
-                  fontWeight: 900,
-                }}
-              >
-                {indicator}
-              </div>
-              <MathText
-                text={option.text}
-                className="text-sm font-semibold leading-snug"
-                style={{ color: textColor }}
-              />
-            </button>
-          );
-        })}
-      </div>
+      {/* Format-specific interaction */}
+      {renderStep()}
 
       {/* Feedback + tip */}
       <AnimatePresence>
-        {submitted && selectedOption && (
-          <FeedbackCard
-            correct={isCorrect}
-            feedback={selectedOption.feedback}
-          />
+        {submitted && result && (
+          <FeedbackCard correct={isCorrect} feedback={result.feedback} />
         )}
         {showTip && <TipCard tip={step.tip} />}
       </AnimatePresence>
@@ -181,16 +152,16 @@ export default function StepQuestion({
         {!submitted ? (
           <button
             onClick={handleCheck}
-            disabled={selected === null}
+            disabled={!ready}
             className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
             style={{
-              background: selected === null ? "#2a2a40" : "#7c3aed",
-              color: selected === null ? "#6b6b80" : "#fff",
-              boxShadow: selected === null ? "0 5px 0 #1a1a30" : "0 5px 0 #5b21b6",
+              background: !ready ? "#2a2a40" : "#7c3aed",
+              color: !ready ? "#6b6b80" : "#fff",
+              boxShadow: !ready ? "0 5px 0 #1a1a30" : "0 5px 0 #5b21b6",
               letterSpacing: "1.5px",
               fontSize: "13px",
               border: "none",
-              cursor: selected === null ? "not-allowed" : "pointer",
+              cursor: !ready ? "not-allowed" : "pointer",
               transition: "all 0.15s ease",
             }}
           >

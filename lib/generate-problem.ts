@@ -1,4 +1,10 @@
 import OpenAI from "openai";
+import {
+  formatForType,
+  StepFormat,
+  StepType,
+  VALID_STEP_TYPES,
+} from "@/lib/types";
 
 let _client: OpenAI | null = null;
 
@@ -64,6 +70,76 @@ Problems should NOT always start with a "trap" step. Vary the opening step type 
 Pick the best opener based on the problem's structure, not by defaulting to trap every time.
 `;
 
+// ─── PER-FORMAT CONTENT + HOOK + DISTRACTOR RULES ────────────────────────────
+
+const PER_FORMAT_GUIDE = `
+STEP 1 HOOK (HARD REQUIREMENT):
+The FIRST step's "prompt" MUST open with a punchy, problem-specific line that
+names what the student would INSTINCTIVELY (and wrongly) do on THIS exact problem,
+and creates tension ("...but that's exactly the trap", "...and that's where most
+people lose the marks"). It must be at least 40 characters and must be DIFFERENT
+for every problem — there is NO fixed canned sentence. Do NOT reuse a template
+like "Most students get this wrong because...". Write a fresh, specific opener
+that could only belong to THIS problem.
+(The FIRST STEP VARIETY rule above still applies: the opener may be a trap,
+identify, principle, or why step — do NOT force a trap-first opener.)
+
+SAME-FAMILY DISTRACTORS (HARD REQUIREMENT):
+Every wrong option, wrong tile, and non-mattering item MUST be a mistake a
+COMPETENT student could actually make on THIS specific problem. Acceptable
+distractors: balancing the potential V instead of the field E, a sign slip, a
+geometry/component slip, dropping a 1/2 factor, using the wrong-but-related law,
+forgetting a unit conversion that belongs to this problem.
+FORBIDDEN: off-topic throwaway distractors that name an unrelated law or quantity
+from a different topic, or that no competent student working THIS problem would
+ever consider. A distractor that is obviously irrelevant teaches nothing.
+
+  GOOD (on a problem balancing electric force on a charge between plates):
+    "Balance the potential difference V instead of the field E — forgetting that
+     the force depends on E, not V directly."   ← a real, on-topic slip
+  BAD:
+    "Use the ideal gas law PV = nRT."   ← off-topic; nobody solving this would
+     reach for thermodynamics. Never write distractors like this.
+
+PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always options):
+
+* type "trap"  => emit a "claim" object (NO "options"):
+    {
+      "statement": "<the bold claim, stated as if true>",
+      "isTrap": true | false,            // true = the claim is false / a trap
+      "feedbackTrap": "<shown when student taps IT'S A TRAP, 40+ chars>",
+      "feedbackSound": "<shown when student taps SOUNDS RIGHT, 40+ chars>"
+    }
+
+* type "identify"  => emit a "multiselect" object (NO "options"):
+    {
+      "items": [ { "text": "<quantity/fact>", "matters": true|false }, ... ],
+      // 4-6 items; AT LEAST ONE matters:true AND AT LEAST ONE matters:false.
+      // The matters:false items must be plausible same-family red herrings.
+      "feedbackCorrect": "<40+ chars>",
+      "feedbackWrong": "<40+ chars>"
+    }
+
+* type "setup"  => emit a "build" object (NO "options"):
+    {
+      "tiles": [ "<unique token>", ... ],   // 3-10 UNIQUE tokens, incl. 1-3 distractor tiles
+      "accepted": [ [ "<token>", "<token>", ... ] ],
+      // >=1 ordered arrangement; each length >=2; every token must appear in "tiles";
+      // an arrangement must NOT repeat a tile.
+      "distractors": [ { "tile": "<a token from tiles>", "feedback": "<30+ chars>" } ],
+      // 1-3 entries; each "tile" MUST be one of "tiles" and MUST NOT appear in
+      // any accepted arrangement (it is a wrong tile that doesn't belong).
+      "feedbackCorrect": "<40+ chars>",
+      "feedbackWrong": "<40+ chars>"
+    }
+
+* all OTHER types ("principle", "connect", "why", "sanity")  => emit "options":
+    exactly 4 options, exactly 1 correct (the existing MCQ rules below apply).
+
+Do NOT add an "options" array to trap/identify/setup steps, and do NOT add
+claim/multiselect/build objects to the MCQ types.
+`;
+
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
 const EXAMPLE_CLASS_11 = {
@@ -81,14 +157,19 @@ const EXAMPLE_CLASS_11 = {
         type: "identify",
         label: "IDENTIFY THE KEY",
         icon: "🎯",
-        prompt: "Before touching any formula, what's the crucial first move with the given temperature?",
-        options: [
-          { text: "Convert to Kelvin: T = 47 + 273 = 320 K — gas laws need absolute temperature", correct: true, feedback: "Right. Gas law temperatures are ALWAYS in Kelvin. T = 320 K." },
-          { text: "Use 47°C directly — the formula handles any temperature scale", correct: false, feedback: "Gas kinetic theory formulas require absolute temperature (Kelvin). 47°C = 320 K. Using Celsius gives a completely wrong answer because the gas law equations are derived assuming an absolute scale where zero means zero molecular energy.", distractor_type: "misconception" as const },
-          { text: "Identify the molar masses first — temperature conversion isn't needed yet", correct: false, feedback: "Molar masses matter, but the temperature conversion is the critical first step. Every gas law formula uses Kelvin, and skipping this conversion is the #1 source of errors. Convert first: T = 47 + 273 = 320 K, then proceed to set up the equation.", distractor_type: "procedural_slip" as const },
-          { text: "Convert to Fahrenheit first — it's the standard for gas calculations", correct: false, feedback: "Physics uses Kelvin for thermodynamic calculations, never Fahrenheit. The Fahrenheit scale has no physical significance in gas kinetics. Convert: T = 47 + 273 = 320 K.", distractor_type: "half_right" as const }
-        ],
-        tip: "ALL gas law temperatures must be in Kelvin. Always convert first."
+        prompt: "Your instinct is to plug 47 straight into a speed formula — but first, tap every quantity that actually controls the RMS speed here.",
+        multiselect: {
+          items: [
+            { text: "The temperature, converted to Kelvin (47°C = 320 K)", matters: true },
+            { text: "The molar masses of O₂ (32 g/mol) and H₂ (2 g/mol)", matters: true },
+            { text: "The pressure of each gas sample", matters: false },
+            { text: "The number of moles of gas present", matters: false },
+            { text: "The volume of the container", matters: false }
+          ],
+          feedbackCorrect: "Exactly — only the absolute temperature (in Kelvin) and the molar masses set the RMS speed, since v_rms = √(3RT/M).",
+          feedbackWrong: "RMS speed depends only on absolute temperature (Kelvin) and molar mass: v_rms = √(3RT/M). Pressure, volume, and moles never enter."
+        },
+        tip: "ALL gas law temperatures must be in Kelvin. RMS speed depends only on T and M."
       },
       {
         type: "principle",
@@ -107,13 +188,19 @@ const EXAMPLE_CLASS_11 = {
         type: "setup",
         label: "SET UP THE MATH",
         icon: "🔧",
-        prompt: "Which equation setup correctly equates the RMS speeds? $\\sqrt{3R \\times 320/32} = \\sqrt{3RT_{H_2}/2}$",
-        options: [
-          { text: "Cancel 3R, square both sides: 320/32 = T/2, giving T = 20 K", correct: true, feedback: "Clean. The 3R and square root cancel when you equate, leaving 320/32 = T/2." },
-          { text: "Keep the square roots, cross-multiply: T = 320 × 2/32", correct: false, feedback: "You multiplied instead of dividing correctly. When you cross-multiply 320/32 = T/2, you get T = 2 × (320/32) = 2 × 10 = 20 K. The error is in the order of operations — divide first, then multiply. Double-check by substituting back: 320/32 = 10, and 20/2 = 10. ✓", distractor_type: "procedural_slip" as const },
-          { text: "Flip the molar mass ratio: T = 320 × 32/2 = 5120 K", correct: false, feedback: "You flipped the ratio. O₂ (M=32) is heavier than H₂ (M=2), so H₂ needs a MUCH lower temperature to match the same RMS speed. Since v_rms ∝ √(T/M), a 16× lighter molecule needs 16× lower temperature for the same speed. T = 20 K.", distractor_type: "misconception" as const },
-          { text: "The 3R doesn't cancel because the gases are different", correct: false, feedback: "R is the universal gas constant — it's the same for ALL ideal gases regardless of type. The 'universal' in its name means it doesn't depend on the gas species. Both sides have identical 3R factors, so they cancel cleanly. What differs between the gases is M (molar mass) and T.", distractor_type: "half_right" as const }
-        ],
+        prompt: "Build the equation that equates the two RMS speeds. Drag the tiles into the correct order.",
+        build: {
+          tiles: ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$", "$\\times$", "$+ 273$"],
+          accepted: [
+            ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$"]
+          ],
+          distractors: [
+            { tile: "$\\times$", feedback: "You don't multiply the two sides — RMS speeds are set EQUAL, so the relation uses '=', not '×'." },
+            { tile: "$+ 273$", feedback: "The 273 conversion belongs at the END (converting the final K to °C), not inside the speed-balance equation." }
+          ],
+          feedbackCorrect: "Clean. Setting v_rms equal gives 3R(320)/32 = 3RT/2; the 3R cancels, leaving 320/32 = T/2.",
+          feedbackWrong: "Equate the two RMS-speed expressions directly: 3R(320)/32 = 3RT/2. Don't multiply the sides or fold in the 273 yet."
+        },
         tip: "When equating speeds, square both sides first to eliminate the square root."
       },
       {
@@ -158,17 +245,17 @@ const EXAMPLE_COLLEGE = {
   solution_flow: {
     steps: [
       {
-        type: "identify",
-        label: "IDENTIFY THE KEY",
-        icon: "🎯",
-        prompt: "Circular orbit in a central force with given U(r) and angular momentum L. What two conditions pin down the orbit radius?",
-        options: [
-          { text: "Force balance (F = mv²/r) and angular momentum constraint (L = mvr)", correct: true, feedback: "Exactly. Two unknowns (v and r), two equations. This always works for circular orbits in central forces." },
-          { text: "Minimize total energy and set kinetic energy equal to potential", correct: false, feedback: "The virial relation depends on the potential: for inverse-square forces K = -U/2, for harmonic U = kr² it's K = U. You can't blindly apply one to the other. Use force balance + angular momentum conservation.", distractor_type: "misconception" as const },
-          { text: "Set gravitational force equal to centrifugal force", correct: false, feedback: "This isn't gravity — there's no GM/r² force here. U = kr² gives F = -2kr, a completely different force law. The centripetal acceleration condition is correct in principle, but you need to use the actual force from this potential, not assume it's gravitational.", distractor_type: "half_right" as const },
-          { text: "Use conservation of energy alone — total energy E determines r", correct: false, feedback: "Energy conservation gives you one equation with two unknowns (v and r). You need a second constraint to pin down both. Angular momentum L = mvr provides that second equation. Energy alone gives a family of possible orbits, not a unique radius.", distractor_type: "procedural_slip" as const }
-        ],
-        tip: "Circular orbit = force balance + one constraint (usually angular momentum)."
+        type: "trap",
+        label: "SPOT THE TRAP",
+        icon: "⚠️",
+        prompt: "You see a central force and immediately reach for the gravitational orbit formula r = L²/(GMm²) — but U = kr² is a harmonic well, not a 1/r field. Sound right, or is it a trap?",
+        claim: {
+          statement: "Because it's a central-force orbit, you can plug into the standard gravitational result r = L²/(GMm²).",
+          isTrap: true,
+          feedbackTrap: "Correct — it's a trap. U = kr² gives F = -2kr (a linear restoring force), not the -GMm/r² of gravity, so the gravitational orbit formula simply does not apply here.",
+          feedbackSound: "Not quite — this is a trap. The gravitational formula assumes a 1/r² force. Here U = kr² gives F = -2kr, so you must derive the orbit from force balance + angular momentum directly."
+        },
+        tip: "Always read the potential before reusing an orbit formula — 1/r gravity ≠ harmonic kr²."
       },
       {
         type: "principle",
@@ -187,14 +274,20 @@ const EXAMPLE_COLLEGE = {
         type: "setup",
         label: "SET UP THE MATH",
         icon: "🔧",
-        prompt: "Which substitution correctly combines 2kr = mv²/r with L = mvr to eliminate v?",
-        options: [
-          { text: "$v = L/(mr)$ → $v^2 = L^2/(m^2r^2)$ → $2kr = L^2/(mr^3)$ → $r^4 = L^2/(2mk)$", correct: true, feedback: "Perfect substitution. v = L/(mr) → v² = L²/(m²r²). Then 2kr = m·L²/(m²r³) = L²/(mr³)." },
-          { text: "$v = L/(mr)$ → $2kr = L/(mr^2)$ → $r^3 = L/(2mk)$", correct: false, feedback: "You forgot to square v. When substituting v = L/(mr) into mv²/r, you must use v² = L²/(m²r²), not v = L/(mr²). Forgetting to square is a common algebraic slip that changes the power of r in the final answer from r⁴ to r³. Re-substitute carefully.", distractor_type: "procedural_slip" as const },
-          { text: "$v = L/(mr)$ → $2kr^2 = L^2/m$ → $r^2 = L^2/(2mk)$", correct: false, feedback: "Check your algebra. The centripetal term is mv²/r = L²/(mr³), not L²/(mr). When you move terms around, track the powers of r carefully: 2kr = L²/(mr³) gives 2mkr⁴ = L², so r⁴ = L²/(2mk). The r powers matter for the correct exponent in the final answer.", distractor_type: "procedural_slip" as const },
-          { text: "Eliminate v using energy conservation E = ½mv² + kr² instead", correct: false, feedback: "Energy conservation introduces E as an additional unknown, giving you one equation with two unknowns (E and r). The force balance approach is cleaner here because it directly relates the force from the potential to the centripetal requirement, and combined with L = mvr, gives two equations for two unknowns (v and r).", distractor_type: "misconception" as const }
-        ],
-        tip: "When substituting L = mvr, always square v before plugging into F = mv²/r."
+        prompt: "Build the force-balance equation for the circular orbit. Drag the tiles into the correct order.",
+        build: {
+          tiles: ["$2kr$", "=", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"],
+          accepted: [
+            ["$2kr$", "=", "$\\frac{mv^2}{r}$"]
+          ],
+          distractors: [
+            { tile: "$\\frac{GMm}{r^2}$", feedback: "There is no gravitational 1/r² force here — the force comes from U = kr², giving F = 2kr, not GMm/r²." },
+            { tile: "$kr$", feedback: "You dropped the factor of 2. Differentiating U = kr² gives F = -dU/dr = -2kr, so the magnitude is 2kr, not kr." }
+          ],
+          feedbackCorrect: "Perfect. The inward force 2kr (from F = -dU/dr) supplies the centripetal requirement mv²/r.",
+          feedbackWrong: "Balance the actual force from this potential: 2kr = mv²/r. There is no GMm/r² term, and don't drop the factor of 2."
+        },
+        tip: "Force from potential: F = -dU/dr. For U = kr² that is 2kr — keep the factor of 2."
       },
       {
         type: "connect",
@@ -332,6 +425,52 @@ const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
 
 // ─── GENERATION PIPELINE ─────────────────────────────────────────────────────
 
+interface GeneratedOption {
+  text: string;
+  correct: boolean;
+  feedback: string;
+  distractor_type?: "misconception" | "procedural_slip" | "half_right";
+}
+
+interface GeneratedClaim {
+  statement: string;
+  isTrap: boolean;
+  feedbackTrap: string;
+  feedbackSound: string;
+}
+
+interface GeneratedMultiSelectItem {
+  text: string;
+  matters: boolean;
+}
+
+interface GeneratedMultiSelect {
+  items: GeneratedMultiSelectItem[];
+  feedbackCorrect: string;
+  feedbackWrong: string;
+}
+
+interface GeneratedBuild {
+  tiles: string[];
+  accepted: string[][];
+  distractors: { tile: string; feedback: string }[];
+  feedbackCorrect: string;
+  feedbackWrong: string;
+}
+
+interface GeneratedStep {
+  type: string;
+  format?: "mcq" | "claim" | "multiselect" | "build";
+  label: string;
+  icon: string;
+  prompt: string;
+  options?: GeneratedOption[];
+  claim?: GeneratedClaim;
+  multiselect?: GeneratedMultiSelect;
+  build?: GeneratedBuild;
+  tip: string;
+}
+
 interface GeneratedProblem {
   title: string;
   subject: string;
@@ -342,19 +481,7 @@ interface GeneratedProblem {
   final_answer: string;
   diagram_type: null;
   solution_flow: {
-    steps: Array<{
-      type: string;
-      label: string;
-      icon: string;
-      prompt: string;
-      options: Array<{
-        text: string;
-        correct: boolean;
-        feedback: string;
-        distractor_type?: "misconception" | "procedural_slip" | "half_right";
-      }>;
-      tip: string;
-    }>;
+    steps: GeneratedStep[];
   };
 }
 
@@ -433,6 +560,8 @@ Your job is to generate ONE physics problem that teaches students HOW to think, 
 
 ${STEP_TYPE_GUIDE}
 
+${PER_FORMAT_GUIDE}
+
 ${difficultyInstructions}
 ${misconceptionBlock}
 
@@ -491,10 +620,12 @@ CRITICAL QUALITY RULES:
    - "title": Short descriptive title (~80 chars max)
    - "goal": "Find: [answer]" format
    - "final_answer": The numerical/symbolic answer
-   - Last step MUST be type "sanity"
-   - Each step has exactly 4 options: 1 correct, 3 wrong
-   - Each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
-   - Each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
+   - Last step MUST be type "sanity" (an MCQ step with options)
+   - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
+     trap → "claim" object; identify → "multiselect" object; setup → "build" object;
+     principle/connect/why/sanity → "options" (exactly 4: 1 correct, 3 wrong).
+   - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
+   - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
 }
 
 export async function generateProblem(
@@ -584,8 +715,6 @@ Now generate a NEW, ORIGINAL problem. Return ONLY valid JSON — no markdown, no
 
 // ─── VALIDATION ──────────────────────────────────────────────────────────────
 
-const VALID_STEP_TYPES = ["trap", "identify", "principle", "setup", "connect", "sanity", "why"];
-
 const STEP_LABELS: Record<string, string> = {
   trap: "SPOT THE TRAP",
   identify: "IDENTIFY THE KEY",
@@ -648,78 +777,302 @@ export function validateAndNormalize(
   // Validate each step
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i];
-    if (!step.type || !step.prompt || !step.options || !step.tip) {
-      throw new Error(`Step ${i} missing required fields (type, prompt, options, tip)`);
+
+    // Common required fields (content shape is validated per-format below).
+    if (!step.type || !step.prompt || !step.tip) {
+      throw new Error(`Step ${i} missing required fields (type, prompt, tip)`);
     }
 
     // Validate step type
-    if (!VALID_STEP_TYPES.includes(step.type)) {
+    if (!VALID_STEP_TYPES.includes(step.type as StepType)) {
       throw new Error(`Step ${i} has invalid type "${step.type}". Valid types: ${VALID_STEP_TYPES.join(", ")}`);
+    }
+
+    // Derive the authoritative format from the type. If the LLM supplied a
+    // conflicting format, reject it; otherwise overwrite it canonically.
+    const format = formatForType(step.type as StepType);
+    if (step.format && step.format !== format) {
+      throw new Error(
+        `Step ${i} format "${step.format}" conflicts with type "${step.type}" (expected "${format}")`
+      );
+    }
+    step.format = format;
+
+    // Reject leftover content objects from other formats. Each format owns
+    // exactly one content shape; a step carrying a foreign shape (e.g. a trap
+    // step with both `claim` and stale `options`) is malformed and would ship
+    // contradictory data to the DB/admin payloads even though `format` wins at
+    // runtime.
+    const FORMAT_FIELDS: Record<StepFormat, keyof GeneratedStep> = {
+      mcq: "options",
+      claim: "claim",
+      multiselect: "multiselect",
+      build: "build",
+    };
+    for (const [fmt, field] of Object.entries(FORMAT_FIELDS) as [
+      StepFormat,
+      keyof GeneratedStep
+    ][]) {
+      if (fmt !== format && step[field] != null) {
+        throw new Error(
+          `Step ${i} (${format}) has a stale "${field}" field from format "${fmt}"`
+        );
+      }
     }
 
     // Normalize label and icon
     step.label = STEP_LABELS[step.type] || step.label;
     step.icon = STEP_ICONS[step.type] || step.icon;
 
-    if (step.options.length !== 4) {
-      throw new Error(`Step ${i} must have exactly 4 options, got ${step.options.length}`);
+    // Common: prompt and tip non-empty
+    if (step.prompt.trim().length === 0) {
+      throw new Error(`Step ${i} has an empty prompt`);
     }
-    const correctCount = step.options.filter((o: { correct: boolean }) => o.correct).length;
-    if (correctCount !== 1) {
-      throw new Error(`Step ${i} must have exactly 1 correct option, got ${correctCount}`);
-    }
-
-    // Validate feedback quality — general check first (15 chars minimum)
-    for (const opt of step.options) {
-      if (!opt.text || opt.text.trim().length < 5) {
-        throw new Error(`Step ${i} has an option with empty or too-short text`);
-      }
-      if (!opt.feedback || opt.feedback.trim().length < 15) {
-        throw new Error(`Step ${i} has an option with empty or too-short feedback`);
-      }
+    if (step.tip.trim().length === 0) {
+      throw new Error(`Step ${i} has an empty tip`);
     }
 
-    // Split feedback validation: stricter thresholds by correctness
-    for (const opt of step.options) {
-      if (!opt.correct) {
-        // Wrong options: minimum 50 chars
-        if (opt.feedback.trim().length < 50) {
-          throw new Error(
-            `Step ${i} has a wrong option with feedback below 50 chars: "${opt.feedback.substring(0, 40)}..."`
-          );
-        }
-        // Check distractor_type exists on wrong options — warn only, don't throw
-        if (!opt.distractor_type) {
-          console.warn(
-            `Step ${i}: wrong option missing distractor_type: "${opt.text.substring(0, 40)}..."`
-          );
-        }
-      } else {
-        // Correct options: minimum 20 chars
-        if (opt.feedback.trim().length < 20) {
-          throw new Error(
-            `Step ${i} has a correct option with feedback below 20 chars: "${opt.feedback.substring(0, 20)}..."`
-          );
-        }
-      }
-    }
-
-    // Check option text length balance: warn if any option >3x longer than shortest
-    const optionLengths = step.options.map((o: { text: string }) => o.text.trim().length);
-    const shortest = Math.min(...optionLengths);
-    const longest = Math.max(...optionLengths);
-    if (shortest > 0 && longest > shortest * 3) {
-      console.warn(
-        `Step ${i}: option text length imbalance (shortest=${shortest}, longest=${longest}, ratio=${(longest / shortest).toFixed(1)}x)`
+    // HARD HOOK GATE: the first step's prompt must be a substantial hook.
+    if (i === 0 && step.prompt.trim().length < 40) {
+      throw new Error(
+        `Step 0 (hook) prompt must be at least 40 characters, got ${step.prompt.trim().length}`
       );
     }
 
-    // Shuffle options so the correct answer isn't always first
-    for (let j = step.options.length - 1; j > 0; j--) {
-      const k = Math.floor(Math.random() * (j + 1));
-      [step.options[j], step.options[k]] = [step.options[k], step.options[j]];
+    switch (format) {
+      case "mcq":
+        validateMcqStep(step, i);
+        break;
+      case "claim":
+        validateClaimStep(step, i);
+        break;
+      case "multiselect":
+        validateMultiSelectStep(step, i);
+        break;
+      case "build":
+        validateBuildStep(step, i);
+        break;
     }
   }
+}
+
+function shuffleInPlace<T>(arr: T[]): void {
+  for (let j = arr.length - 1; j > 0; j--) {
+    const k = Math.floor(Math.random() * (j + 1));
+    [arr[j], arr[k]] = [arr[k], arr[j]];
+  }
+}
+
+function validateMcqStep(step: GeneratedStep, i: number): void {
+  if (!step.options) {
+    throw new Error(`Step ${i} (mcq) missing required "options" array`);
+  }
+  if (step.options.length !== 4) {
+    throw new Error(`Step ${i} must have exactly 4 options, got ${step.options.length}`);
+  }
+  for (const opt of step.options) {
+    if (typeof opt.correct !== "boolean") {
+      throw new Error(`Step ${i} has an option with non-boolean "correct" field`);
+    }
+  }
+  const correctCount = step.options.filter((o) => o.correct === true).length;
+  if (correctCount !== 1) {
+    throw new Error(`Step ${i} must have exactly 1 correct option, got ${correctCount}`);
+  }
+
+  // Validate feedback quality — general check first (15 chars minimum)
+  for (const opt of step.options) {
+    if (!opt.text || opt.text.trim().length < 5) {
+      throw new Error(`Step ${i} has an option with empty or too-short text`);
+    }
+    if (!opt.feedback || opt.feedback.trim().length < 15) {
+      throw new Error(`Step ${i} has an option with empty or too-short feedback`);
+    }
+  }
+
+  // Split feedback validation: stricter thresholds by correctness
+  for (const opt of step.options) {
+    if (!opt.correct) {
+      // Wrong options: minimum 50 chars
+      if (opt.feedback.trim().length < 50) {
+        throw new Error(
+          `Step ${i} has a wrong option with feedback below 50 chars: "${opt.feedback.substring(0, 40)}..."`
+        );
+      }
+      // Check distractor_type exists on wrong options — warn only, don't throw
+      if (!opt.distractor_type) {
+        console.warn(
+          `Step ${i}: wrong option missing distractor_type: "${opt.text.substring(0, 40)}..."`
+        );
+      }
+    } else {
+      // Correct options: minimum 20 chars
+      if (opt.feedback.trim().length < 20) {
+        throw new Error(
+          `Step ${i} has a correct option with feedback below 20 chars: "${opt.feedback.substring(0, 20)}..."`
+        );
+      }
+    }
+  }
+
+  // Check option text length balance: warn if any option >3x longer than shortest
+  const optionLengths = step.options.map((o) => o.text.trim().length);
+  const shortest = Math.min(...optionLengths);
+  const longest = Math.max(...optionLengths);
+  if (shortest > 0 && longest > shortest * 3) {
+    console.warn(
+      `Step ${i}: option text length imbalance (shortest=${shortest}, longest=${longest}, ratio=${(longest / shortest).toFixed(1)}x)`
+    );
+  }
+
+  // Fisher-Yates shuffle so the correct answer isn't always first
+  shuffleInPlace(step.options);
+}
+
+function validateClaimStep(step: GeneratedStep, i: number): void {
+  const claim = step.claim;
+  if (!claim) {
+    throw new Error(`Step ${i} (claim) missing required "claim" object`);
+  }
+  if (!claim.statement || claim.statement.trim().length < 15) {
+    throw new Error(`Step ${i} claim.statement must be at least 15 chars`);
+  }
+  if (typeof claim.isTrap !== "boolean") {
+    throw new Error(`Step ${i} claim.isTrap must be a boolean`);
+  }
+  if (!claim.feedbackTrap || claim.feedbackTrap.trim().length < 40) {
+    throw new Error(`Step ${i} claim.feedbackTrap must be at least 40 chars`);
+  }
+  if (!claim.feedbackSound || claim.feedbackSound.trim().length < 40) {
+    throw new Error(`Step ${i} claim.feedbackSound must be at least 40 chars`);
+  }
+}
+
+function validateMultiSelectStep(step: GeneratedStep, i: number): void {
+  const ms = step.multiselect;
+  if (!ms) {
+    throw new Error(`Step ${i} (multiselect) missing required "multiselect" object`);
+  }
+  if (!Array.isArray(ms.items) || ms.items.length < 4 || ms.items.length > 6) {
+    throw new Error(
+      `Step ${i} multiselect.items must have 4-6 items, got ${Array.isArray(ms.items) ? ms.items.length : "none"}`
+    );
+  }
+  for (const item of ms.items) {
+    if (!item.text || item.text.trim().length === 0) {
+      throw new Error(`Step ${i} multiselect has an item with empty text`);
+    }
+    if (typeof item.matters !== "boolean") {
+      throw new Error(`Step ${i} multiselect item "matters" must be a boolean`);
+    }
+  }
+  const mattersCount = ms.items.filter((it) => it.matters === true).length;
+  const notMattersCount = ms.items.filter((it) => it.matters === false).length;
+  if (mattersCount < 1) {
+    throw new Error(`Step ${i} multiselect must have at least 1 item with matters:true`);
+  }
+  if (notMattersCount < 1) {
+    throw new Error(`Step ${i} multiselect must have at least 1 item with matters:false`);
+  }
+  if (!ms.feedbackCorrect || ms.feedbackCorrect.trim().length < 40) {
+    throw new Error(`Step ${i} multiselect.feedbackCorrect must be at least 40 chars`);
+  }
+  if (!ms.feedbackWrong || ms.feedbackWrong.trim().length < 40) {
+    throw new Error(`Step ${i} multiselect.feedbackWrong must be at least 40 chars`);
+  }
+
+  // Shuffle items so the mattering ones aren't always first
+  shuffleInPlace(ms.items);
+}
+
+function validateBuildStep(step: GeneratedStep, i: number): void {
+  const build = step.build;
+  if (!build) {
+    throw new Error(`Step ${i} (build) missing required "build" object`);
+  }
+  if (!Array.isArray(build.tiles) || build.tiles.length < 3 || build.tiles.length > 10) {
+    throw new Error(
+      `Step ${i} build.tiles must have 3-10 tiles, got ${Array.isArray(build.tiles) ? build.tiles.length : "none"}`
+    );
+  }
+  // All tiles must be unique
+  const seen = new Set<string>();
+  for (const tile of build.tiles) {
+    if (typeof tile !== "string" || tile.trim().length === 0) {
+      throw new Error(`Step ${i} build has an empty tile`);
+    }
+    if (seen.has(tile)) {
+      throw new Error(`Step ${i} build.tiles has a duplicate tile: "${tile}"`);
+    }
+    seen.add(tile);
+  }
+
+  // Accepted arrangements
+  if (!Array.isArray(build.accepted) || build.accepted.length === 0) {
+    throw new Error(`Step ${i} build.accepted must be a non-empty array`);
+  }
+  const tileSet = new Set(build.tiles);
+  const tilesUsedInAccepted = new Set<string>();
+  for (const arrangement of build.accepted) {
+    if (!Array.isArray(arrangement) || arrangement.length < 2) {
+      throw new Error(`Step ${i} build.accepted arrangement must have length >= 2`);
+    }
+    const arrSeen = new Set<string>();
+    for (const token of arrangement) {
+      if (!tileSet.has(token)) {
+        throw new Error(`Step ${i} build.accepted references token "${token}" not in tiles`);
+      }
+      if (arrSeen.has(token)) {
+        throw new Error(`Step ${i} build.accepted arrangement repeats token "${token}"`);
+      }
+      arrSeen.add(token);
+      tilesUsedInAccepted.add(token);
+    }
+  }
+
+  // Distractors
+  if (!Array.isArray(build.distractors) || build.distractors.length < 1) {
+    throw new Error(`Step ${i} build.distractors must have at least 1 entry`);
+  }
+  if (build.distractors.length > 3) {
+    throw new Error(`Step ${i} build.distractors must have at most 3 entries`);
+  }
+  for (const d of build.distractors) {
+    if (!d.tile || !tileSet.has(d.tile)) {
+      throw new Error(`Step ${i} build.distractors tile "${d.tile}" not in tiles`);
+    }
+    if (tilesUsedInAccepted.has(d.tile)) {
+      throw new Error(
+        `Step ${i} build.distractors tile "${d.tile}" also appears in an accepted arrangement`
+      );
+    }
+    if (!d.feedback || d.feedback.trim().length < 30) {
+      throw new Error(`Step ${i} build.distractors feedback must be at least 30 chars`);
+    }
+  }
+
+  // Every tile not used in any accepted arrangement is a distractor tile and
+  // MUST have its own misconception feedback — otherwise selecting it falls back
+  // to the generic feedbackWrong, defeating the point of distractor-specific
+  // teaching.
+  const distractorTiles = new Set(build.distractors.map((d) => d.tile));
+  for (const tile of build.tiles) {
+    if (!tilesUsedInAccepted.has(tile) && !distractorTiles.has(tile)) {
+      throw new Error(
+        `Step ${i} build tile "${tile}" is unused in accepted arrangements and has no distractor entry`
+      );
+    }
+  }
+
+  if (!build.feedbackCorrect || build.feedbackCorrect.trim().length < 40) {
+    throw new Error(`Step ${i} build.feedbackCorrect must be at least 40 chars`);
+  }
+  if (!build.feedbackWrong || build.feedbackWrong.trim().length < 40) {
+    throw new Error(`Step ${i} build.feedbackWrong must be at least 40 chars`);
+  }
+
+  // Shuffle tiles so distractor/correct order isn't fixed
+  shuffleInPlace(build.tiles);
 }
 
 // ─── REGENERATE STEPS ───────────────────────────────────────────────────────

@@ -37,19 +37,14 @@ export default function TopBar({ streak, xp, isAdmin }: TopBarProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Admin Dashboard Link */}
+        {/* Admin Dashboard Link — intentionally subtle; only renders for admins */}
         {isAdmin && (
-          <Link href="/admin">
+          <Link href="/admin" aria-label="Admin dashboard" title="Admin dashboard">
             <div
-              className="px-3 py-1.5 rounded-lg flex items-center gap-1.5"
-              style={{
-                background: "#7c3aed",
-                border: "none",
-              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ background: "transparent", border: "2px solid #2a2a40", opacity: 0.6 }}
             >
-              <span className="text-xs font-bold" style={{ color: "#fff" }}>
-                Dashboard
-              </span>
+              <span className="text-sm" style={{ color: "#6b6b80" }}>⚙️</span>
             </div>
           </Link>
         )}

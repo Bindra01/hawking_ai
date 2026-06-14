@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Problem, SolutionFlow } from "@/lib/types";
+import { Problem } from "@/lib/types";
 import { calcXP, calcStars } from "@/lib/xp";
 import StepQuestion from "./StepQuestion";
 import CompletionScreen from "./CompletionScreen";
@@ -17,7 +17,7 @@ const STEP_ICONS: Record<string, string> = {
   principle: "⚡",
   setup: "🔧",
   sanity: "🧪",
-  connect: "🔗",
+  connect: "🧩",
   why: "💡",
 };
 
@@ -26,7 +26,7 @@ interface PlayScreenProps {
 }
 
 export default function PlayScreen({ problem }: PlayScreenProps) {
-  const flow = problem.solution_flow as unknown as SolutionFlow;
+  const flow = problem.solution_flow;
   const steps = flow.steps;
 
   const [phase, setPhase] = useState<Phase>("intro");
@@ -72,7 +72,17 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   const stepsCorrect = results.filter(Boolean).length;
   const xpEarned = calcXP(stepsCorrect, steps.length);
   const stars = calcStars(stepsCorrect, steps.length);
-  const takeaways = steps.map((s) => s.tip).filter(Boolean).slice(0, 4);
+
+  // The ordered journey through the problem: each step's role (icon/label),
+  // its takeaway (tip), and whether the student got it right. Drives the
+  // end-of-problem "Solution Story" recap so the steps read as one connected
+  // method rather than isolated questions. results[i] aligns with steps[i].
+  const journey = steps.map((s, i) => ({
+    icon: STEP_ICONS[s.type] ?? "•",
+    label: s.label,
+    tip: s.tip ?? "",
+    correct: results[i] ?? false,
+  }));
 
   const progress = phase === "intro" ? 0 : ((stepIndex) / steps.length) * 100;
 
@@ -182,6 +192,67 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
               transition={{ duration: 0.25 }}
               className="px-4 pt-4 pb-36"
             >
+              {/* Persistent goal + step breadcrumb: keeps the student anchored
+                  to the ONE problem they're solving, with conquered steps lit
+                  up so each step reads as part of a connected method. */}
+              <div className="flex flex-col gap-2.5 mb-4">
+                <div
+                  className="rounded-xl px-3 py-2 flex items-start gap-2"
+                  style={{ background: "#1a1a2e", border: "1.5px solid #2a2a40" }}
+                >
+                  <span className="text-sm mt-0.5">🎯</span>
+                  <div className="flex flex-col">
+                    <span
+                      className="text-xs font-black uppercase"
+                      style={{ color: "#6b6b80", letterSpacing: "1.2px", fontSize: "9px" }}
+                    >
+                      Goal
+                    </span>
+                    <MathText
+                      text={problem.goal}
+                      className="text-sm font-semibold leading-snug"
+                      style={{ color: "#e5e5e5" }}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5" role="list" aria-label="Problem steps">
+                  {steps.map((s, i) => {
+                    const done = i < stepIndex;
+                    const current = i === stepIndex;
+                    const status = done ? "completed" : current ? "current" : "upcoming";
+                    return (
+                      <div key={i} role="listitem" className="flex items-center gap-1.5 flex-1">
+                        <div
+                          className="flex items-center justify-center rounded-full"
+                          style={{
+                            width: 26,
+                            height: 26,
+                            fontSize: "13px",
+                            background: current ? "#7c3aed" : done ? "#1e1a0e" : "#1a1a2e",
+                            border: current
+                              ? "2px solid #a78bfa"
+                              : done
+                              ? "2px solid #ffc800"
+                              : "2px solid #2a2a40",
+                            filter: !done && !current ? "grayscale(1) opacity(0.5)" : "none",
+                          }}
+                          aria-label={`Step ${i + 1}: ${s.label}, ${status}`}
+                          aria-current={current ? "step" : undefined}
+                        >
+                          {done ? "✓" : STEP_ICONS[s.type] ?? "•"}
+                        </div>
+                        {i < steps.length - 1 && (
+                          <div
+                            className="flex-1 h-0.5 rounded-full"
+                            style={{ background: i < stepIndex ? "#ffc800" : "#2a2a40" }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <StepQuestion
                 step={steps[stepIndex]}
                 stepIndex={stepIndex}
@@ -204,8 +275,9 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                 correct={stepsCorrect}
                 total={steps.length}
                 xpEarned={xpEarned}
+                goal={problem.goal}
                 finalAnswer={problem.final_answer}
-                takeaways={takeaways}
+                journey={journey}
               />
             </motion.div>
           )}

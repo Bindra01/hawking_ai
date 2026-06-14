@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
@@ -27,7 +28,27 @@ export async function GET(req: NextRequest) {
       }
     );
 
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    // Record the student in our database at login so we always have a reliable
+    // record of their email and most recent login. Upsert keeps the row in sync
+    // (name/avatar may change) and stamps last_login on every sign-in. A failure
+    // here must not block the user from getting into the app, so we swallow it.
+    const user = data?.user;
+    if (!error && user?.email) {
+      try {
+        const name = user.user_metadata?.full_name ?? null;
+        const avatar_url = user.user_metadata?.avatar_url ?? null;
+        const now = new Date();
+        await prisma.users.upsert({
+          where: { email: user.email },
+          create: { email: user.email, name, avatar_url, last_login: now },
+          update: { name, avatar_url, last_login: now },
+        });
+      } catch (e) {
+        console.error("Failed to record user login:", e);
+      }
+    }
 
     return response;
   }
