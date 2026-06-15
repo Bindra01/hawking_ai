@@ -3,8 +3,6 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase-client";
 import Link from "next/link";
 
 interface ProfileStats {
@@ -34,7 +32,6 @@ const SUBJECT_COLORS: Record<string, string> = {
 export default function ProfilePage() {
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => {
@@ -48,10 +45,14 @@ export default function ProfilePage() {
       .catch(() => setLoading(false));
   }, []);
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+  function handleSignOut() {
+    // Sign out via the server route (/auth/signout) rather than the client
+    // `supabase.auth.signOut()`. The client call is unreliable for logout: it
+    // still makes a network request that can hang or return a retryable error
+    // without clearing the session, which previously stranded the user on an
+    // authenticated page with no way back to login. The server route clears the
+    // auth cookies on the response unconditionally and redirects to /login.
+    window.location.href = "/auth/signout";
   }
 
   const maxCount = stats
