@@ -3,7 +3,8 @@
  *
  * Usage:
  *   npx tsx scripts/regenerate-existing.ts                          # dry-run, local DB
- *   npx tsx scripts/regenerate-existing.ts --apply                  # apply to local DB
+ *   npx tsx scripts/regenerate-existing.ts --apply                  # apply (update in place)
+ *   npx tsx scripts/regenerate-existing.ts --apply --replace        # write new rows + delete old (appear as new; unlinks attempts)
  *   npx tsx scripts/regenerate-existing.ts --db-url "postgres://…"  # use custom DB URL
  *   npx tsx scripts/regenerate-existing.ts --problem-id "abc-123"   # single problem
  *   npx tsx scripts/regenerate-existing.ts --output report.json     # save report to file
@@ -30,10 +31,19 @@ function getFlagValue(name: string): string | undefined {
 }
 
 const APPLY = getFlag("apply");
+// In --replace mode, each regenerated problem is written as a NEW row (fresh id
+// + created_at) and the old row is deleted, so the problem appears brand new and
+// follows the gamified structure. This also lets us regenerate problems that have
+// existing attempts: the attempts.problem_id FK is ON DELETE SET NULL, so deleting
+// the old row unlinks (but never deletes) the student's attempt history.
+const REPLACE = getFlag("replace");
 const DB_URL = getFlagValue("db-url");
 const PROBLEM_ID = getFlagValue("problem-id");
 const OUTPUT_PATH = getFlagValue("output");
 const DELAY_MS = 3000; // 3 seconds between API calls
+// Number of additional regeneration attempts per problem when the audit fails.
+// Stochastic build-step slips reliably recover on a fresh generation.
+const MAX_REROLLS = 4;
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
@@ -58,6 +68,7 @@ interface ProblemRow {
   scenario: string;
   goal: string;
   final_answer: string;
+  diagram_type: string | null;
   solution_flow: unknown;
 }
 
@@ -77,6 +88,22 @@ interface AuditResult {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function writeReport(results: AuditResult[], outputPath: string | undefined): void {
+  if (!outputPath) return;
+  const reportData = results.map((r) => ({
+    id: r.id,
+    title: r.title,
+    passed: r.passed,
+    issues: r.issues,
+    oldStepCount: r.oldStepCount,
+    newStepCount: r.newStepCount,
+    oldStepTypes: r.oldStepTypes,
+    newStepTypes: r.newStepTypes,
+  }));
+  fs.writeFileSync(outputPath, JSON.stringify(reportData, null, 2));
+  console.log(`\nReport saved to: ${outputPath}`);
 }
 
 function auditSolutionFlow(
@@ -272,14 +299,17 @@ async function main() {
   });
 
   const problemsWithAttempts = attemptCounts.filter((a) => a._count.id > 0);
-  if (problemsWithAttempts.length > 0) {
+  if (problemsWithAttempts.length > 0 && !REPLACE) {
     console.error(`ERROR: ${problemsWithAttempts.length} problem(s) have existing attempts. Aborting.`);
     console.error("Problem IDs with attempts:", problemsWithAttempts.map((a) => a.problem_id));
-    console.error("Cannot regenerate problems with existing attempts.");
+    console.error("Cannot regenerate problems with existing attempts. Use --replace to write new rows and delete the old ones (attempts are unlinked, not deleted).");
     process.exit(1);
   }
 
-  console.log(`Found ${problems.length} published problem(s), 0 with attempts. Proceeding.\n`);
+  const attemptNote = problemsWithAttempts.length > 0
+    ? `${problemsWithAttempts.length} with attempts (will be unlinked via ON DELETE SET NULL in --replace mode)`
+    : "0 with attempts";
+  console.log(`Found ${problems.length} published problem(s), ${attemptNote}. Proceeding.\n`);
 
   // 2. Backup current solution_flow values
   const backupDir = "/code/.generated_artifacts";
@@ -305,44 +335,60 @@ async function main() {
     console.log(`[${i + 1}/${problems.length}] ${problem.title}`);
     console.log(`  Subject: ${problem.subject} | Topic: ${problem.topic} | Difficulty: ${problem.difficulty}`);
 
-    try {
-      const input: RegenerateStepsInput = {
-        title: problem.title,
-        subject: problem.subject,
-        topic: problem.topic,
-        difficulty: problem.difficulty,
-        scenario: problem.scenario,
-        goal: problem.goal,
-        final_answer: problem.final_answer,
-      };
+    const input: RegenerateStepsInput = {
+      title: problem.title,
+      subject: problem.subject,
+      topic: problem.topic,
+      difficulty: problem.difficulty,
+      scenario: problem.scenario,
+      goal: problem.goal,
+      final_answer: problem.final_answer,
+    };
 
-      const newFlow = await regenerateSteps(input);
-      const audit = auditSolutionFlow(problem, newFlow as unknown as { steps: Step[] });
-      results.push(audit);
-
-      if (audit.passed) {
-        console.log(`  ✓ PASS — ${audit.newStepCount} steps: ${audit.newStepTypes.join(" → ")}`);
-        if (audit.issues.length > 0) {
-          console.log(`  ⚠ Warnings: ${audit.issues.join("; ")}`);
+    // Re-roll loop: a single regeneration occasionally produces a stochastic
+    // model slip (most often a build/"setup" step whose tiles/accepted/distractors
+    // are internally inconsistent). Re-generating from scratch reliably recovers,
+    // so we re-roll up to MAX_REROLLS times until the audit passes.
+    let finalResult: AuditResult | null = null;
+    let lastErrorMsg = "";
+    for (let roll = 0; roll <= MAX_REROLLS; roll++) {
+      try {
+        const newFlow = await regenerateSteps(input);
+        const audit = auditSolutionFlow(problem, newFlow as unknown as { steps: Step[] });
+        if (audit.passed) {
+          finalResult = audit;
+          break;
         }
-        succeeded++;
-      } else {
-        console.log(`  ✗ FAIL — ${audit.issues.join("; ")}`);
-        failed++;
+        lastErrorMsg = audit.issues.join("; ");
+        finalResult = audit; // keep the last failing audit if all rolls fail
+        console.log(`  ↻ re-roll ${roll + 1}/${MAX_REROLLS} after FAIL — ${lastErrorMsg}`);
+      } catch (err) {
+        lastErrorMsg = err instanceof Error ? err.message : String(err);
+        finalResult = {
+          id: problem.id,
+          title: problem.title,
+          passed: false,
+          issues: [`Generation error: ${lastErrorMsg}`],
+          oldStepCount: (problem.solution_flow as { steps: unknown[] })?.steps?.length ?? 0,
+          newStepCount: 0,
+          oldStepTypes: [],
+          newStepTypes: [],
+        };
+        console.log(`  ↻ re-roll ${roll + 1}/${MAX_REROLLS} after ERROR — ${lastErrorMsg}`);
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.log(`  ✗ ERROR — ${msg}`);
-      results.push({
-        id: problem.id,
-        title: problem.title,
-        passed: false,
-        issues: [`Generation error: ${msg}`],
-        oldStepCount: (problem.solution_flow as { steps: unknown[] })?.steps?.length ?? 0,
-        newStepCount: 0,
-        oldStepTypes: [],
-        newStepTypes: [],
-      });
+      if (roll < MAX_REROLLS) await sleep(DELAY_MS);
+    }
+
+    const result = finalResult!;
+    results.push(result);
+    if (result.passed) {
+      console.log(`  ✓ PASS — ${result.newStepCount} steps: ${result.newStepTypes.join(" → ")}`);
+      if (result.issues.length > 0) {
+        console.log(`  ⚠ Warnings: ${result.issues.join("; ")}`);
+      }
+      succeeded++;
+    } else {
+      console.log(`  ✗ FAIL — ${result.issues.join("; ")}`);
       failed++;
     }
 
@@ -358,9 +404,54 @@ async function main() {
 
   // 5. Apply if requested
   if (APPLY) {
+    // Safety: never do a partial migration. If any problem failed the audit,
+    // abort before writing anything so we don't end up with a mix of
+    // regenerated and stale problems. (A single targeted --problem-id run is
+    // exempt: the operator explicitly scoped it to one problem.)
+    if (failed > 0 && !PROBLEM_ID) {
+      console.error(
+        `\nABORTING APPLY: ${failed} problem(s) failed the audit. ` +
+          `Re-run until all ${problems.length} pass before applying (apply must be all-or-nothing).`
+      );
+      // Write the report for inspection, then exit non-zero.
+      writeReport(results, OUTPUT_PATH);
+      await prisma.$disconnect();
+      process.exit(1);
+    }
+
     const toApply = results.filter((r) => r.passed && r.newSolutionFlow);
     if (toApply.length === 0) {
       console.log("\nNo problems passed audit. Nothing to apply.");
+    } else if (REPLACE) {
+      // Replace mode: write each regenerated problem as a brand-new row (fresh id
+      // + created_at = now, so it surfaces as new) and delete the old row in the
+      // same transaction. The attempts FK is ON DELETE SET NULL, so any student
+      // attempts on the old problem are unlinked, never deleted.
+      console.log(`\nReplacing ${toApply.length} problem(s) (create new + delete old)...`);
+      const byId = new Map(problems.map((p) => [p.id, p]));
+      for (const r of toApply) {
+        const src = byId.get(r.id);
+        if (!src) continue;
+        await prisma.$transaction(async (tx) => {
+          const created = await tx.problems.create({
+            data: {
+              title: src.title,
+              subject: src.subject,
+              topic: src.topic,
+              difficulty: src.difficulty,
+              scenario: src.scenario,
+              goal: src.goal,
+              final_answer: src.final_answer,
+              diagram_type: src.diagram_type,
+              solution_flow: r.newSolutionFlow as object,
+              status: "published",
+            },
+          });
+          await tx.problems.delete({ where: { id: src.id } });
+          console.log(`  Replaced: ${src.title} (old ${src.id} -> new ${created.id})`);
+        });
+      }
+      console.log(`Done. ${toApply.length} problem(s) replaced.`);
     } else {
       console.log(`\nApplying ${toApply.length} problem(s) to database...`);
       for (const r of toApply) {
@@ -373,24 +464,11 @@ async function main() {
       console.log(`Done. ${toApply.length} problem(s) updated.`);
     }
   } else {
-    console.log("\nDry-run complete. Use --apply to write changes to the database.");
+    console.log(`\nDry-run complete. Use --apply${REPLACE ? " --replace" : ""} to write changes to the database.`);
   }
 
   // 6. Save report if requested
-  if (OUTPUT_PATH) {
-    const reportData = results.map((r) => ({
-      id: r.id,
-      title: r.title,
-      passed: r.passed,
-      issues: r.issues,
-      oldStepCount: r.oldStepCount,
-      newStepCount: r.newStepCount,
-      oldStepTypes: r.oldStepTypes,
-      newStepTypes: r.newStepTypes,
-    }));
-    fs.writeFileSync(OUTPUT_PATH, JSON.stringify(reportData, null, 2));
-    console.log(`\nReport saved to: ${OUTPUT_PATH}`);
-  }
+  writeReport(results, OUTPUT_PATH);
 
   await prisma.$disconnect();
   process.exit(APPLY && failed > 0 ? 1 : 0);

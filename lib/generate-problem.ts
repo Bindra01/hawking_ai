@@ -1148,6 +1148,18 @@ ${JSON.stringify(exampleProblem.solution_flow, null, 2)}
 Generate a NEW set of steps for this problem. Return ONLY a JSON object with this shape:
 { "steps": [ ... ] }
 
+MANDATORY PER-STEP FIELDS — every single step object MUST include ALL of these:
+- "type": one of trap, identify, setup, principle, connect, why, sanity
+- "prompt": the question/instruction text (the first step's prompt must be a punchy, problem-specific hook of at least 40 characters)
+- "tip": a one-sentence, generalizable rule-of-thumb takeaway. This field is REQUIRED on EVERY step — never omit it.
+Plus the type-specific content object (claim / multiselect / build / options) exactly as shown in the example.
+The flow must have 4-7 steps and the LAST step MUST be type "sanity".
+
+BUILD-STEP TILE CONSISTENCY (for "setup" steps with a "build" object) — these are hard rules, double-check them:
+- Every token that appears in any "accepted" arrangement MUST be an exact string match of a token in "tiles". Do not invent tokens like "1" or "\\frac{h}{2ma^2}" inside "accepted" or "distractors" unless that exact string is also listed in "tiles".
+- Every "distractors[].tile" MUST be an exact token from "tiles", and MUST NOT appear in any "accepted" arrangement.
+- "tiles" must contain 3-10 UNIQUE tokens: all tokens used by "accepted", plus the 1-3 distractor tiles, with no duplicates.
+
 Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
 
   let lastError: Error | null = null;
