@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { prisma } from "@/lib/prisma";
 import { shuffleStepOptions } from "@/lib/shuffle-options";
+import { buildProblemListWhere } from "@/lib/problem-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -10,10 +11,10 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const subject = req.nextUrl.searchParams.get("subject");
-  const where = subject
-    ? { subject, status: "published" }
-    : { status: "published" };
+  const where = buildProblemListWhere(
+    req.nextUrl.searchParams.get("subject"),
+    req.nextUrl.searchParams.get("difficulty")
+  );
 
   const problems = await prisma.problems.findMany({
     where,
