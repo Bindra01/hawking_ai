@@ -25,20 +25,20 @@ export function isAnswerReady(step: Step, answer: Answer | null): boolean {
     case "multiselect":
       return answer.indices.length >= 1;
     case "build": {
-      // Only ready once the built arrangement can match an accepted one: it
-      // must be a complete arrangement (same length), use unique tile indices,
-      // and reference tiles that actually exist. This prevents the student
-      // from submitting (and locking in a wrong answer on) a partial build.
+      // Ready as soon as the student has placed at least one valid tile. We
+      // deliberately do NOT require the arrangement to match an accepted
+      // length — the student is free to submit a short/wrong build and be
+      // told it's incorrect. We still guard against malformed input (duplicate
+      // or out-of-range tile indices) so evaluation has clean data.
       if (!step.build) return false;
       const { order } = answer;
+      if (order.length < 1) return false;
       const unique = new Set(order);
       if (unique.size !== order.length) return false;
       if (order.some((i) => i < 0 || i >= step.build!.tiles.length)) {
         return false;
       }
-      return step.build.accepted.some(
-        (arrangement) => arrangement.length === order.length
-      );
+      return true;
     }
     default:
       return false;
