@@ -74,16 +74,19 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
         </div>
 
         {/* CTA */}
-        {bestAttempt ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{"⭐".repeat(bestAttempt.stars)}</span>
-            <span className="text-xs font-bold" style={{ color: "#ffc800" }}>
-              +{bestAttempt.xp_earned} XP
-            </span>
-          </div>
-        ) : (
+        <div className="flex items-center justify-between gap-2">
+          {bestAttempt ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{"⭐".repeat(bestAttempt.stars)}</span>
+              <span className="text-xs font-bold" style={{ color: "#ffc800" }}>
+                +{bestAttempt.xp_earned} XP
+              </span>
+            </div>
+          ) : (
+            <span />
+          )}
           <div
-            className="self-start px-5 py-2 rounded-xl font-black text-xs uppercase"
+            className="px-5 py-2 rounded-xl font-black text-xs uppercase"
             style={{
               background: "#7c3aed",
               color: "#fff",
@@ -92,9 +95,9 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
               fontSize: "11px",
             }}
           >
-            START
+            {bestAttempt ? "REPLAY" : "START"}
           </div>
-        )}
+        </div>
       </div>
     </Link>
   );
