@@ -155,6 +155,12 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
       "feedbackCorrect": "<40+ chars>",
       "feedbackWrong": "<40+ chars>"
     }
+    // PROMPT GRAMMAR: the "prompt" wording MUST agree with how many items have
+    // matters:true. If MORE THAN ONE item matters, phrase it PLURAL and tell the
+    // student to pick all of them — e.g. "what ARE the key QUANTITIES?" and end
+    // with "Select all that apply." If EXACTLY ONE item matters, keep it singular
+    // — e.g. "what IS the key quantity?". Never ask "what is the key quantity?"
+    // when two or more items are correct.
 
 * type "setup"  => emit a "build" object (NO "options"):
     {
@@ -178,14 +184,14 @@ claim/multiselect/build objects to the MCQ types.
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
-const EXAMPLE_CLASS_11 = {
+export const EXAMPLE_CLASS_11 = {
   title: "RMS speed of O₂ at 47°C equals that of H₂ at ___°C",
   subject: "thermodynamics",
   topic: "Kinetic Theory",
   difficulty: "class_11",
   scenario: "The RMS speed of O₂ at 47°C equals the RMS speed of H₂ at what temperature (in °C)?",
-  goal: "Find: -253°C",
-  final_answer: "-253°C",
+  goal: "Find the temperature of the hydrogen (in °C)",
+  final_answer: "$-253\\,^{\\circ}\\text{C}$",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -226,9 +232,9 @@ const EXAMPLE_CLASS_11 = {
         icon: "🔧",
         prompt: "Build the equation that equates the two RMS speeds. Drag the tiles into the correct order.",
         build: {
-          tiles: ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$", "$\\times$", "$+ 273$"],
+          tiles: ["$\\frac{3R(320)}{32}$", "$=$", "$\\frac{3RT}{2}$", "$\\times$", "$+ 273$"],
           accepted: [
-            ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$"]
+            ["$\\frac{3R(320)}{32}$", "$=$", "$\\frac{3RT}{2}$"]
           ],
           distractors: [
             { tile: "$\\times$", feedback: "You don't multiply the two sides — RMS speeds are set EQUAL, so the relation uses '=', not '×'." },
@@ -269,14 +275,14 @@ const EXAMPLE_CLASS_11 = {
   }
 };
 
-const EXAMPLE_COLLEGE = {
+export const EXAMPLE_COLLEGE = {
   title: "A particle of mass m and angular momentum L in potential U(r) = kr²",
   subject: "mechanics",
   topic: "Central Forces",
   difficulty: "college",
   scenario: "A particle of mass m moves in a central force field with potential energy U(r) = kr². If the particle has angular momentum L, find the radius of its circular orbit.",
-  goal: "Find: $r = (L^2/2mk)^{1/4}$",
-  final_answer: "r = (L²/2mk)^(1/4)",
+  goal: "Find the radius $r$ of the circular orbit",
+  final_answer: "$r = (L^{2}/2mk)^{1/4}$",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -312,9 +318,9 @@ const EXAMPLE_COLLEGE = {
         icon: "🔧",
         prompt: "Build the force-balance equation for the circular orbit. Drag the tiles into the correct order.",
         build: {
-          tiles: ["$2kr$", "=", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"],
+          tiles: ["$2kr$", "$=$", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"],
           accepted: [
-            ["$2kr$", "=", "$\\frac{mv^2}{r}$"]
+            ["$2kr$", "$=$", "$\\frac{mv^2}{r}$"]
           ],
           distractors: [
             { tile: "$\\frac{GMm}{r^2}$", feedback: "There is no gravitational 1/r² force here — the force comes from U = kr², giving F = 2kr, not GMm/r²." },
@@ -652,11 +658,26 @@ CRITICAL QUALITY RULES:
    - Use LaTeX: $F = ma$, $\\\\sqrt{x}$, $\\\\frac{a}{b}$, $x^{2}$
    - Use double backslashes for LaTeX commands: $\\\\sqrt{x}$, $\\\\frac{a}{b}$, $\\\\vec{F}$
    - The "scenario" field should contain the full problem statement with LaTeX.
+   - EVERY math expression MUST be wrapped in BALANCED $...$ delimiters. Never emit a
+     bare math string (e.g. "4 N") or an unbalanced delimiter (e.g. "V_0 = 0.98$ V").
+     Text outside $...$ is rendered literally, so a stray "_" or "^" leaks as raw text.
+   - Units inside math use \\\\text and a thin space: $4\\\\,\\\\text{N}$, $5.6\\\\,\\\\text{km/s}$,
+     $-253\\\\,^{\\\\circ}\\\\text{C}$. Do NOT write a bare unit like "4 N" or "0.98 V".
+   - build-step "tiles" (and every "accepted" arrangement entry and "distractors[].tile",
+     which are matched by EXACT string equality) MUST each be wrapped in $...$ — including
+     standalone operators: "$=$", "$+$", "$-$", "$\\\\times$". Never emit an undelimited
+     tile like "=" or "\\\\times"; "\\\\times" outside $...$ renders as the literal text "\\times".
 
 7. STRUCTURE:
    - "title": Short descriptive title (~80 chars max)
-   - "goal": "Find: [answer]" format
-   - "final_answer": The numerical/symbolic answer
+   - "goal": names the QUANTITY the student must find — NEVER its value. Write it as
+     "Find the <quantity sought>" (e.g. "Find the net force acting on the object",
+     "Find the escape velocity from the planet"). DO NOT put the answer in the goal
+     (no "Find: 4 N", no "Find: -253°C") — the goal card is shown while the student is
+     still solving, so leaking the answer there defeats the problem. A symbol name is
+     fine if it doesn't reveal the value (e.g. "Find the stopping potential $V_0$").
+   - "final_answer": the numerical/symbolic answer as BALANCED $...$ LaTeX with proper
+     units, e.g. "$4\\\\,\\\\text{N}$", "$5.6\\\\,\\\\text{km/s}$", "$2/3$". Never bare or unbalanced.
    - Last step MUST be type "sanity" (an MCQ step with options)
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap → "claim" object; identify → "multiselect" object; setup → "build" object;
@@ -796,6 +817,22 @@ export function validateAndNormalize(
   problem.topic = topic;
   problem.difficulty = difficulty;
   problem.diagram_type = null;
+
+  // Defensive display normalization for the final-answer card, which renders the
+  // string directly: ensure it is balanced $...$ LaTeX so a bare ("4 N") or
+  // unbalanced ("V_0 = 0.98$ V") value can't surface literal underscores/operators.
+  // (The goal card's "name the quantity, not the value" rule can't be enforced
+  // mechanically — a value can't be reverse-engineered into a quantity name — so
+  // that relies on the generation prompt + worked examples.)
+  if (typeof problem.final_answer === "string") {
+    const fa = problem.final_answer.trim();
+    const dollars = (fa.match(/\$/g) || []).length;
+    // Wrap only when there is no balanced $...$ math already present: a bare
+    // string ("4 N") or an unbalanced one ("V_0 = 0.98$ V") gets wrapped whole.
+    if (dollars === 0 || dollars % 2 !== 0) {
+      problem.final_answer = `$${fa.replace(/\$/g, "")}$`;
+    }
+  }
 
   const steps = problem.solution_flow?.steps;
   if (!steps || !Array.isArray(steps)) {
@@ -1022,10 +1059,38 @@ function validateMultiSelectStep(step: GeneratedStep, i: number): void {
   shuffleInPlace(ms.items);
 }
 
+// Wrap a single math token in balanced $...$ delimiters, stripping any existing
+// (possibly unbalanced/duplicated) delimiters first. MathText only routes text
+// inside $...$ through KaTeX, so an undelimited token like "=" or "\\times" would
+// render as literal text. Applying this identically to tiles, accepted
+// arrangements, and distractor tiles preserves the exact-string matching that
+// step-eval relies on.
+function wrapMathTile(s: string): string {
+  let t = s.trim();
+  while (t.startsWith("$$") && t.endsWith("$$") && t.length >= 4) t = t.slice(2, -2).trim();
+  while (t.startsWith("$") && t.endsWith("$") && t.length >= 2) t = t.slice(1, -1).trim();
+  return `$${t}$`;
+}
+
 function validateBuildStep(step: GeneratedStep, i: number): void {
   const build = step.build;
   if (!build) {
     throw new Error(`Step ${i} (build) missing required "build" object`);
+  }
+  // Normalize every tile to balanced $...$ BEFORE the exact-match invariants run,
+  // so accepted arrangements and distractor tiles stay string-equal to tiles.
+  if (Array.isArray(build.tiles)) {
+    build.tiles = build.tiles.map((t) => (typeof t === "string" ? wrapMathTile(t) : t));
+  }
+  if (Array.isArray(build.accepted)) {
+    build.accepted = build.accepted.map((arr) =>
+      Array.isArray(arr) ? arr.map((t) => (typeof t === "string" ? wrapMathTile(t) : t)) : arr
+    );
+  }
+  if (Array.isArray(build.distractors)) {
+    build.distractors = build.distractors.map((d) =>
+      d && typeof d.tile === "string" ? { ...d, tile: wrapMathTile(d.tile) } : d
+    );
   }
   if (!Array.isArray(build.tiles) || build.tiles.length < 3 || build.tiles.length > 10) {
     throw new Error(
