@@ -1,25 +1,10 @@
-import OpenAI from "openai";
 import {
   formatForType,
   StepFormat,
   StepType,
   VALID_STEP_TYPES,
 } from "@/lib/types";
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI {
-  if (!_client) {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) {
-      throw new Error(
-        "OPENAI_API_KEY is not set. Add it to your .env.local file to enable problem generation."
-      );
-    }
-    _client = new OpenAI({ apiKey: key });
-  }
-  return _client;
-}
+import { getOpenAIClient } from "@/lib/openai";
 
 // ─── STEP TYPE DEFINITIONS ───────────────────────────────────────────────────
 
@@ -725,7 +710,7 @@ Now generate a NEW, ORIGINAL problem. Return ONLY valid JSON — no markdown, no
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let response;
     try {
-      response = await getClient().chat.completions.create({
+      response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         max_tokens: 8192,
         temperature: 0.7,
@@ -1232,7 +1217,7 @@ Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let response;
     try {
-      response = await getClient().chat.completions.create({
+      response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         max_tokens: 8192,
         temperature: 0.7,

@@ -5,6 +5,9 @@ import { motion } from "framer-motion";
 import Confetti from "./Confetti";
 import { useRouter } from "next/navigation";
 import MathText from "./MathText";
+import ProblemChat from "./ProblemChat";
+import { Problem } from "@/lib/types";
+import { StepSummary } from "@/lib/chat-context";
 
 export interface JourneyStep {
   icon: string;
@@ -21,6 +24,8 @@ interface CompletionScreenProps {
   goal: string;
   finalAnswer: string;
   journey: JourneyStep[];
+  problem: Problem;
+  stepSummaries: StepSummary[];
 }
 
 export default function CompletionScreen({
@@ -31,9 +36,12 @@ export default function CompletionScreen({
   goal,
   finalAnswer,
   journey,
+  problem,
+  stepSummaries,
 }: CompletionScreenProps) {
   const missed = journey.filter((s) => !s.correct);
   const [showConfetti, setShowConfetti] = useState(true);
+  const [chatOpen, setChatOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -208,6 +216,22 @@ export default function CompletionScreen({
         </motion.div>
       )}
 
+      {/* Chat about this problem */}
+      <button
+        onClick={() => setChatOpen(true)}
+        className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
+        style={{
+          background: "transparent",
+          color: "#7c3aed",
+          border: "2px solid #7c3aed",
+          letterSpacing: "1.5px",
+          fontSize: "13px",
+          cursor: "pointer",
+        }}
+      >
+        💬 Chat about this problem
+      </button>
+
       {/* Continue */}
       <button
         onClick={() => router.push("/home")}
@@ -224,6 +248,20 @@ export default function CompletionScreen({
       >
         CONTINUE
       </button>
+
+      {chatOpen && (
+        <ProblemChat
+          problemId={problem.id}
+          context={{
+            title: problem.title,
+            scenario: problem.scenario,
+            goal: problem.goal,
+            finalAnswer: problem.final_answer,
+            steps: stepSummaries,
+          }}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }
