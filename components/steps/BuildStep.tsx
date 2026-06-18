@@ -10,6 +10,11 @@ interface BuildStepProps {
   submitted: boolean;
   color: string;
   onAnswerChange: (answer: Answer) => void;
+  /**
+   * Authoritative correctness of the built arrangement after submit, computed
+   * by the parent via {@link evaluateStep}. Only meaningful when `submitted`.
+   */
+  isCorrect: boolean;
 }
 
 export default function BuildStep({
@@ -18,22 +23,13 @@ export default function BuildStep({
   submitted,
   color,
   onAnswerChange,
+  isCorrect,
 }: BuildStepProps) {
   const data = step.build;
   if (!data) return null;
 
   const order = answer && answer.kind === "build" ? answer.order : [];
   const placedSet = new Set(order);
-
-  // Whether the final arrangement is correct (only meaningful after submit).
-  const placedTiles = order.map((i) => data.tiles[i]);
-  const isCorrect =
-    submitted &&
-    data.accepted.some(
-      (arr) =>
-        arr.length === placedTiles.length &&
-        arr.every((t, idx) => t === placedTiles[idx])
-    );
   const distractorTiles = new Set(data.distractors.map((d) => d.tile));
 
   function place(i: number) {

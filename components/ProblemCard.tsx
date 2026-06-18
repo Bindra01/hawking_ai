@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Problem } from "@/lib/types";
+import { SUBJECT_LABELS, DIFFICULTY_LABELS } from "@/lib/constants";
+import { buildCardMeta } from "@/lib/problem-filters";
 
 const STEP_ICONS: Record<string, string> = {
   trap: "⚠️",
@@ -11,12 +13,6 @@ const STEP_ICONS: Record<string, string> = {
   sanity: "🧪",
   connect: "🧩",
   why: "💡",
-};
-
-const DIFFICULTY_LABELS: Record<string, string> = {
-  class_11: "Class 11",
-  class_12: "Class 12",
-  college: "College",
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -32,6 +28,8 @@ interface ProblemCardProps {
 
 export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) {
   const steps = (problem.solution_flow as { steps: Array<{ type: string }> })?.steps ?? [];
+  const subjectLabel = SUBJECT_LABELS[problem.subject] ?? problem.subject;
+  const meta = buildCardMeta(subjectLabel, problem.topic, steps.length);
 
   return (
     <Link href={`/play/${problem.id}`}>
@@ -50,7 +48,7 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
               {problem.title}
             </h3>
             <p className="text-xs font-semibold" style={{ color: "#afafbf" }}>
-              {problem.topic} · {steps.length} steps
+              {meta}
             </p>
           </div>
           <span
@@ -74,16 +72,19 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
         </div>
 
         {/* CTA */}
-        {bestAttempt ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{"⭐".repeat(bestAttempt.stars)}</span>
-            <span className="text-xs font-bold" style={{ color: "#ffc800" }}>
-              +{bestAttempt.xp_earned} XP
-            </span>
-          </div>
-        ) : (
+        <div className="flex items-center justify-between gap-2">
+          {bestAttempt ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{"⭐".repeat(bestAttempt.stars)}</span>
+              <span className="text-xs font-bold" style={{ color: "#ffc800" }}>
+                +{bestAttempt.xp_earned} XP
+              </span>
+            </div>
+          ) : (
+            <span />
+          )}
           <div
-            className="self-start px-5 py-2 rounded-xl font-black text-xs uppercase"
+            className="px-5 py-2 rounded-xl font-black text-xs uppercase"
             style={{
               background: "#7c3aed",
               color: "#fff",
@@ -92,9 +93,9 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
               fontSize: "11px",
             }}
           >
-            START
+            {bestAttempt ? "REPLAY" : "START"}
           </div>
-        )}
+        </div>
       </div>
     </Link>
   );

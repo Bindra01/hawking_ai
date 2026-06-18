@@ -13,6 +13,41 @@ export const VALID_DIFFICULTIES = [
   "college",
 ] as const;
 
+/** Full subject names (used on cards, admin, detail views). */
+export const SUBJECT_LABELS: Record<string, string> = {
+  mechanics: "Mechanics",
+  electrodynamics: "Electrodynamics",
+  thermodynamics: "Thermodynamics",
+  quantum_mechanics: "Quantum Mechanics",
+};
+
+/** Short subject names (used in compact filter chips / stat rows). */
+export const SUBJECT_SHORT_LABELS: Record<string, string> = {
+  mechanics: "Mechanics",
+  electrodynamics: "Electrodynamics",
+  thermodynamics: "Thermo",
+  quantum_mechanics: "Quantum",
+};
+
+/** Difficulty labels, surfaced in the UI as "Class". */
+export const DIFFICULTY_LABELS: Record<string, string> = {
+  class_11: "Class 11",
+  class_12: "Class 12",
+  college: "College",
+};
+
+/** Class filter options for the problem list (empty key = all). */
+export const CLASS_FILTER_OPTIONS = [
+  { key: "", label: "All Classes" },
+  ...VALID_DIFFICULTIES.map((d) => ({ key: d, label: DIFFICULTY_LABELS[d] })),
+];
+
+/** Subject filter options for the problem list (empty key = all, short labels). */
+export const SUBJECT_FILTER_OPTIONS = [
+  { key: "", label: "All" },
+  ...VALID_SUBJECTS.map((s) => ({ key: s, label: SUBJECT_SHORT_LABELS[s] })),
+];
+
 /** Valid problem statuses in the moderation workflow. */
 export const VALID_STATUSES = [
   "draft",

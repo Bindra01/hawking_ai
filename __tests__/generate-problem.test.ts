@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { validateAndNormalize } from "@/lib/generate-problem";
+import { validateAndNormalize, EXAMPLE_CLASS_11, EXAMPLE_COLLEGE } from "@/lib/generate-problem";
 
 // Helper to generate wrong feedback meeting the 50-char minimum
 function wrongFeedback(detail: string = "you misapplied the formula"): string {
@@ -174,6 +174,48 @@ describe("validateAndNormalize", () => {
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
+  });
+
+  it("wraps a bare final_answer in balanced $...$ LaTeX", () => {
+    const problem = makeValidProblem();
+    problem.final_answer = "10 m/s";
+    validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
+    expect(problem.final_answer).toBe("$10 m/s$");
+  });
+
+  it("repairs an unbalanced final_answer into balanced $...$ LaTeX", () => {
+    const problem = makeValidProblem();
+    problem.final_answer = "V_0 = 0.98$ V";
+    validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
+    const dollars = (problem.final_answer.match(/\$/g) || []).length;
+    expect(dollars % 2).toBe(0);
+    expect(problem.final_answer).toBe("$V_0 = 0.98 V$");
+  });
+
+  it("leaves an already-balanced final_answer untouched", () => {
+    const problem = makeValidProblem();
+    problem.final_answer = "$4\\,\\text{N}$";
+    validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
+    expect(problem.final_answer).toBe("$4\\,\\text{N}$");
+  });
+
+  it("wraps undelimited build tiles in $...$ while preserving accepted/distractor matching", () => {
+    const problem = makeValidProblem();
+    // makeBuildStep uses bare tiles ("a", "=", "b", "x", "y").
+    validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
+    const buildStep = problem.solution_flow.steps.find((s) => s.build)!;
+    const build = buildStep.build!;
+    for (const tile of build.tiles) {
+      expect(tile.startsWith("$") && tile.endsWith("$")).toBe(true);
+    }
+    // Every accepted entry and distractor tile must still be one of the (wrapped) tiles.
+    const tileSet = new Set(build.tiles);
+    for (const arr of build.accepted) {
+      for (const t of arr) expect(tileSet.has(t)).toBe(true);
+    }
+    for (const d of build.distractors) {
+      expect(tileSet.has(d.tile)).toBe(true);
+    }
   });
 
   it("normalizes subject/topic/difficulty to match the request", () => {
@@ -623,7 +665,7 @@ describe("validateAndNormalize", () => {
     problem.solution_flow.steps[3].build!.accepted = [["a", "=", "z"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('references token "z" not in tiles');
+    ).toThrow('references token "$z$" not in tiles');
   });
 
   it("throws when an accepted arrangement repeats a tile", () => {
@@ -631,7 +673,7 @@ describe("validateAndNormalize", () => {
     problem.solution_flow.steps[3].build!.accepted = [["a", "=", "a"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('repeats token "a"');
+    ).toThrow('repeats token "$a$"');
   });
 
   it("throws when an accepted arrangement is too short", () => {
@@ -665,7 +707,7 @@ describe("validateAndNormalize", () => {
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('tile "zzz" not in tiles');
+    ).toThrow('tile "$zzz$" not in tiles');
   });
 
   it("throws when a distractor tile also appears in an accepted arrangement", () => {
@@ -703,7 +745,7 @@ describe("validateAndNormalize", () => {
     problem.solution_flow.steps[3].build!.tiles.push("orphan");
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('build tile "orphan" is unused');
+    ).toThrow('build tile "$orphan$" is unused');
   });
 
   it("throws when an mcq option has a non-boolean correct field", () => {
@@ -747,5 +789,50 @@ describe("XP calculation", () => {
     expect(calcStars(3, 5)).toBe(2); // 60%
     expect(calcStars(2, 5)).toBe(1); // 40% < 50% = 1 star
     expect(calcStars(1, 5)).toBe(1); // 20%
+  });
+});
+
+describe("EXAMPLE problems model the corrected display rules", () => {
+  // These examples are shown to the model as the quality bar, so they must not
+  // re-teach the four display defects we just fixed in the stored data.
+  const balanced = (s: string) => (s.match(/\$/g) || []).length % 2 === 0;
+  const wrapped = (s: string) => {
+    const t = s.trim();
+    return t.startsWith("$") && t.endsWith("$");
+  };
+
+  it.each([
+    ["EXAMPLE_CLASS_11", EXAMPLE_CLASS_11],
+    ["EXAMPLE_COLLEGE", EXAMPLE_COLLEGE],
+  ])("%s goal names the quantity, never 'Find: <value>'", (_name, ex) => {
+    expect(ex.goal).not.toMatch(/^Find:\s/);
+  });
+
+  it.each([
+    ["EXAMPLE_CLASS_11", EXAMPLE_CLASS_11],
+    ["EXAMPLE_COLLEGE", EXAMPLE_COLLEGE],
+  ])("%s final_answer is balanced $...$ LaTeX", (_name, ex) => {
+    expect(balanced(ex.final_answer)).toBe(true);
+    expect(wrapped(ex.final_answer)).toBe(true);
+  });
+
+  it.each([
+    ["EXAMPLE_CLASS_11", EXAMPLE_CLASS_11],
+    ["EXAMPLE_COLLEGE", EXAMPLE_COLLEGE],
+  ])("%s build tiles are each wrapped in $...$ (incl. operators)", (_name, ex) => {
+    for (const step of ex.solution_flow.steps) {
+      if (!step.build) continue;
+      for (const tile of step.build.tiles) {
+        expect(wrapped(tile), `tile not wrapped: ${tile}`).toBe(true);
+      }
+      for (const arr of step.build.accepted) {
+        for (const tile of arr) {
+          expect(wrapped(tile), `accepted tile not wrapped: ${tile}`).toBe(true);
+        }
+      }
+      for (const d of step.build.distractors) {
+        expect(wrapped(d.tile), `distractor tile not wrapped: ${d.tile}`).toBe(true);
+      }
+    }
   });
 });

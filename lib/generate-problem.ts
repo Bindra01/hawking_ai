@@ -1,25 +1,10 @@
-import OpenAI from "openai";
 import {
   formatForType,
   StepFormat,
   StepType,
   VALID_STEP_TYPES,
 } from "@/lib/types";
-
-let _client: OpenAI | null = null;
-
-function getClient(): OpenAI {
-  if (!_client) {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) {
-      throw new Error(
-        "OPENAI_API_KEY is not set. Add it to your .env.local file to enable problem generation."
-      );
-    }
-    _client = new OpenAI({ apiKey: key });
-  }
-  return _client;
-}
+import { getOpenAIClient } from "@/lib/openai";
 
 // ─── STEP TYPE DEFINITIONS ───────────────────────────────────────────────────
 
@@ -28,7 +13,10 @@ STEP TYPES — choose the right ones based on the problem's structure:
 
 1. "trap" (⚠️ SPOT THE TRAP)
    Purpose: Expose the #1 mistake students make on this problem type.
-   The trap must be a REAL, SPECIFIC mistake — not a generic warning.
+   USE ONLY WHEN A REAL, SPECIFIC TRAP EXISTS. Not every problem is a trick/trap
+   problem — if there is no genuine, classic trap, do NOT invent one; use an
+   identify/principle step instead.
+   When you do use it, the trap must be a REAL, SPECIFIC mistake — not a generic warning.
    Use varied, creative hooks — do NOT always say "Most students get this wrong because..."
    Example hooks: "Before you start calculating, there's a hidden assumption here...", "This problem looks straightforward, but there's a catch...", "What's the first thing you'd instinctively do? That might be wrong..."
    Example traps: using wrong formula, forgetting unit conversion, confusing similar concepts, applying a formula outside its valid range.
@@ -58,31 +46,64 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Verify the answer makes physical sense. ALWAYS the LAST step.
    Check: units, limiting cases, order of magnitude, physical intuition.
 
-FIRST STEP VARIETY:
-Problems should NOT always start with a "trap" step. Vary the opening step type based on what best hooks the student into the problem. Good openers include:
-- "trap" — but with varied phrasing, NOT always "Most students get this wrong..." Use creative hooks like:
-  "Before you start calculating, there's a hidden assumption here..."
-  "This problem looks straightforward, but there's a catch..."
-  "What's the first thing you'd instinctively do? That might be wrong..."
-- "identify" — "What's the key insight that unlocks this problem?", "Before diving into equations, what's really going on here?"
-- "principle" — "Which physics framework should you reach for?", "Two laws seem to apply here. Which one actually works?"
-- "why" — "Before solving, let's build intuition. What should the answer look like?"
-Pick the best opener based on the problem's structure, not by defaulting to trap every time.
+FIRST STEP VARIETY — OPEN ON "HOW DO I START / WHAT'S THE KEY?":
+The opening step's real job is to make the student think about HOW to approach the
+problem — the KEY to cracking it. Almost every physics problem has a key: a key
+formula, a key equation, a key concept, or a governing principle. The opener should
+surface that "way in", NOT default to a trap. Many problems are NOT trick/trap
+problems at all — do NOT force trap framing onto them.
+
+Pick the opener type that matches what THIS problem actually demands:
+- "identify" — surface the key insight / what actually matters: "What's the key
+  quantity that unlocks this problem?", "Before diving into equations, what is the
+  problem really asking for?"
+- "principle" — surface the governing law/equation to reach for first: "Which
+  principle governs this situation?", "Two laws seem to apply — which one actually
+  controls the answer here?"
+- "trap" — ONLY when a real, specific trap genuinely exists for this problem. Use
+  varied phrasing, never the canned "Most students get this wrong...". e.g.
+  "Your gut says the field is strongest in the middle — but is it?"
+- "why" — when intuition is the hook: "Before solving, what should the answer look
+  like in the limit?"
+Default toward identify/principle openers (the "key" framing). Use trap openers
+only when the problem truly has a classic trap — not as a habit.
 `;
 
 // ─── PER-FORMAT CONTENT + HOOK + DISTRACTOR RULES ────────────────────────────
 
 const PER_FORMAT_GUIDE = `
-STEP 1 HOOK (HARD REQUIREMENT):
-The FIRST step's "prompt" MUST open with a punchy, problem-specific line that
-names what the student would INSTINCTIVELY (and wrongly) do on THIS exact problem,
-and creates tension ("...but that's exactly the trap", "...and that's where most
-people lose the marks"). It must be at least 40 characters and must be DIFFERENT
-for every problem — there is NO fixed canned sentence. Do NOT reuse a template
-like "Most students get this wrong because...". Write a fresh, specific opener
-that could only belong to THIS problem.
-(The FIRST STEP VARIETY rule above still applies: the opener may be a trap,
-identify, principle, or why step — do NOT force a trap-first opener.)
+EVERY STEP — REQUIRED FIELDS (ALL FORMATS):
+Regardless of format (claim, multiselect, build, or options), EVERY step object
+MUST include ALL of these top-level fields: "type", "label", "icon", "prompt",
+and "tip". The "tip" field is MANDATORY on every single step — a one-sentence
+rule-of-thumb the student can reuse. Do NOT omit "tip" on trap/identify/setup
+steps just because they carry a claim/multiselect/build object. A step missing
+"tip" is INVALID and will be rejected.
+
+STEP 1 HOOK (HARD REQUIREMENT) — FRAME THE "HOW DO I START?" MOMENT:
+The FIRST step's "prompt" MUST open with a punchy, problem-specific line that makes
+the student think about HOW TO APPROACH this problem — what the KEY to cracking it
+is. Almost every physics problem has a "key": the key formula, the key equation,
+the key concept, or the governing principle (sometimes a formula AND an equation,
+sometimes a principle). The opener's job is to make the student commit to a way IN.
+It must be at least 40 characters, must be DIFFERENT for every problem, and must be
+specific enough that it could only belong to THIS problem. There is NO fixed canned
+sentence — do NOT reuse a template like "Most students get this wrong because...".
+
+NOT EVERY PROBLEM IS A TRAP/TRICK PROBLEM. Do NOT default to "what would you
+instinctively (and wrongly) do" or "...that's exactly the trap" framing. Only use
+trap/instinct/"lose the marks" tension when the opener is genuinely a "trap" step
+(type "trap") AND a real, specific trap actually exists for this problem.
+
+Choose the opener that best matches what this problem actually demands:
+- If the hard part is REACHING for the right tool → open on the KEY: "What's the
+  governing principle / key equation you reach for first here?" (identify / principle).
+- If the hard part is SEPARATING signal from noise → open on what matters
+  (identify / multiselect).
+- If there IS a classic, specific trap → open on it (trap / claim) with fresh
+  tension wording.
+The unifying goal: by the end of step 1 the student has consciously chosen HOW to
+start, not just answered a quiz question.
 
 SAME-FAMILY DISTRACTORS (HARD REQUIREMENT):
 Every wrong option, wrong tile, and non-mattering item MUST be a mistake a
@@ -119,6 +140,12 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
       "feedbackCorrect": "<40+ chars>",
       "feedbackWrong": "<40+ chars>"
     }
+    // PROMPT GRAMMAR: the "prompt" wording MUST agree with how many items have
+    // matters:true. If MORE THAN ONE item matters, phrase it PLURAL and tell the
+    // student to pick all of them — e.g. "what ARE the key QUANTITIES?" and end
+    // with "Select all that apply." If EXACTLY ONE item matters, keep it singular
+    // — e.g. "what IS the key quantity?". Never ask "what is the key quantity?"
+    // when two or more items are correct.
 
 * type "setup"  => emit a "build" object (NO "options"):
     {
@@ -142,14 +169,14 @@ claim/multiselect/build objects to the MCQ types.
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
-const EXAMPLE_CLASS_11 = {
+export const EXAMPLE_CLASS_11 = {
   title: "RMS speed of O₂ at 47°C equals that of H₂ at ___°C",
   subject: "thermodynamics",
   topic: "Kinetic Theory",
   difficulty: "class_11",
   scenario: "The RMS speed of O₂ at 47°C equals the RMS speed of H₂ at what temperature (in °C)?",
-  goal: "Find: -253°C",
-  final_answer: "-253°C",
+  goal: "Find the temperature of the hydrogen (in °C)",
+  final_answer: "$-253\\,^{\\circ}\\text{C}$",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -190,9 +217,9 @@ const EXAMPLE_CLASS_11 = {
         icon: "🔧",
         prompt: "Build the equation that equates the two RMS speeds. Drag the tiles into the correct order.",
         build: {
-          tiles: ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$", "$\\times$", "$+ 273$"],
+          tiles: ["$\\frac{3R(320)}{32}$", "$=$", "$\\frac{3RT}{2}$", "$\\times$", "$+ 273$"],
           accepted: [
-            ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$"]
+            ["$\\frac{3R(320)}{32}$", "$=$", "$\\frac{3RT}{2}$"]
           ],
           distractors: [
             { tile: "$\\times$", feedback: "You don't multiply the two sides — RMS speeds are set EQUAL, so the relation uses '=', not '×'." },
@@ -233,14 +260,14 @@ const EXAMPLE_CLASS_11 = {
   }
 };
 
-const EXAMPLE_COLLEGE = {
+export const EXAMPLE_COLLEGE = {
   title: "A particle of mass m and angular momentum L in potential U(r) = kr²",
   subject: "mechanics",
   topic: "Central Forces",
   difficulty: "college",
   scenario: "A particle of mass m moves in a central force field with potential energy U(r) = kr². If the particle has angular momentum L, find the radius of its circular orbit.",
-  goal: "Find: $r = (L^2/2mk)^{1/4}$",
-  final_answer: "r = (L²/2mk)^(1/4)",
+  goal: "Find the radius $r$ of the circular orbit",
+  final_answer: "$r = (L^{2}/2mk)^{1/4}$",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -276,9 +303,9 @@ const EXAMPLE_COLLEGE = {
         icon: "🔧",
         prompt: "Build the force-balance equation for the circular orbit. Drag the tiles into the correct order.",
         build: {
-          tiles: ["$2kr$", "=", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"],
+          tiles: ["$2kr$", "$=$", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"],
           accepted: [
-            ["$2kr$", "=", "$\\frac{mv^2}{r}$"]
+            ["$2kr$", "$=$", "$\\frac{mv^2}{r}$"]
           ],
           distractors: [
             { tile: "$\\frac{GMm}{r^2}$", feedback: "There is no gravitational 1/r² force here — the force comes from U = kr², giving F = 2kr, not GMm/r²." },
@@ -400,24 +427,25 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
 - Use 5 steps. Focus on building correct problem-solving habits.
-- Start with the step type that best hooks the student into the problem.
-- The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
+- Open on the KEY: start with the opener (identify or principle) that makes the student think about how to approach this problem. Use a trap opener only if this problem has a genuine, classic trap.
+- If a trap step is present, it should target the most common beginner mistake (wrong units, wrong formula, sign errors).
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Recommended step pattern: identify/trap/principle → principle → setup → connect → sanity`,
+- Recommended step pattern: identify/principle (the "key") → principle → setup → connect → sanity. Insert a trap step only when a real trap exists.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
 - Use 5 steps. Problems should require multi-step reasoning.
-- Start with the step type that best hooks the student into the problem.
-- The trap step should target a subtle conceptual error (not just arithmetic).
+- Open on the KEY: start with the opener (identify or principle) that makes the student think about how to approach this problem. Use a trap opener only if this problem has a genuine, classic trap.
+- If a trap step is present, it should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: identify/trap/principle → identify → setup → connect → sanity`,
+- Recommended step pattern: identify/principle (the "key") → identify → setup → connect → sanity. Insert a trap step only when a real trap exists.`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
 - Use 5-6 steps. Problems should require deep physical insight.
+- Open on the KEY: start with the opener (identify or principle) that surfaces the governing principle or key insight. Use a trap opener only if this problem has a genuine, sophisticated trap.
 - Include a "why" step to explain the deeper physics behind a key result.
-- The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
+- If a trap step is present, it should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
 - Recommended step pattern: identify → principle → setup → connect → why → sanity`,
@@ -589,7 +617,7 @@ CRITICAL QUALITY RULES:
    - Steps must form a logical narrative. Each step's answer feeds into the next step.
    - The student should feel like they're being guided by an expert tutor, not quizzed randomly.
    - Never ask a step that doesn't contribute to reaching the final answer.
-   - The first step should address the biggest obstacle (usually the trap or identifying the key insight).
+   - The first step should make the student think about how to START — surfacing the KEY (the key formula, equation, concept, or governing principle). Only frame it as a trap when this problem genuinely has one.
    - Cognitive scaffolding: use the "fading" principle — give more support in early steps, less in later steps. Each step should require exactly one decision from the student.
 
 3. WRONG ANSWER OPTIONS — THIS IS THE MOST IMPORTANT PART:
@@ -615,11 +643,26 @@ CRITICAL QUALITY RULES:
    - Use LaTeX: $F = ma$, $\\\\sqrt{x}$, $\\\\frac{a}{b}$, $x^{2}$
    - Use double backslashes for LaTeX commands: $\\\\sqrt{x}$, $\\\\frac{a}{b}$, $\\\\vec{F}$
    - The "scenario" field should contain the full problem statement with LaTeX.
+   - EVERY math expression MUST be wrapped in BALANCED $...$ delimiters. Never emit a
+     bare math string (e.g. "4 N") or an unbalanced delimiter (e.g. "V_0 = 0.98$ V").
+     Text outside $...$ is rendered literally, so a stray "_" or "^" leaks as raw text.
+   - Units inside math use \\\\text and a thin space: $4\\\\,\\\\text{N}$, $5.6\\\\,\\\\text{km/s}$,
+     $-253\\\\,^{\\\\circ}\\\\text{C}$. Do NOT write a bare unit like "4 N" or "0.98 V".
+   - build-step "tiles" (and every "accepted" arrangement entry and "distractors[].tile",
+     which are matched by EXACT string equality) MUST each be wrapped in $...$ — including
+     standalone operators: "$=$", "$+$", "$-$", "$\\\\times$". Never emit an undelimited
+     tile like "=" or "\\\\times"; "\\\\times" outside $...$ renders as the literal text "\\times".
 
 7. STRUCTURE:
    - "title": Short descriptive title (~80 chars max)
-   - "goal": "Find: [answer]" format
-   - "final_answer": The numerical/symbolic answer
+   - "goal": names the QUANTITY the student must find — NEVER its value. Write it as
+     "Find the <quantity sought>" (e.g. "Find the net force acting on the object",
+     "Find the escape velocity from the planet"). DO NOT put the answer in the goal
+     (no "Find: 4 N", no "Find: -253°C") — the goal card is shown while the student is
+     still solving, so leaking the answer there defeats the problem. A symbol name is
+     fine if it doesn't reveal the value (e.g. "Find the stopping potential $V_0$").
+   - "final_answer": the numerical/symbolic answer as BALANCED $...$ LaTeX with proper
+     units, e.g. "$4\\\\,\\\\text{N}$", "$5.6\\\\,\\\\text{km/s}$", "$2/3$". Never bare or unbalanced.
    - Last step MUST be type "sanity" (an MCQ step with options)
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap → "claim" object; identify → "multiselect" object; setup → "build" object;
@@ -667,7 +710,7 @@ Now generate a NEW, ORIGINAL problem. Return ONLY valid JSON — no markdown, no
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let response;
     try {
-      response = await getClient().chat.completions.create({
+      response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         max_tokens: 8192,
         temperature: 0.7,
@@ -759,6 +802,22 @@ export function validateAndNormalize(
   problem.topic = topic;
   problem.difficulty = difficulty;
   problem.diagram_type = null;
+
+  // Defensive display normalization for the final-answer card, which renders the
+  // string directly: ensure it is balanced $...$ LaTeX so a bare ("4 N") or
+  // unbalanced ("V_0 = 0.98$ V") value can't surface literal underscores/operators.
+  // (The goal card's "name the quantity, not the value" rule can't be enforced
+  // mechanically — a value can't be reverse-engineered into a quantity name — so
+  // that relies on the generation prompt + worked examples.)
+  if (typeof problem.final_answer === "string") {
+    const fa = problem.final_answer.trim();
+    const dollars = (fa.match(/\$/g) || []).length;
+    // Wrap only when there is no balanced $...$ math already present: a bare
+    // string ("4 N") or an unbalanced one ("V_0 = 0.98$ V") gets wrapped whole.
+    if (dollars === 0 || dollars % 2 !== 0) {
+      problem.final_answer = `$${fa.replace(/\$/g, "")}$`;
+    }
+  }
 
   const steps = problem.solution_flow?.steps;
   if (!steps || !Array.isArray(steps)) {
@@ -985,10 +1044,38 @@ function validateMultiSelectStep(step: GeneratedStep, i: number): void {
   shuffleInPlace(ms.items);
 }
 
+// Wrap a single math token in balanced $...$ delimiters, stripping any existing
+// (possibly unbalanced/duplicated) delimiters first. MathText only routes text
+// inside $...$ through KaTeX, so an undelimited token like "=" or "\\times" would
+// render as literal text. Applying this identically to tiles, accepted
+// arrangements, and distractor tiles preserves the exact-string matching that
+// step-eval relies on.
+function wrapMathTile(s: string): string {
+  let t = s.trim();
+  while (t.startsWith("$$") && t.endsWith("$$") && t.length >= 4) t = t.slice(2, -2).trim();
+  while (t.startsWith("$") && t.endsWith("$") && t.length >= 2) t = t.slice(1, -1).trim();
+  return `$${t}$`;
+}
+
 function validateBuildStep(step: GeneratedStep, i: number): void {
   const build = step.build;
   if (!build) {
     throw new Error(`Step ${i} (build) missing required "build" object`);
+  }
+  // Normalize every tile to balanced $...$ BEFORE the exact-match invariants run,
+  // so accepted arrangements and distractor tiles stay string-equal to tiles.
+  if (Array.isArray(build.tiles)) {
+    build.tiles = build.tiles.map((t) => (typeof t === "string" ? wrapMathTile(t) : t));
+  }
+  if (Array.isArray(build.accepted)) {
+    build.accepted = build.accepted.map((arr) =>
+      Array.isArray(arr) ? arr.map((t) => (typeof t === "string" ? wrapMathTile(t) : t)) : arr
+    );
+  }
+  if (Array.isArray(build.distractors)) {
+    build.distractors = build.distractors.map((d) =>
+      d && typeof d.tile === "string" ? { ...d, tile: wrapMathTile(d.tile) } : d
+    );
   }
   if (!Array.isArray(build.tiles) || build.tiles.length < 3 || build.tiles.length > 10) {
     throw new Error(
@@ -1111,6 +1198,18 @@ ${JSON.stringify(exampleProblem.solution_flow, null, 2)}
 Generate a NEW set of steps for this problem. Return ONLY a JSON object with this shape:
 { "steps": [ ... ] }
 
+MANDATORY PER-STEP FIELDS — every single step object MUST include ALL of these:
+- "type": one of trap, identify, setup, principle, connect, why, sanity
+- "prompt": the question/instruction text (the first step's prompt must be a punchy, problem-specific hook of at least 40 characters)
+- "tip": a one-sentence, generalizable rule-of-thumb takeaway. This field is REQUIRED on EVERY step — never omit it.
+Plus the type-specific content object (claim / multiselect / build / options) exactly as shown in the example.
+The flow must have 4-7 steps and the LAST step MUST be type "sanity".
+
+BUILD-STEP TILE CONSISTENCY (for "setup" steps with a "build" object) — these are hard rules, double-check them:
+- Every token that appears in any "accepted" arrangement MUST be an exact string match of a token in "tiles". Do not invent tokens like "1" or "\\frac{h}{2ma^2}" inside "accepted" or "distractors" unless that exact string is also listed in "tiles".
+- Every "distractors[].tile" MUST be an exact token from "tiles", and MUST NOT appear in any "accepted" arrangement.
+- "tiles" must contain 3-10 UNIQUE tokens: all tokens used by "accepted", plus the 1-3 distractor tiles, with no duplicates.
+
 Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
 
   let lastError: Error | null = null;
@@ -1118,7 +1217,7 @@ Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let response;
     try {
-      response = await getClient().chat.completions.create({
+      response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         max_tokens: 8192,
         temperature: 0.7,

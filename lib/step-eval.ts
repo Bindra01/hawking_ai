@@ -25,20 +25,20 @@ export function isAnswerReady(step: Step, answer: Answer | null): boolean {
     case "multiselect":
       return answer.indices.length >= 1;
     case "build": {
-      // Only ready once the built arrangement can match an accepted one: it
-      // must be a complete arrangement (same length), use unique tile indices,
-      // and reference tiles that actually exist. This prevents the student
-      // from submitting (and locking in a wrong answer on) a partial build.
+      // Ready as soon as the student has placed at least one valid tile. We
+      // deliberately do NOT require the arrangement to match an accepted
+      // length — the student is free to submit a short/wrong build and be
+      // told it's incorrect. We still guard against malformed input (duplicate
+      // or out-of-range tile indices) so evaluation has clean data.
       if (!step.build) return false;
       const { order } = answer;
+      if (order.length < 1) return false;
       const unique = new Set(order);
       if (unique.size !== order.length) return false;
       if (order.some((i) => i < 0 || i >= step.build!.tiles.length)) {
         return false;
       }
-      return step.build.accepted.some(
-        (arrangement) => arrangement.length === order.length
-      );
+      return true;
     }
     default:
       return false;
@@ -115,6 +115,93 @@ export function evaluateStep(
 
     default:
       return { correct: false, feedback: "" };
+  }
+}
+
+/**
+ * Human-readable description of what the student actually answered for a step.
+ * Pure and total — never throws; returns documented fallback strings for any
+ * missing/out-of-range/mismatched data. Format is resolved via
+ * {@link getStepFormat}.
+ */
+export function describeAnswer(step: Step, answer: Answer | null): string {
+  if (!answer) return "(no answer)";
+  const format = getStepFormat(step);
+
+  switch (format) {
+    case "mcq": {
+      if (answer.kind !== "mcq") return "(no answer)";
+      if (
+        !step.options ||
+        answer.index < 0 ||
+        answer.index >= step.options.length
+      ) {
+        return "(no answer)";
+      }
+      return step.options[answer.index].text;
+    }
+
+    case "claim": {
+      if (answer.kind !== "claim" || !step.claim) return "(no answer)";
+      return answer.saidTrap ? "said it's a trap" : "said it sounds right";
+    }
+
+    case "multiselect": {
+      if (answer.kind !== "multiselect" || !step.multiselect) {
+        return "(no answer)";
+      }
+      const items = step.multiselect.items;
+      const texts = answer.indices
+        .filter((i) => i >= 0 && i < items.length)
+        .map((i) => items[i].text);
+      if (texts.length === 0) return "(nothing selected)";
+      return texts.join(", ");
+    }
+
+    case "build": {
+      if (answer.kind !== "build" || !step.build) return "(no answer)";
+      const tiles = step.build.tiles;
+      const placed = answer.order
+        .filter((i) => i >= 0 && i < tiles.length)
+        .map((i) => tiles[i]);
+      if (placed.length === 0) return "(empty)";
+      return placed.join(" ");
+    }
+
+    default:
+      return "(no answer)";
+  }
+}
+
+/**
+ * Human-readable description of the correct answer for a step. Pure and total —
+ * never throws; returns "" when the format-specific data is missing.
+ */
+export function describeCorrectAnswer(step: Step): string {
+  const format = getStepFormat(step);
+
+  switch (format) {
+    case "mcq":
+      return step.options?.find((o) => o.correct)?.text ?? "";
+
+    case "claim": {
+      if (!step.claim) return "";
+      return step.claim.isTrap ? "it's a trap" : "it sounds right";
+    }
+
+    case "multiselect": {
+      if (!step.multiselect) return "";
+      return step.multiselect.items
+        .filter((item) => item.matters === true)
+        .map((item) => item.text)
+        .join(", ");
+    }
+
+    case "build":
+      return step.build?.accepted?.[0]?.join(" ") ?? "";
+
+    default:
+      return "";
   }
 }
 
