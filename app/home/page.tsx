@@ -3,13 +3,13 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState } from "react";
-import { Problem, Attempt } from "@/lib/types";
+import { ProblemListItem, Attempt } from "@/lib/types";
 import TopBar from "@/components/TopBar";
 import SubjectFilter from "@/components/SubjectFilter";
 import ProblemCard from "@/components/ProblemCard";
 
 export default function HomePage() {
-  const [problems, setProblems] = useState<Problem[]>([]);
+  const [problems, setProblems] = useState<ProblemListItem[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [subject, setSubject] = useState("");
   const [xp, setXp] = useState(0);

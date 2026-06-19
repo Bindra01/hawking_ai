@@ -132,6 +132,24 @@ export interface Problem {
   created_at: string;
 }
 
+/**
+ * Lightweight shape returned by `GET /api/problems` for the home feed. The
+ * list only needs enough to render each card (title/subject/topic/difficulty
+ * + the step-type icons and step count), so the heavy per-step content
+ * (prompts, options, feedback, claim/multiselect/build data) and the
+ * scenario/goal/final_answer fields are omitted. The full `Problem` is fetched
+ * on demand by `/play/[id]`.
+ */
+export interface ProblemListItem {
+  id: string;
+  title: string;
+  subject: Subject;
+  topic: string;
+  difficulty: Difficulty;
+  created_at: string;
+  solution_flow: { steps: Pick<Step, "type">[] };
+}
+
 export interface GenerateRequest {
   subject: Subject;
   topic: string;

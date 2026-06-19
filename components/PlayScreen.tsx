@@ -37,33 +37,36 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
     setPhase("playing");
   }
 
-  async function handleNext(correct: boolean) {
+  function handleNext(correct: boolean) {
     const newResults = [...results, correct];
     setResults(newResults);
 
     if (stepIndex + 1 >= steps.length) {
-      // Save attempt
       const stepsCorrect = newResults.filter(Boolean).length;
       const xpEarned = calcXP(stepsCorrect, steps.length);
       const stars = calcStars(stepsCorrect, steps.length);
 
-      try {
-        await fetch("/api/attempts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            problem_id: problem.id,
-            steps_correct: stepsCorrect,
-            steps_total: steps.length,
-            xp_earned: xpEarned,
-            stars,
-          }),
-        });
-      } catch {
-        // non-blocking
-      }
-
+      // Show the recap immediately. CompletionScreen renders entirely from
+      // in-memory results (journey/stars/xp), so it never needs the POST
+      // response — persisting the attempt is fire-and-forget in the background.
       setPhase("complete");
+
+      void fetch("/api/attempts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // keepalive lets the request outlive this page, so tapping CONTINUE
+        // immediately (which navigates to /home) can't abort the save.
+        keepalive: true,
+        body: JSON.stringify({
+          problem_id: problem.id,
+          steps_correct: stepsCorrect,
+          steps_total: steps.length,
+          xp_earned: xpEarned,
+          stars,
+        }),
+      }).catch(() => {
+        // non-blocking: a failed save must not block the recap
+      });
     } else {
       setStepIndex(stepIndex + 1);
     }

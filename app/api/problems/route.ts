@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { prisma } from "@/lib/prisma";
-import { shuffleStepOptions } from "@/lib/shuffle-options";
+import { ProblemListItem, Step } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -24,19 +24,28 @@ export async function GET(req: NextRequest) {
       subject: true,
       topic: true,
       difficulty: true,
-      scenario: true,
-      goal: true,
-      final_answer: true,
-      diagram_type: true,
       solution_flow: true,
       created_at: true,
     },
   });
 
-  // Shuffle options in each step so the correct answer isn't always first
-  const shuffled = problems.map((p) =>
-    shuffleStepOptions(p as unknown as Parameters<typeof shuffleStepOptions>[0])
-  );
+  // The home feed only renders each card's step-type icons and step count
+  // (see ProblemCard), so strip the heavy per-step content (prompts, options,
+  // feedback, claim/multiselect/build data) before sending. On the seeded set
+  // this cuts the list payload ~96% (76 KB -> ~3 KB) and removes the need to
+  // shuffle options here — the full, shuffled problem is fetched on /play/[id].
+  const lite: ProblemListItem[] = problems.map((p) => {
+    const steps = (p.solution_flow as { steps?: Step[] })?.steps ?? [];
+    return {
+      id: p.id,
+      title: p.title,
+      subject: p.subject as ProblemListItem["subject"],
+      topic: p.topic,
+      difficulty: p.difficulty as ProblemListItem["difficulty"],
+      created_at: p.created_at.toISOString(),
+      solution_flow: { steps: steps.map((s) => ({ type: s.type })) },
+    };
+  });
 
-  return NextResponse.json(shuffled);
+  return NextResponse.json(lite);
 }

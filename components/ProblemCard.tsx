@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Problem } from "@/lib/types";
+import { ProblemListItem } from "@/lib/types";
 
 const STEP_ICONS: Record<string, string> = {
   trap: "⚠️",
@@ -26,12 +26,12 @@ const DIFFICULTY_COLORS: Record<string, string> = {
 };
 
 interface ProblemCardProps {
-  problem: Problem;
+  problem: ProblemListItem;
   bestAttempt?: { stars: number; xp_earned: number } | null;
 }
 
 export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) {
-  const steps = (problem.solution_flow as { steps: Array<{ type: string }> })?.steps ?? [];
+  const steps = problem.solution_flow?.steps ?? [];
 
   return (
     <Link href={`/play/${problem.id}`}>
