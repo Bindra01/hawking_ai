@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { prisma } from "@/lib/prisma";
+import { calcStreak } from "@/lib/streak";
 
 export async function GET() {
   const supabase = await createClient();
@@ -29,22 +30,40 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { problem_id, steps_correct, steps_total, xp_earned, stars } = body;
 
-  const attempt = await prisma.attempts.create({
-    data: {
-      user_id: dbUser.id,
-      problem_id,
-      steps_correct,
-      steps_total,
-      xp_earned,
-      stars,
-    },
-  });
+  // Solving a problem (right or wrong) is what advances the daily streak.
+  // Normalize to UTC midnight up front so the value compared by calcStreak and
+  // the value written to the @db.Date column are the same unambiguous day.
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const newStreak = calcStreak(
+    dbUser.current_streak,
+    dbUser.last_active_date,
+    today
+  );
 
-  // Update user XP
-  await prisma.users.update({
-    where: { id: dbUser.id },
-    data: { total_xp: { increment: xp_earned } },
-  });
+  // Record the attempt and award XP + advance the streak atomically, so we
+  // never persist a solved attempt without its corresponding stat update.
+  const [attempt] = await prisma.$transaction([
+    prisma.attempts.create({
+      data: {
+        user_id: dbUser.id,
+        problem_id,
+        steps_correct,
+        steps_total,
+        xp_earned,
+        stars,
+      },
+    }),
+    prisma.users.update({
+      where: { id: dbUser.id },
+      data: {
+        total_xp: { increment: xp_earned },
+        current_streak: newStreak,
+        longest_streak: Math.max(dbUser.longest_streak, newStreak),
+        last_active_date: today,
+      },
+    }),
+  ]);
 
   return NextResponse.json(attempt);
 }

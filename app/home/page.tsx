@@ -18,9 +18,8 @@ export default function HomePage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Update streak on every page load
-    fetch("/api/streak", { method: "POST" }).catch(() => null);
-
+    // Streak is advanced when a problem is solved (see POST /api/attempts),
+    // not on page load — so we only read the current values here.
     Promise.all([
       fetch("/api/profile").then((r) => r.json()),
       fetch("/api/attempts").then((r) => r.json()),
