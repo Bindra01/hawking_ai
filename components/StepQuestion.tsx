@@ -22,6 +22,12 @@ const STEP_COLORS: Record<string, string> = {
   why: "#ff9600",
 };
 
+// The selection highlight is always the standard UI blue, regardless of the
+// step type's accent color, so "this option is currently picked" looks uniform
+// across every problem. After submit, the step components switch to the
+// purple (correct) / red (incorrect) result colors on their own.
+const SELECT_COLOR = "#1cb0f6";
+
 const STEP_BG: Record<string, string> = {
   trap: "#2e1a1a",
   identify: "#2e1e0a",
@@ -92,7 +98,7 @@ export default function StepQuestion({
       step,
       answer,
       submitted,
-      color,
+      color: SELECT_COLOR,
       onAnswerChange: handleAnswerChange,
     };
     switch (format) {

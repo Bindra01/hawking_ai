@@ -160,8 +160,11 @@ describe("isAnswerReady", () => {
       true
     );
   });
-  it("build not ready with partial order (length < accepted)", () => {
-    expect(isAnswerReady(buildStep, { kind: "build", order: [0] })).toBe(false);
+  it("build ready with a single placed tile (any-length arrangement allowed)", () => {
+    expect(isAnswerReady(buildStep, { kind: "build", order: [0] })).toBe(true);
+  });
+  it("build ready with a partial arrangement shorter than accepted", () => {
+    expect(isAnswerReady(buildStep, { kind: "build", order: [0, 1] })).toBe(true);
   });
   it("build not ready with empty order", () => {
     expect(isAnswerReady(buildStep, { kind: "build", order: [] })).toBe(false);
