@@ -6,6 +6,8 @@
  *   npx tsx scripts/regenerate-existing.ts --apply                  # apply to local DB
  *   npx tsx scripts/regenerate-existing.ts --db-url "postgres://…"  # use custom DB URL
  *   npx tsx scripts/regenerate-existing.ts --problem-id "abc-123"   # single problem
+ *   npx tsx scripts/regenerate-existing.ts --allow-attempts         # regenerate even if attempts exist
+ *                                                                   # (attempt scores are aggregate-only, unaffected)
  *   npx tsx scripts/regenerate-existing.ts --output report.json     # save report to file
  */
 
@@ -30,6 +32,7 @@ function getFlagValue(name: string): string | undefined {
 }
 
 const APPLY = getFlag("apply");
+const ALLOW_ATTEMPTS = getFlag("allow-attempts");
 const DB_URL = getFlagValue("db-url");
 const PROBLEM_ID = getFlagValue("problem-id");
 const OUTPUT_PATH = getFlagValue("output");
@@ -273,13 +276,27 @@ async function main() {
 
   const problemsWithAttempts = attemptCounts.filter((a) => a._count.id > 0);
   if (problemsWithAttempts.length > 0) {
-    console.error(`ERROR: ${problemsWithAttempts.length} problem(s) have existing attempts. Aborting.`);
-    console.error("Problem IDs with attempts:", problemsWithAttempts.map((a) => a.problem_id));
-    console.error("Cannot regenerate problems with existing attempts.");
-    process.exit(1);
+    // Attempt rows store only aggregate summary fields (steps_correct,
+    // steps_total, xp_earned, stars) — they do NOT reference specific step
+    // content, so regenerating solution_flow leaves historical attempts intact.
+    // The default guard stays conservative; --allow-attempts opts in knowingly.
+    if (ALLOW_ATTEMPTS) {
+      console.warn(
+        `WARNING: ${problemsWithAttempts.length} problem(s) have existing attempts; proceeding because --allow-attempts was passed.`
+      );
+      console.warn("Problem IDs with attempts:", problemsWithAttempts.map((a) => a.problem_id));
+      console.warn("Historical attempt scores are aggregate-only and remain unchanged.\n");
+    } else {
+      console.error(`ERROR: ${problemsWithAttempts.length} problem(s) have existing attempts. Aborting.`);
+      console.error("Problem IDs with attempts:", problemsWithAttempts.map((a) => a.problem_id));
+      console.error("Pass --allow-attempts to regenerate anyway (attempt scores are unaffected).");
+      process.exit(1);
+    }
   }
 
-  console.log(`Found ${problems.length} published problem(s), 0 with attempts. Proceeding.\n`);
+  console.log(
+    `Found ${problems.length} published problem(s), ${problemsWithAttempts.length} with attempts. Proceeding.\n`
+  );
 
   // 2. Backup current solution_flow values
   const backupDir = "/code/.generated_artifacts";

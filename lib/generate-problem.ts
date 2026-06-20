@@ -132,6 +132,24 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
       "feedbackCorrect": "<40+ chars>",
       "feedbackWrong": "<40+ chars>"
     }
+    // CRITICAL — TILE GRANULARITY: each tile MUST be an ATOMIC FRAGMENT of the
+    // equation — a single term, a single factor, or a bare operator — that only
+    // becomes a meaningful relation once arranged WITH the other tiles. The "="
+    // sign is ALWAYS its own separate tile. NO tile may be a complete, already-
+    // assembled equation, because then the student has nothing to set up and the
+    // step degrades into a disguised multiple-choice.
+    //   GOOD (fragments): "$2kr$", "=", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"
+    //                     → student arranges them into  2kr = mv²/r
+    //   BAD  (whole equations, NEVER do this):
+    //                     "$F = ma$", "$v = 4\\sqrt{x}$", "$a = \\frac{dv}{dx}\\frac{dx}{dt}$"
+    //                     → each tile is the entire answer; nothing to build.
+    // RULE OF THUMB: a relation operator ("=", "<", ">", "\\leq", "\\geq",
+    // "\\neq", "\\approx", ...) must ALWAYS be its own tile, with NOTHING else
+    // attached. Tiles like "$F = ma$" (whole), "$F =$" or "$= ma$" (partial), or
+    // "$v \\leq c$" are INVALID. Split them: left-hand side, the bare operator,
+    // right-hand side (further split each side into its terms/factors) all become
+    // separate tiles. (A relation INSIDE a subscript/argument, e.g. "$E_{x=0}$"
+    // or "$v(t=0)$", is part of a single term and is fine.)
 
 * all OTHER types ("principle", "connect", "why", "sanity")  => emit "options":
     exactly 4 options, exactly 1 correct (the existing MCQ rules below apply).
@@ -985,6 +1003,151 @@ function validateMultiSelectStep(step: GeneratedStep, i: number): void {
   shuffleInPlace(ms.items);
 }
 
+// Relation operators that, if a tile carries one at the TOP LEVEL (outside any
+// braces/parens), make the tile a (partial or whole) relation rather than an
+// atomic fragment. Multi-character LaTeX commands are listed longest-first so a
+// shorter command can never shadow a longer one (e.g. "\leqslant" before
+// "\leq"). The non-letter lookahead in the scanner is what ultimately
+// disambiguates "\le" from "\left", but keeping the list longest-first is a
+// cheap safety net.
+const LATEX_RELATION_COMMANDS = [
+  "\\leqslant",
+  "\\geqslant",
+  "\\lesssim",
+  "\\gtrsim",
+  "\\approx",
+  "\\propto",
+  "\\equiv",
+  "\\simeq",
+  "\\doteq",
+  "\\cong",
+  "\\leq",
+  "\\geq",
+  "\\neq",
+  "\\sim",
+  "\\le",
+  "\\ge",
+  "\\ne",
+  "\\lt",
+  "\\gt",
+];
+const SINGLE_CHAR_RELATIONS = new Set([
+  "=",
+  "<",
+  ">",
+  "\u2264", // ≤
+  "\u2265", // ≥
+  "\u2260", // ≠
+  "\u2248", // ≈
+  "\u2261", // ≡
+  "\u221d", // ∝
+]);
+
+/**
+ * A build tile must be an ATOMIC FRAGMENT (a single term, factor, or a bare
+ * relation operator on its own), never an already-assembled (partial or whole)
+ * relation. A tile carrying a relation operator at the TOP LEVEL — e.g.
+ * "$F = ma$" (whole), "$F =$" / "$= ma$" (partial), or "$v \\leq c$" — leaves
+ * the student little or nothing to arrange and degrades the build step into a
+ * disguised multiple-choice. The lone separator tile (the relation operator by
+ * itself, like "=" or "\\leq") is explicitly allowed.
+ *
+ * A relation operator nested inside braces/parentheses/brackets is NOT a
+ * top-level relation — it is part of a single atomic term (a subscript,
+ * argument, or evaluation condition such as "$E_{x=0}$", "$v(t=0)$", or
+ * "$\\left.\\frac{dV}{dr}\\right|_{r=R}$") and is allowed.
+ */
+/**
+ * Remove grouping wrappers that enclose the ENTIRE tile, so a whole equation the
+ * LLM parenthesized (e.g. "(F = ma)" or "\left(F = ma\right)") is not hidden
+ * from the top-level relation scan. Only an outermost pair that spans the whole
+ * string is stripped; inner groups (subscripts, arguments) are left intact.
+ */
+function stripEnclosingGroups(s: string): string {
+  let prev: string;
+  do {
+    prev = s;
+    s = s.trim();
+    // \left( ... \right)  /  \left[ ... \right]  /  \left\{ ... \right\}
+    const left = s.match(/^\\left\s*[([{]?/);
+    const right = s.match(/\\right\s*[)\]}]?$/);
+    if (left && right && left.index === 0) {
+      const inner = s.slice(left[0].length, s.length - right[0].length);
+      // Only strip if these are the matching OUTERMOST \left...\right (no other
+      // \left appears inside, which would mean we'd be merging two groups).
+      if (!inner.includes("\\left")) {
+        s = inner;
+        continue;
+      }
+    }
+    // Plain (...) / [...] spanning the whole string. Bare "{...}" is NOT stripped
+    // here: LaTeX braces are grouping (e.g. a braced atomic condition tile like
+    // "{x=0}"), so they are left to the depth-based nesting scan rather than
+    // unwrapped, which would falsely expose their contents as a top-level relation.
+    const open = s[0];
+    const close = { "(": ")", "[": "]" }[open];
+    if (close && s.endsWith(close)) {
+      let depth = 0;
+      let spansWhole = true;
+      for (let i = 0; i < s.length; i++) {
+        if (s[i] === open) depth++;
+        else if (s[i] === close) {
+          depth--;
+          if (depth === 0 && i !== s.length - 1) {
+            spansWhole = false; // closes before the end -> not an enclosing pair
+            break;
+          }
+        }
+      }
+      if (spansWhole && depth === 0) {
+        s = s.slice(1, -1);
+        continue;
+      }
+    }
+  } while (s !== prev);
+  return s;
+}
+
+export function tileHasEmbeddedRelation(tile: string): boolean {
+  // Strip LaTeX math delimiters and whitespace: "$F = ma$" -> "F = ma".
+  const inner = stripEnclosingGroups(tile.replace(/\$+/g, "").trim());
+
+  let depth = 0;
+  for (let i = 0; i < inner.length; i++) {
+    const c = inner[i];
+    if (c === "{" || c === "(" || c === "[") {
+      depth++;
+      continue;
+    }
+    if (c === "}" || c === ")" || c === "]") {
+      if (depth > 0) depth--;
+      continue;
+    }
+    if (depth > 0) continue; // ignore relations nested inside a term
+
+    // Multi-char LaTeX relation command? Require the next char to be a
+    // non-letter so "\le" does not match the start of "\left".
+    let matched = "";
+    for (const cmd of LATEX_RELATION_COMMANDS) {
+      if (inner.startsWith(cmd, i)) {
+        const after = inner[i + cmd.length];
+        if (after === undefined || !/[a-zA-Z]/.test(after)) {
+          matched = cmd;
+          break;
+        }
+      }
+    }
+    if (!matched && SINGLE_CHAR_RELATIONS.has(c)) matched = c;
+    if (matched) {
+      // A top-level relation is allowed ONLY when the whole tile is exactly that
+      // bare operator; any extra content means the tile pre-assembles the relation.
+      return inner !== matched;
+    }
+  }
+
+  return false; // no top-level relation -> atomic fragment
+}
+
 function validateBuildStep(step: GeneratedStep, i: number): void {
   const build = step.build;
   if (!build) {
@@ -1003,6 +1166,11 @@ function validateBuildStep(step: GeneratedStep, i: number): void {
     }
     if (seen.has(tile)) {
       throw new Error(`Step ${i} build.tiles has a duplicate tile: "${tile}"`);
+    }
+    if (tileHasEmbeddedRelation(tile)) {
+      throw new Error(
+        `Step ${i} build tile "${tile}" embeds a relation operator; tiles must be atomic fragments and the relation operator (e.g. "=") must be its own separate tile`
+      );
     }
     seen.add(tile);
   }
@@ -1110,6 +1278,9 @@ ${JSON.stringify(exampleProblem.solution_flow, null, 2)}
 
 Generate a NEW set of steps for this problem. Return ONLY a JSON object with this shape:
 { "steps": [ ... ] }
+
+EVERY step object MUST include ALL fields shown in the example above, including a
+non-empty "tip" string — no step may omit "type", "prompt", or "tip".
 
 Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
 

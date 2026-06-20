@@ -697,6 +697,133 @@ describe("validateAndNormalize", () => {
     ).toThrow("build.feedbackWrong must be at least 40 chars");
   });
 
+  it("throws when a build tile is a complete equation (content on both sides of '=')", () => {
+    const problem = makeValidProblem();
+    // Each tile is a whole, already-assembled equation -> nothing to arrange.
+    problem.solution_flow.steps[3].build!.tiles = ["$F = ma$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("throws when a build tile is a partial relation (content on only one side of '=')", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = ["$F =$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("throws when a build tile is a complete inequality relation (\\leq with both sides)", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = ["$v \\leq c$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("throws when a build tile is a complete Unicode inequality (≠ with both sides)", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = ["$x \u2260 0$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("allows a bare '=' separator tile (relation operator alone)", () => {
+    const problem = makeValidProblem();
+    // The only relation-bearing tile here is the bare "=" separator; it must
+    // NOT be rejected by the embedded-relation guard.
+    problem.solution_flow.steps[3].build!.tiles = ["$2kr$", "=", "$mv^2/r$", "x", "y"];
+    problem.solution_flow.steps[3].build!.accepted = [["$2kr$", "=", "$mv^2/r$"]];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
+  it("allows a fragment tile with a relation nested inside a subscript/argument", () => {
+    const problem = makeValidProblem();
+    // "$E_{x=0}$" and "$v(t=0)$" carry "=" only INSIDE braces/parens — they are
+    // single atomic terms (evaluation conditions), not assembled relations.
+    problem.solution_flow.steps[3].build!.tiles = ["$E_{x=0}$", "=", "$v(t=0)$", "x", "y"];
+    problem.solution_flow.steps[3].build!.accepted = [["$E_{x=0}$", "=", "$v(t=0)$"]];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
+  it("throws when a whole equation is wrapped in plain parentheses", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = ["$(F = ma)$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("throws when a whole equation is wrapped in \\left( ... \\right)", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = ["$\\left(F = ma\\right)$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("allows a brace-grouped atomic condition tile (braces are grouping, not equation-wrapping)", () => {
+    const problem = makeValidProblem();
+    // "{x=0}" is a single grouped condition term; bare braces must NOT be
+    // unwrapped and rejected as a top-level relation.
+    problem.solution_flow.steps[3].build!.tiles = ["${x=0}$", "=", "$kr$", "x", "y"];
+    problem.solution_flow.steps[3].build!.accepted = [["${x=0}$", "=", "$kr$"]];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
+  it("throws when a build tile is a complete \\leqslant inequality", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = ["$v \\leqslant c$", "=", "b", "x", "y"];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("embeds a relation operator");
+  });
+
+  it("does not mistake the LaTeX command \\left for the relation \\le", () => {
+    const problem = makeValidProblem();
+    // "\left." starts with "\le" but is NOT a relation operator.
+    problem.solution_flow.steps[3].build!.tiles = [
+      "$\\left.\\frac{dV}{dr}\\right|_{r=R}$",
+      "=",
+      "$kr$",
+      "x",
+      "y",
+    ];
+    problem.solution_flow.steps[3].build!.accepted = [
+      ["$\\left.\\frac{dV}{dr}\\right|_{r=R}$", "=", "$kr$"],
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
+  it("accepts LaTeX-wrapped fragment tiles that contain no relation operator", () => {
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[3].build!.tiles = [
+      "$2kr$",
+      "=",
+      "$\\frac{mv^2}{r}$",
+      "$\\frac{GMm}{r^2}$",
+      "$kr$",
+    ];
+    problem.solution_flow.steps[3].build!.accepted = [["$2kr$", "=", "$\\frac{mv^2}{r}$"]];
+    problem.solution_flow.steps[3].build!.distractors = [
+      { tile: "$\\frac{GMm}{r^2}$", feedback: longFeedback("there is no gravitational term here") },
+      { tile: "$kr$", feedback: longFeedback("you dropped the factor of 2 from the derivative") },
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
   it("throws when a build tile is unused in any accepted arrangement and has no distractor", () => {
     const problem = makeValidProblem();
     // Add an extra tile that is neither in an accepted arrangement nor a distractor.
