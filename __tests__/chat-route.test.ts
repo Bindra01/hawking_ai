@@ -3,7 +3,7 @@ import { MAX_CHAT_MESSAGES, MAX_MESSAGE_CHARS } from "@/lib/chat-context";
 
 vi.mock("@/lib/supabase-server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
-  prisma: { problems: { findUnique: vi.fn() } },
+  prisma: { problems: { findFirst: vi.fn() } },
 }));
 vi.mock("@/lib/openai", () => ({ getOpenAIClient: vi.fn() }));
 
@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { getOpenAIClient } from "@/lib/openai";
 
 const mockedCreateClient = vi.mocked(createClient);
-const mockedFindUnique = vi.mocked(prisma.problems.findUnique);
+const mockedFindFirst = vi.mocked(prisma.problems.findFirst);
 const mockedGetOpenAIClient = vi.mocked(getOpenAIClient);
 
 const VALID_UUID = "11111111-1111-1111-1111-111111111111";
@@ -121,7 +121,7 @@ describe("POST /api/chat", () => {
 
   it("returns 404 when problem not found", async () => {
     authAs({ id: "u1" });
-    mockedFindUnique.mockResolvedValue(null as never);
+    mockedFindFirst.mockResolvedValue(null as never);
     const res = await POST(
       makeReq({
         problemId: OTHER_UUID,
@@ -133,7 +133,7 @@ describe("POST /api/chat", () => {
 
   it("happy path returns 200 with reply and server-built system prompt", async () => {
     authAs({ id: "u1" });
-    mockedFindUnique.mockResolvedValue(DB_PROBLEM as never);
+    mockedFindFirst.mockResolvedValue(DB_PROBLEM as never);
     const create = makeOpenAI("hello reply");
 
     const clientMessages = [
@@ -173,7 +173,7 @@ describe("POST /api/chat", () => {
 
   it("propagates Tier-0 wrong studentAnswer + DB correct answer into the system prompt", async () => {
     authAs({ id: "u1" });
-    mockedFindUnique.mockResolvedValue(DB_PROBLEM as never);
+    mockedFindFirst.mockResolvedValue(DB_PROBLEM as never);
     const create = makeOpenAI();
 
     await POST(
@@ -191,7 +191,7 @@ describe("POST /api/chat", () => {
 
   it("returns 500 when OpenAI throws", async () => {
     authAs({ id: "u1" });
-    mockedFindUnique.mockResolvedValue(DB_PROBLEM as never);
+    mockedFindFirst.mockResolvedValue(DB_PROBLEM as never);
     const create = vi.fn().mockRejectedValue(new Error("boom"));
     mockedGetOpenAIClient.mockReturnValue({
       chat: { completions: { create } },
@@ -215,7 +215,7 @@ describe("POST /api/chat", () => {
       })
     );
     expect(res.status).toBe(404);
-    expect(mockedFindUnique).not.toHaveBeenCalled();
+    expect(mockedFindFirst).not.toHaveBeenCalled();
   });
 
   it("returns 400 when stepResults is not an array", async () => {

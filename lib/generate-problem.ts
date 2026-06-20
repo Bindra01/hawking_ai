@@ -5,6 +5,7 @@ import {
   VALID_STEP_TYPES,
 } from "@/lib/types";
 import { getOpenAIClient } from "@/lib/openai";
+import { STEP_ICONS } from "@/lib/step-icons";
 
 // ─── STEP TYPE DEFINITIONS ───────────────────────────────────────────────────
 
@@ -728,15 +729,6 @@ const STEP_LABELS: Record<string, string> = {
   why: "WHY THIS WORKS",
 };
 
-const STEP_ICONS: Record<string, string> = {
-  trap: "⚠️",
-  identify: "🎯",
-  principle: "⚡",
-  setup: "🔧",
-  connect: "🧩",
-  sanity: "🧪",
-  why: "💡",
-};
 
 /**
  * Validates the LLM-generated problem matches the expected schema,

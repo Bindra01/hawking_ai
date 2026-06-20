@@ -13,7 +13,7 @@ import {
   MAX_STUDENT_ANSWER_CHARS,
 } from "@/lib/chat-context";
 import { describeCorrectAnswer } from "@/lib/step-eval";
-import { getStepFormat, type Step } from "@/lib/types";
+import { type Step } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -124,8 +124,12 @@ export async function POST(req: NextRequest) {
   // 3. Fetch canonical problem
   let problem;
   try {
-    problem = await prisma.problems.findUnique({
-      where: { id: problemId },
+    // Restrict to published problems, mirroring GET /api/problems. Draft /
+    // rejected problems are admin-only; without this filter any authenticated
+    // user holding an unpublished UUID could have the model recite its
+    // scenario, solution steps, and final answer.
+    problem = await prisma.problems.findFirst({
+      where: { id: problemId, status: "published" },
       select: {
         title: true,
         scenario: true,
@@ -162,11 +166,8 @@ export async function POST(req: NextRequest) {
     const match = stepResults.find((entry) => entry.index === i);
     return {
       label: step.label,
-      icon: "",
       prompt: step.prompt,
-      format: getStepFormat(step),
       correctAnswer: describeCorrectAnswer(step),
-      tip: step.tip ?? "",
       studentAnswer: match ? match.studentAnswer : "(no answer)",
       correct: match ? match.correct : false,
     };

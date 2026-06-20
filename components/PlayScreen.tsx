@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Problem, getStepFormat } from "@/lib/types";
+import { Problem } from "@/lib/types";
 import { calcXP, calcStars } from "@/lib/xp";
 import {
   type Answer,
@@ -11,21 +11,12 @@ import {
   describeCorrectAnswer,
 } from "@/lib/step-eval";
 import { StepSummary } from "@/lib/chat-context";
+import { stepIcon } from "@/lib/step-icons";
 import StepQuestion from "./StepQuestion";
 import CompletionScreen from "./CompletionScreen";
 import MathText from "./MathText";
 
 type Phase = "intro" | "playing" | "complete";
-
-const STEP_ICONS: Record<string, string> = {
-  trap: "⚠️",
-  identify: "🎯",
-  principle: "⚡",
-  setup: "🔧",
-  sanity: "🧪",
-  connect: "🧩",
-  why: "💡",
-};
 
 interface PlayScreenProps {
   problem: Problem;
@@ -56,13 +47,10 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
       // async state) so the LAST step's summary isn't dropped.
       const summaries: StepSummary[] = steps.map((s, i) => ({
         label: s.label,
-        icon: STEP_ICONS[s.type] ?? "•",
         prompt: s.prompt,
-        format: getStepFormat(s),
         correct: newResults[i] ?? false,
         studentAnswer: describeAnswer(s, newAnswers[i] ?? null),
         correctAnswer: describeCorrectAnswer(s),
-        tip: s.tip ?? "",
       }));
       setStepSummaries(summaries);
 
@@ -105,7 +93,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   // end-of-problem "Solution Story" recap so the steps read as one connected
   // method rather than isolated questions. results[i] aligns with steps[i].
   const journey = steps.map((s, i) => ({
-    icon: STEP_ICONS[s.type] ?? "•",
+    icon: stepIcon(s.type),
     label: s.label,
     tip: s.tip ?? "",
     correct: results[i] ?? false,
@@ -180,7 +168,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                       key={i}
                       className="flex flex-col items-center gap-1"
                     >
-                      <span className="text-2xl">{STEP_ICONS[s.type] ?? "•"}</span>
+                      <span className="text-2xl">{stepIcon(s.type)}</span>
                       <span className="text-xs font-bold" style={{ color: "#6b6b80", fontSize: "9px" }}>
                         {s.label.split(" ")[0]}
                       </span>
@@ -266,7 +254,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                           aria-label={`Step ${i + 1}: ${s.label}, ${status}`}
                           aria-current={current ? "step" : undefined}
                         >
-                          {done ? "✓" : STEP_ICONS[s.type] ?? "•"}
+                          {done ? "✓" : stepIcon(s.type)}
                         </div>
                         {i < steps.length - 1 && (
                           <div

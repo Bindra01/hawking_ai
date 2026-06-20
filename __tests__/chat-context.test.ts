@@ -227,13 +227,10 @@ describe("describeCorrectAnswer", () => {
 function makeSummary(over: Partial<StepSummary>): StepSummary {
   return {
     label: "Step",
-    icon: "S",
     prompt: "Do the thing",
-    format: "mcq",
     correct: true,
     studentAnswer: "ans",
     correctAnswer: "ans",
-    tip: "tip",
     ...over,
   };
 }

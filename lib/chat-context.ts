@@ -1,14 +1,9 @@
-import type { StepFormat } from "@/lib/types";
-
 export interface StepSummary {
   label: string;
-  icon: string;
   prompt: string;
-  format: StepFormat;
   correct: boolean;
   studentAnswer: string;
   correctAnswer: string;
-  tip: string;
 }
 
 // What the client is allowed to send the chat API (no problem text!).

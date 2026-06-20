@@ -2,16 +2,7 @@
 
 import Link from "next/link";
 import { ProblemListItem } from "@/lib/types";
-
-const STEP_ICONS: Record<string, string> = {
-  trap: "⚠️",
-  identify: "🎯",
-  principle: "⚡",
-  setup: "🔧",
-  sanity: "🧪",
-  connect: "🧩",
-  why: "💡",
-};
+import { stepIcon } from "@/lib/step-icons";
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   class_11: "Class 11",
@@ -69,7 +60,7 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
         {/* Step icons */}
         <div className="flex gap-1.5">
           {steps.map((s, i) => (
-            <span key={i} className="text-base">{STEP_ICONS[s.type] ?? "•"}</span>
+            <span key={i} className="text-base">{stepIcon(s.type)}</span>
           ))}
         </div>
 
