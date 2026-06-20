@@ -118,6 +118,93 @@ export function evaluateStep(
   }
 }
 
+/**
+ * Human-readable description of what the student actually answered for a step.
+ * Pure and total — never throws; returns documented fallback strings for any
+ * missing/out-of-range/mismatched data. Format is resolved via
+ * {@link getStepFormat}.
+ */
+export function describeAnswer(step: Step, answer: Answer | null): string {
+  if (!answer) return "(no answer)";
+  const format = getStepFormat(step);
+
+  switch (format) {
+    case "mcq": {
+      if (answer.kind !== "mcq") return "(no answer)";
+      if (
+        !step.options ||
+        answer.index < 0 ||
+        answer.index >= step.options.length
+      ) {
+        return "(no answer)";
+      }
+      return step.options[answer.index].text;
+    }
+
+    case "claim": {
+      if (answer.kind !== "claim" || !step.claim) return "(no answer)";
+      return answer.saidTrap ? "said it's a trap" : "said it sounds right";
+    }
+
+    case "multiselect": {
+      if (answer.kind !== "multiselect" || !step.multiselect) {
+        return "(no answer)";
+      }
+      const items = step.multiselect.items;
+      const texts = answer.indices
+        .filter((i) => i >= 0 && i < items.length)
+        .map((i) => items[i].text);
+      if (texts.length === 0) return "(nothing selected)";
+      return texts.join(", ");
+    }
+
+    case "build": {
+      if (answer.kind !== "build" || !step.build) return "(no answer)";
+      const tiles = step.build.tiles;
+      const placed = answer.order
+        .filter((i) => i >= 0 && i < tiles.length)
+        .map((i) => tiles[i]);
+      if (placed.length === 0) return "(empty)";
+      return placed.join(" ");
+    }
+
+    default:
+      return "(no answer)";
+  }
+}
+
+/**
+ * Human-readable description of the correct answer for a step. Pure and total —
+ * never throws; returns "" when the format-specific data is missing.
+ */
+export function describeCorrectAnswer(step: Step): string {
+  const format = getStepFormat(step);
+
+  switch (format) {
+    case "mcq":
+      return step.options?.find((o) => o.correct)?.text ?? "";
+
+    case "claim": {
+      if (!step.claim) return "";
+      return step.claim.isTrap ? "it's a trap" : "it sounds right";
+    }
+
+    case "multiselect": {
+      if (!step.multiselect) return "";
+      return step.multiselect.items
+        .filter((item) => item.matters === true)
+        .map((item) => item.text)
+        .join(", ");
+    }
+
+    case "build":
+      return step.build?.accepted?.[0]?.join(" ") ?? "";
+
+    default:
+      return "";
+  }
+}
+
 function arraysEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {

@@ -75,11 +75,26 @@ export default function ProblemCard({ problem, bestAttempt }: ProblemCardProps) 
 
         {/* CTA */}
         {bestAttempt ? (
-          <div className="flex items-center gap-2">
-            <span className="text-sm">{"⭐".repeat(bestAttempt.stars)}</span>
-            <span className="text-xs font-bold" style={{ color: "#ffc800" }}>
-              +{bestAttempt.xp_earned} XP
-            </span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{"⭐".repeat(bestAttempt.stars)}</span>
+              <span className="text-xs font-bold" style={{ color: "#ffc800" }}>
+                +{bestAttempt.xp_earned} XP
+              </span>
+            </div>
+            {/* Already attempted -> REVISE instead of START */}
+            <div
+              className="shrink-0 px-5 py-2 rounded-xl font-black text-xs uppercase"
+              style={{
+                background: "#1cb0f6",
+                color: "#fff",
+                boxShadow: "0 3px 0 #1280bd",
+                letterSpacing: "1.5px",
+                fontSize: "11px",
+              }}
+            >
+              REVISE
+            </div>
           </div>
         ) : (
           <div

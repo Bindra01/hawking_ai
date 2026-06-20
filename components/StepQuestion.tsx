@@ -37,7 +37,7 @@ interface StepQuestionProps {
   stepIndex: number;
   totalSteps: number;
   isLast: boolean;
-  onNext: (correct: boolean) => void;
+  onNext: (correct: boolean, answer: Answer | null) => void;
 }
 
 export default function StepQuestion({
@@ -82,7 +82,7 @@ export default function StepQuestion({
       setShowTip(true);
       return;
     }
-    onNext(result?.correct ?? false);
+    onNext(result?.correct ?? false, answer);
   }
 
   const isCorrect = submitted && (result?.correct ?? false);

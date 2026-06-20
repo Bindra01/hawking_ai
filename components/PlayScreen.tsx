@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Problem } from "@/lib/types";
+import { Problem, getStepFormat } from "@/lib/types";
 import { calcXP, calcStars } from "@/lib/xp";
+import {
+  type Answer,
+  describeAnswer,
+  describeCorrectAnswer,
+} from "@/lib/step-eval";
+import { StepSummary } from "@/lib/chat-context";
 import StepQuestion from "./StepQuestion";
 import CompletionScreen from "./CompletionScreen";
 import MathText from "./MathText";
@@ -32,16 +38,34 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [stepIndex, setStepIndex] = useState(0);
   const [results, setResults] = useState<boolean[]>([]);
+  const [answers, setAnswers] = useState<(Answer | null)[]>([]);
+  const [stepSummaries, setStepSummaries] = useState<StepSummary[]>([]);
 
   function handleStart() {
     setPhase("playing");
   }
 
-  function handleNext(correct: boolean) {
+  function handleNext(correct: boolean, answer: Answer | null) {
     const newResults = [...results, correct];
     setResults(newResults);
+    const newAnswers = [...answers, answer];
+    setAnswers(newAnswers);
 
     if (stepIndex + 1 >= steps.length) {
+      // Build the per-step recap from the freshly-computed locals (not the
+      // async state) so the LAST step's summary isn't dropped.
+      const summaries: StepSummary[] = steps.map((s, i) => ({
+        label: s.label,
+        icon: STEP_ICONS[s.type] ?? "•",
+        prompt: s.prompt,
+        format: getStepFormat(s),
+        correct: newResults[i] ?? false,
+        studentAnswer: describeAnswer(s, newAnswers[i] ?? null),
+        correctAnswer: describeCorrectAnswer(s),
+        tip: s.tip ?? "",
+      }));
+      setStepSummaries(summaries);
+
       const stepsCorrect = newResults.filter(Boolean).length;
       const xpEarned = calcXP(stepsCorrect, steps.length);
       const stars = calcStars(stepsCorrect, steps.length);
@@ -281,6 +305,8 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                 goal={problem.goal}
                 finalAnswer={problem.final_answer}
                 journey={journey}
+                problem={problem}
+                stepSummaries={stepSummaries}
               />
             </motion.div>
           )}
