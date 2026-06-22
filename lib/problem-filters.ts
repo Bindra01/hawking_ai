@@ -13,9 +13,14 @@ export function buildProblemListWhere(
   subject?: string | null,
   difficulty?: string | null
 ): ProblemListWhere {
+  // Trim so whitespace-only params (e.g. "?difficulty=%20") behave like "no
+  // filter" instead of filtering out every problem, and padded valid values
+  // still match.
   const where: ProblemListWhere = { status: "published" };
-  if (subject) where.subject = subject;
-  if (difficulty) where.difficulty = difficulty;
+  const normalizedSubject = subject?.trim();
+  const normalizedDifficulty = difficulty?.trim();
+  if (normalizedSubject) where.subject = normalizedSubject;
+  if (normalizedDifficulty) where.difficulty = normalizedDifficulty;
   return where;
 }
 

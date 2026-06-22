@@ -29,6 +29,18 @@ describe("buildProblemListWhere", () => {
       difficulty: "class_12",
     });
   });
+
+  it("treats whitespace-only params as no filter", () => {
+    expect(buildProblemListWhere("   ", "\t")).toEqual({ status: "published" });
+  });
+
+  it("trims padded valid values", () => {
+    expect(buildProblemListWhere("  mechanics  ", " class_11 ")).toEqual({
+      status: "published",
+      subject: "mechanics",
+      difficulty: "class_11",
+    });
+  });
 });
 
 describe("buildCardMeta", () => {
