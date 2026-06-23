@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { validateAndNormalize } from "@/lib/generate-problem";
+import { validateAndNormalize, __TEST_EXAMPLES } from "@/lib/generate-problem";
 
 // Helper to generate wrong feedback meeting the 50-char minimum
 function wrongFeedback(detail: string = "you misapplied the formula"): string {
@@ -83,6 +83,24 @@ function makeMcqStep(type: string, prompt: string): Step {
   };
 }
 
+// A valid solve step (type "solve"). Its correct option text is the fixture
+// final_answer "10 m/s" so the warn-only equality check stays quiet by default.
+function makeSolveStep(prompt: string): Step {
+  return {
+    type: "solve",
+    label: "LOCK THE ANSWER",
+    icon: "🔒",
+    prompt,
+    options: [
+      { text: "10 m/s", correct: true, feedback: "Locked in, that is the final answer!" },
+      { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("you used the wrong units"), distractor_type: "misconception" as const },
+      { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("you confused velocity with acceleration"), distractor_type: "procedural_slip" as const },
+      { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("you applied a formula outside its valid range"), distractor_type: "half_right" as const },
+    ],
+    tip: "Lock in the answer you already derived",
+  };
+}
+
 // A valid claim step (type "trap").
 function makeClaimStep(prompt: string): Step {
   return {
@@ -144,7 +162,7 @@ function makeBuildStep(prompt: string): Step {
 
 // Helper to create a valid problem for mutation in tests.
 // Step layout: 0 principle (mcq), 1 trap (claim), 2 identify (multiselect),
-// 3 setup (build), 4 connect (mcq), 5 sanity (mcq).
+// 3 setup (build), 4 connect (mcq), 5 solve (mcq), 6 sanity (mcq). (7 steps.)
 function makeValidProblem(): TestProblem {
   return {
     title: "Test Problem",
@@ -162,10 +180,27 @@ function makeValidProblem(): TestProblem {
         makeMultiSelectStep("Tap every quantity that actually controls the outcome of this throw."),
         makeBuildStep("Build the kinematic equation that relates the given quantities."),
         makeMcqStep("connect", "What's the key simplification that fast-tracks the solve here?"),
+        makeSolveStep("Lock in the final answer for this projectile problem."),
         makeMcqStep("sanity", "Does the final answer make physical sense given the setup?"),
       ],
     },
   };
+}
+
+// Set the text of the solve step's correct option (solve is index 5 in the
+// makeValidProblem() layout).
+function setSolveCorrectText(problem: TestProblem, text: string): void {
+  problem.solution_flow.steps[5].options!.find((o) => o.correct)!.text = text;
+}
+
+// Run a body with console.warn spied on, then restore the spy.
+function withWarnSpy(body: (warnSpy: ReturnType<typeof vi.spyOn>) => void): void {
+  const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    body(warnSpy);
+  } finally {
+    warnSpy.mockRestore();
+  }
 }
 
 describe("validateAndNormalize", () => {
@@ -199,7 +234,8 @@ describe("validateAndNormalize", () => {
     expect(steps[1].format).toBe("claim"); // trap
     expect(steps[2].format).toBe("multiselect"); // identify
     expect(steps[3].format).toBe("build"); // setup
-    expect(steps[5].format).toBe("mcq"); // sanity
+    expect(steps[5].format).toBe("mcq"); // solve
+    expect(steps[6].format).toBe("mcq"); // sanity
   });
 
   it("throws when title is missing", () => {
@@ -237,8 +273,8 @@ describe("validateAndNormalize", () => {
   it("throws when there are too many steps (> 7)", () => {
     const problem = makeValidProblem();
     const extraStep = makeMcqStep("connect", "Another connecting step with a sufficiently long prompt here.");
-    // 6 + 2 = 8 steps
-    problem.solution_flow.steps.splice(4, 0, extraStep, { ...extraStep });
+    // 7 + 1 = 8 steps; insert before solve so the flow stays solve-before-sanity.
+    problem.solution_flow.steps.splice(4, 0, extraStep);
     expect(problem.solution_flow.steps.length).toBe(8);
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
@@ -322,8 +358,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.solution_flow.steps = [
       makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
-      makeClaimStep("Is the claim about ignoring friction sound, or is it a trap on this one?"),
       makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
+      makeSolveStep("Lock in the final answer you derived for this problem."),
       makeMcqStep("sanity", "Does the final answer make physical sense given the setup?"),
     ];
     expect(() =>
@@ -333,8 +369,7 @@ describe("validateAndNormalize", () => {
 
   it("accepts a problem with exactly 7 steps (maximum)", () => {
     const problem = makeValidProblem();
-    const extra = makeMcqStep("why", "Why does this result make physical sense for this configuration?");
-    problem.solution_flow.steps.splice(4, 0, extra);
+    // makeValidProblem() already builds a valid 7-step flow with solve before sanity.
     expect(problem.solution_flow.steps.length).toBe(7);
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
@@ -852,6 +887,129 @@ describe("validateAndNormalize", () => {
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('stale "options" field');
+  });
+
+  // ─── solve step: count + adjacency + answer-match ─────────────────────────
+
+  it("throws when there is no solve step", () => {
+    const problem = makeValidProblem();
+    // Replace the solve step (index 5) with a connect mcq -> zero solve steps,
+    // count stays 7. The count check fires before the adjacency check.
+    problem.solution_flow.steps[5] = makeMcqStep(
+      "connect",
+      "Another connecting step standing in for the solve step here."
+    );
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow('Expected exactly 1 "solve" step');
+  });
+
+  it("throws when the step before sanity is not solve (mis-positioned, still exactly one)", () => {
+    const problem = makeValidProblem();
+    const steps = problem.solution_flow.steps;
+    // Swap connect (index 4) with solve (index 5): exactly one solve remains but
+    // it sits at index 4, and a non-solve (connect) is immediately before sanity.
+    [steps[4], steps[5]] = [steps[5], steps[4]];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow('Step before "sanity" must be type "solve"');
+  });
+
+  it("throws when there is more than one solve step", () => {
+    const problem = makeValidProblem();
+    // Replace the connect step (index 4) with a second solve step. Total stays 7
+    // (<=7, so the 4-7 count check passes) and we reach the solve-count check.
+    problem.solution_flow.steps[4] = makeSolveStep(
+      "A second lock-in step that should not be allowed here."
+    );
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow('Expected exactly 1 "solve" step, got 2');
+  });
+
+  it("warns but does not throw when solve correct option text does not match final_answer", () => {
+    const problem = makeValidProblem();
+    setSolveCorrectText(problem, "42 joules");
+
+    withWarnSpy((warnSpy) => {
+      expect(() =>
+        validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+      ).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("final_answer")
+      );
+    });
+  });
+
+  it("warns on a near-but-wrong answer (substring trap)", () => {
+    const problem = makeValidProblem();
+    problem.final_answer = "10 m/s";
+    setSolveCorrectText(problem, "110 m/s");
+
+    withWarnSpy((warnSpy) => {
+      expect(() =>
+        validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+      ).not.toThrow();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("final_answer")
+      );
+    });
+  });
+
+  it("accepts when solve correct option matches final_answer with simple wrapper formatting", () => {
+    const problem = makeValidProblem();
+    problem.final_answer = "-253°C";
+    setSolveCorrectText(problem, "$-253°C$");
+
+    withWarnSpy((warnSpy) => {
+      expect(() =>
+        validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+      ).not.toThrow();
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("final_answer")
+      );
+    });
+  });
+
+  it("accepts identical college-style LaTeX", () => {
+    const problem = makeValidProblem();
+    const latex = "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$";
+    problem.final_answer = latex;
+    setSolveCorrectText(problem, latex);
+
+    withWarnSpy((warnSpy) => {
+      expect(() =>
+        validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+      ).not.toThrow();
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("final_answer")
+      );
+    });
+  });
+
+  it("accepts equivalent plain-vs-LaTeX college formatting", () => {
+    const problem = makeValidProblem();
+    problem.final_answer = "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$";
+    setSolveCorrectText(problem, "r = (L²/2mk)^(1/4)");
+
+    withWarnSpy((warnSpy) => {
+      expect(() =>
+        validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+      ).not.toThrow();
+      expect(warnSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining("final_answer")
+      );
+    });
+  });
+
+  it("examples keep solve-correct-text === final_answer", () => {
+    for (const example of Object.values(__TEST_EXAMPLES)) {
+      const solveStep = example.solution_flow.steps.find((s) => s.type === "solve");
+      expect(solveStep).toBeDefined();
+      const correct = solveStep!.options!.find((o) => o.correct);
+      expect(correct).toBeDefined();
+      expect(correct!.text).toBe(example.final_answer);
+    }
   });
 });
 

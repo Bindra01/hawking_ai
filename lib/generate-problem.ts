@@ -24,7 +24,7 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Use when the problem requires choosing between multiple possible approaches.
    For hard problems, this step should distinguish between superficially similar principles.
 
-3. "identify" (🎯 LOCK THE ANSWER / IDENTIFY THE KEY)
+3. "identify" (🎯 IDENTIFY THE KEY)
    Purpose: Identify the key variable, quantity, constraint, or boundary condition.
    Use when the problem has a non-obvious "key insight" that unlocks the solution.
 
@@ -40,7 +40,13 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Explain the deeper physical intuition. Why does this result make sense?
    Use for hard problems where the physics insight is as important as the math.
 
-7. "sanity" (🧪 SANITY CHECK)
+7. "solve" (🔒 LOCK THE ANSWER)
+   Purpose: Land exactly on the problem's final_answer. The student picks the
+   value/expression they already derived — the single correct option's text MUST
+   BE the problem's final_answer (byte-identical). Comes right AFTER "connect"
+   and right BEFORE "sanity". No fresh arithmetic — it is a recognition step.
+
+8. "sanity" (🧪 SANITY CHECK)
    Purpose: Verify the answer makes physical sense. ALWAYS the LAST step.
    Check: units, limiting cases, order of magnitude, physical intuition.
 
@@ -137,8 +143,10 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     // separate tiles. (A relation INSIDE a subscript/argument, e.g. "$E_{x=0}$"
     // or "$v(t=0)$", is part of a single term and is fine.)
 
-* all OTHER types ("principle", "connect", "why", "sanity")  => emit "options":
+* all OTHER types ("principle", "connect", "why", "solve", "sanity")  => emit "options":
     exactly 4 options, exactly 1 correct (the existing MCQ rules below apply).
+    For the "solve" step, the single correct option's text MUST equal the
+    problem's final_answer.
 
 Do NOT add an "options" array to trap/identify/setup steps, and do NOT add
 claim/multiselect/build objects to the MCQ types.
@@ -221,10 +229,23 @@ const EXAMPLE_CLASS_11 = {
         tip: "K → °C: subtract 273. °C → K: add 273. Never just negate."
       },
       {
+        type: "solve",
+        label: "LOCK THE ANSWER",
+        icon: "🔒",
+        prompt: "You converted T(H₂) = 20 K back to Celsius. Lock in the final answer for this problem — which value is it?",
+        options: [
+          { text: "-253°C", correct: true, feedback: "Locked in. -253°C (= 20 K) is the temperature at which H₂'s RMS speed matches O₂ at 47°C." },
+          { text: "20 K", correct: false, feedback: "That's the temperature in Kelvin, but the question asks for °C. You still need the final K → °C conversion: 20 - 273 = -253°C. Don't hand in the intermediate Kelvin value as the final answer.", distractor_type: "procedural_slip" as const },
+          { text: "293°C", correct: false, feedback: "You added 273 instead of subtracting it. Going from Kelvin to Celsius always subtracts 273 (since 0°C = 273 K), so 20 K = 20 - 273 = -253°C, not 293°C. The sign flips negative because 20 K is far below the freezing point of water.", distractor_type: "misconception" as const },
+          { text: "-20°C", correct: false, feedback: "You just negated the Kelvin value instead of converting it. The Kelvin and Celsius scales are offset by 273, not related by a sign flip, so 20 K = 20 - 273 = -253°C. Negating alone never converts between the two scales.", distractor_type: "half_right" as const }
+        ],
+        tip: "The final answer is the value in the units the question asks for — finish every conversion before you lock it in."
+      },
+      {
         type: "sanity",
         label: "SANITY CHECK",
         icon: "🧪",
-        prompt: "H₂ is 16× lighter than O₂ but needs the same RMS speed. -253°C (= 20 K) is near absolute zero. Does this make sense?",
+        prompt: "You found -253°C (= 20 K), near absolute zero. H₂ is 16× lighter than O₂ but needs the same RMS speed. Does this hold up?",
         options: [
           { text: "Yes — lighter molecules move faster at the same T, so H₂ needs very low T to match heavy O₂", correct: true, feedback: "Exactly. Since v ∝ √(T/M), a 16× lighter molecule needs 16× lower temperature for the same speed." },
           { text: "No — temperature can't be that low for a real gas", correct: false, feedback: "The math is correct even if H₂ would liquefy at this temperature. The question asks for the temperature value, not whether it's physically achievable in practice. In JEE problems, ideal gas assumptions apply unless stated otherwise.", distractor_type: "half_right" as const },
@@ -244,7 +265,7 @@ const EXAMPLE_COLLEGE = {
   difficulty: "college",
   scenario: "A particle of mass m moves in a central force field with potential energy U(r) = kr². If the particle has angular momentum L, find the radius of its circular orbit.",
   goal: "Find: $r = (L^2/2mk)^{1/4}$",
-  final_answer: "r = (L²/2mk)^(1/4)",
+  final_answer: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -307,10 +328,23 @@ const EXAMPLE_COLLEGE = {
         tip: "r^n = X → r = X^(1/n). Don't confuse square root with fourth root."
       },
       {
+        type: "solve",
+        label: "LOCK THE ANSWER",
+        icon: "🔒",
+        prompt: "You isolated r by taking the fourth root of $r^4 = L^2/(2mk)$. Lock in the final expression for the orbit radius.",
+        options: [
+          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$", correct: true, feedback: "Locked in. The orbit radius is the fourth root of $L^2/(2mk)$ — exactly what force balance plus angular momentum demand." },
+          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/2}$", correct: false, feedback: "That's the square root, but you needed the fourth root since $r^4 = L^2/(2mk)$. If $r^n = X$ then $r = X^{1/n}$, and here n = 4, so the exponent is 1/4, not 1/2. This drops half of the required root.", distractor_type: "procedural_slip" as const },
+          { text: "$r = \\frac{L}{\\sqrt{2mk}}$", correct: false, feedback: "This is what you'd get if $r^2 = L^2/(2mk)$, but the relation is $r^4 = L^2/(2mk)$. You took the square root once instead of the fourth root, so the L stays to the first power instead of becoming $L^{1/2}$. The correct form is the fourth root of the whole expression.", distractor_type: "half_right" as const },
+          { text: "$r = \\left(\\frac{2mk}{L^2}\\right)^{1/4}$", correct: false, feedback: "You inverted the fraction. From $r^4 = L^2/(2mk)$ the fourth root keeps $L^2$ on top and $2mk$ on the bottom, so it's $(L^2/2mk)^{1/4}$, not its reciprocal. Flipping numerator and denominator would make r shrink when L grows, which is physically backwards.", distractor_type: "misconception" as const }
+        ],
+        tip: "Once you've isolated the variable, the final answer is that exact expression — don't invert or under-root it."
+      },
+      {
         type: "sanity",
         label: "SANITY CHECK",
         icon: "🧪",
-        prompt: "$r = (L^2/2mk)^{1/4}$. If you increase k (stiffer potential), what happens to the orbit radius? Does this match intuition?",
+        prompt: "You found $r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$. If you increase k (stiffer potential), does the orbit radius behave as it should?",
         options: [
           { text: "r decreases — stiffer potential pulls the particle closer, like a stiffer spring", correct: true, feedback: "Correct. k in the denominator means larger k → smaller r. A stronger restoring force confines the orbit." },
           { text: "r increases — stronger force means the particle moves outward", correct: false, feedback: "Stronger restoring force pulls inward, not outward. Think of a stiffer spring — it keeps the mass closer to center. In the formula, k is in the denominator, confirming larger k → smaller r. Physical intuition and math agree.", distractor_type: "misconception" as const },
@@ -322,6 +356,10 @@ const EXAMPLE_COLLEGE = {
     ]
   }
 };
+
+// Exposed for the test suite's guard that each example's `solve` correct option
+// text stays byte-identical to that example's `final_answer`.
+export const __TEST_EXAMPLES = { EXAMPLE_CLASS_11, EXAMPLE_COLLEGE };
 
 // ─── MISCONCEPTION CATALOG ──────────────────────────────────────────────────
 
@@ -403,28 +441,28 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
-- Use 5 steps. Focus on building correct problem-solving habits.
+- Use 6 steps. Focus on building correct problem-solving habits.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Recommended step pattern: identify/trap/principle → principle → setup → connect → sanity`,
+- Recommended step pattern: identify/trap/principle → principle → setup → connect → solve → sanity`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
-- Use 5 steps. Problems should require multi-step reasoning.
+- Use 6 steps. Problems should require multi-step reasoning.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: identify/trap/principle → identify → setup → connect → sanity`,
+- Recommended step pattern: identify/trap/principle → identify → setup → connect → solve → sanity`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
-- Use 5-6 steps. Problems should require deep physical insight.
+- Use 6-7 steps. Problems should require deep physical insight.
 - Include a "why" step to explain the deeper physics behind a key result.
 - The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
-- Recommended step pattern: identify → principle → setup → connect → why → sanity`,
+- Recommended step pattern: identify → principle → setup → connect → why → solve → sanity`,
 };
 
 // ─── GENERATION PIPELINE ─────────────────────────────────────────────────────
@@ -581,6 +619,7 @@ Rules:
 - The "connect" step should ask "What's the key simplification?" — showing conceptual leaps, NOT asking for arithmetic.
 - Think of each step as a DECISION POINT, not a CALCULATION POINT.
 - The student should feel like they're making strategic choices, like a game — not doing homework.
+- EXCEPTION — the dedicated "solve" step: this ONE step asks the student to LOCK IN the final answer, so its correct option text IS the final numerical/symbolic answer (equal to final_answer). Even so, it must be answerable by recognition/THINKING, not fresh pen-and-paper arithmetic — the student picks the answer they already derived through the "setup"/"connect" steps, not a value they must newly compute here.
 
 CRITICAL QUALITY RULES:
 
@@ -625,9 +664,10 @@ CRITICAL QUALITY RULES:
    - "goal": "Find: [answer]" format
    - "final_answer": The numerical/symbolic answer
    - Last step MUST be type "sanity" (an MCQ step with options)
+   - The step IMMEDIATELY BEFORE sanity MUST be type "solve" (an MCQ whose single correct option text is the final_answer)
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap → "claim" object; identify → "multiselect" object; setup → "build" object;
-     principle/connect/why/sanity → "options" (exactly 4: 1 correct, 3 wrong).
+     principle/connect/why/solve/sanity → "options" (exactly 4: 1 correct, 3 wrong).
    - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
    - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
 }
@@ -725,6 +765,7 @@ const STEP_LABELS: Record<string, string> = {
   principle: "RECALL THE PRINCIPLE",
   setup: "SET UP THE MATH",
   connect: "FAST-TRACK THE SOLVE",
+  solve: "LOCK THE ANSWER",
   sanity: "SANITY CHECK",
   why: "WHY THIS WORKS",
 };
@@ -767,6 +808,17 @@ export function validateAndNormalize(
   // Last step must be sanity
   if (steps[steps.length - 1].type !== "sanity") {
     throw new Error('Last step must be type "sanity"');
+  }
+
+  // The step immediately before sanity must be a single "solve" step.
+  // ORDER MATTERS: do the count check FIRST, then the adjacency check, so the
+  // thrown error is deterministic for a given flow.
+  const solveCount = steps.filter((s) => s.type === "solve").length;
+  const solveIdx = steps.findIndex((s) => s.type === "solve");
+  if (solveCount !== 1) {
+    throw new Error(`Expected exactly 1 "solve" step, got ${solveCount}`);
+  } else if (solveIdx !== steps.length - 2) {
+    throw new Error('Step before "sanity" must be type "solve"');
   }
 
   // Validate each step
@@ -849,6 +901,59 @@ export function validateAndNormalize(
         break;
     }
   }
+
+  // WARN-ONLY: the solve step's single correct option text should canonically
+  // equal the problem's final_answer. GPT-4o formats answers differently across
+  // surfaces, so a mismatch only warns (a hard fail causes spurious retries);
+  // the byte-exact example JSONs are what drive compliance.
+  const solveStep = steps[solveIdx];
+  const solveCorrect = solveStep.options?.find((o) => o.correct);
+  if (
+    solveCorrect &&
+    normalizeAnswer(solveCorrect.text) !== normalizeAnswer(problem.final_answer)
+  ) {
+    console.warn(
+      `Solve step's correct option ("${solveCorrect.text}") may not match final_answer ("${problem.final_answer}")`
+    );
+  }
+}
+
+/**
+ * Canonicalize an answer string so that cross-surface formatting differences
+ * (LaTeX wrappers, \frac vs a/b, superscript unicode, exponent grouping,
+ * unicode minus, degree sign, whitespace) collapse to a comparable form. Used
+ * by the warn-only solve/final_answer equality check. Order matters — \frac is
+ * canonicalized BEFORE braces are stripped.
+ */
+export function normalizeAnswer(s: string): string {
+  let out = (s ?? "").toLowerCase();
+  // Strip math delimiters.
+  out = out.replace(/\$/g, "");
+  // Canonicalize \frac{a}{b} -> a/b BEFORE stripping braces.
+  out = out.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "$1/$2");
+  // Strip all LaTeX wrappers/commands (\left, \right, and any other backslash-command).
+  out = out.replace(/\\[a-zA-Z]+/g, "");
+  // Map superscript unicode digits to plain digits.
+  const superMap: Record<string, string> = {
+    "\u2070": "0",
+    "\u00b9": "1",
+    "\u00b2": "2",
+    "\u00b3": "3",
+    "\u2074": "4",
+    "\u2075": "5",
+    "\u2076": "6",
+    "\u2077": "7",
+    "\u2078": "8",
+    "\u2079": "9",
+  };
+  out = out.replace(/[\u2070\u00b9\u00b2\u00b3\u2074-\u2079]/g, (c) => superMap[c] || c);
+  // Strip grouping/exponent punctuation so ^{1/4} and ^(1/4) both -> 1/4.
+  out = out.replace(/[\^{}()]/g, "");
+  // Unify minus and strip degree.
+  out = out.replace(/\u2212/g, "-").replace(/\u00b0/g, "");
+  // Remove all whitespace.
+  out = out.replace(/\s+/g, "");
+  return out;
 }
 
 function shuffleInPlace<T>(arr: T[]): void {

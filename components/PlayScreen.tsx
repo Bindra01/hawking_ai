@@ -16,7 +16,7 @@ import StepQuestion from "./StepQuestion";
 import CompletionScreen from "./CompletionScreen";
 import MathText from "./MathText";
 
-type Phase = "intro" | "playing" | "complete";
+type Phase = "intro" | "playing" | "reveal" | "complete";
 
 interface PlayScreenProps {
   problem: Problem;
@@ -31,6 +31,15 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   const [results, setResults] = useState<boolean[]>([]);
   const [answers, setAnswers] = useState<(Answer | null)[]>([]);
   const [stepSummaries, setStepSummaries] = useState<StepSummary[]>([]);
+  // Whether the student picked the correct option on the solve step. Drives the
+  // conditional reveal copy — they can CONTINUE after a wrong pick, so the
+  // reveal must never falsely congratulate.
+  const [solveCorrect, setSolveCorrect] = useState(false);
+
+  // Index of the dedicated "solve" (LOCK THE ANSWER) step. -1 for legacy /
+  // un-regenerated problems that predate the solve step — those flow unchanged
+  // (no reveal beat).
+  const solveIdx = steps.findIndex((s) => s.type === "solve");
 
   function handleStart() {
     setPhase("playing");
@@ -79,6 +88,12 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
       }).catch(() => {
         // non-blocking: a failed save must not block the recap
       });
+    } else if (stepIndex === solveIdx && solveIdx !== -1) {
+      // The student just answered the solve step (and it's not the last step):
+      // show the in-flow reveal card before advancing. Do NOT advance stepIndex
+      // yet — sanity remains steps[stepIndex + 1] when we resume from reveal.
+      setSolveCorrect(correct);
+      setPhase("reveal");
     } else {
       setStepIndex(stepIndex + 1);
     }
@@ -99,7 +114,25 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
     correct: results[i] ?? false,
   }));
 
-  const progress = phase === "intro" ? 0 : ((stepIndex) / steps.length) * 100;
+  // During reveal we haven't advanced stepIndex yet (it still points at the
+  // solve step), so compute progress from solveIdx + 1 to show the solve step
+  // as complete and the bar sitting between solve and sanity.
+  const progressIndex = phase === "reveal" ? solveIdx + 1 : stepIndex;
+  const progress = phase === "intro" ? 0 : (progressIndex / steps.length) * 100;
+
+  // Conditional reveal copy: a wrong solve pick can still CONTINUE, so the card
+  // must never falsely congratulate.
+  const reveal = solveCorrect
+    ? {
+        heading: "You've got it!",
+        label: "Your answer",
+        body: "That's the value you set out to find. One last move — let's make sure it holds up.",
+      }
+    : {
+        heading: "Here's the answer",
+        label: "Correct answer",
+        body: "Lock this in — it's the value you set out to find. One last move to make sure it holds up.",
+      };
 
   return (
     <div
@@ -275,6 +308,124 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                 isLast={stepIndex === steps.length - 1}
                 onNext={handleNext}
               />
+            </motion.div>
+          )}
+
+          {phase === "reveal" && (
+            <motion.div
+              key="reveal"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col justify-center px-4 pt-4 pb-36"
+              style={{ minHeight: "70vh" }}
+            >
+              <div
+                className="relative rounded-3xl flex flex-col items-center gap-4 text-center overflow-hidden"
+                style={{
+                  background: "#1a1a2e",
+                  border: "2px solid #2a2a40",
+                  padding: "28px 22px",
+                }}
+              >
+                {/* subtle teal glow behind the medallion */}
+                <div
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: -40,
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: 220,
+                    height: 220,
+                    borderRadius: "50%",
+                    background:
+                      "radial-gradient(circle, rgba(0,205,156,.16), transparent 70%)",
+                  }}
+                />
+                <div
+                  className="relative flex items-center justify-center rounded-full"
+                  style={{
+                    width: 74,
+                    height: 74,
+                    background: "#06241d",
+                    border: "2.5px solid #00cd9c",
+                    fontSize: "34px",
+                    boxShadow: "0 0 0 6px rgba(0,205,156,.12)",
+                  }}
+                >
+                  🔒
+                </div>
+                <div
+                  className="relative font-black uppercase"
+                  style={{
+                    color: "#00cd9c",
+                    fontSize: "11px",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  Answer Locked
+                </div>
+                <div
+                  className="relative font-black"
+                  style={{ color: "#e5e5e5", fontSize: "26px", lineHeight: 1.1 }}
+                >
+                  {reveal.heading}
+                </div>
+
+                <div
+                  className="relative w-full rounded-2xl flex flex-col gap-1.5"
+                  style={{
+                    background: "#06241d",
+                    border: "2px solid #00cd9c",
+                    padding: "18px 16px",
+                  }}
+                >
+                  <div
+                    className="font-black uppercase"
+                    style={{
+                      color: "#4fd9b8",
+                      fontSize: "10px",
+                      letterSpacing: "1.8px",
+                    }}
+                  >
+                    {reveal.label}
+                  </div>
+                  <MathText
+                    text={problem.final_answer}
+                    className="font-black"
+                    style={{ color: "#fff", fontSize: "30px", letterSpacing: ".5px" }}
+                  />
+                </div>
+
+                <div
+                  className="relative font-bold leading-snug"
+                  style={{ color: "#afafbf", fontSize: "13px", maxWidth: 320 }}
+                >
+                  {reveal.body}
+                </div>
+              </div>
+
+              <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3" style={{ background: "linear-gradient(to top, #131327 80%, transparent)", maxWidth: 480, margin: "0 auto" }}>
+                <button
+                  onClick={() => {
+                    setStepIndex(solveIdx + 1);
+                    setPhase("playing");
+                  }}
+                  className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
+                  style={{
+                    background: "#7c3aed",
+                    color: "#fff",
+                    boxShadow: "0 5px 0 #5b21b6",
+                    letterSpacing: "1.5px",
+                    fontSize: "13px",
+                    border: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  CONTINUE
+                </button>
+              </div>
             </motion.div>
           )}
 

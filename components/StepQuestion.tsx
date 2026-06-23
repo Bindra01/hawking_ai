@@ -20,6 +20,7 @@ const STEP_COLORS: Record<string, string> = {
   connect: "#ff4b4b",
   sanity: "#7c3aed",
   why: "#ff9600",
+  solve: "#00cd9c",
 };
 
 // The selection highlight is always the standard UI blue, regardless of the
@@ -36,6 +37,7 @@ const STEP_BG: Record<string, string> = {
   connect: "#2e1a1a",
   sanity: "#0d0520",
   why: "#2e1e0a",
+  solve: "#06241d",
 };
 
 interface StepQuestionProps {

@@ -9,6 +9,7 @@ describe("formatForType", () => {
     ["principle", "mcq"],
     ["connect", "mcq"],
     ["why", "mcq"],
+    ["solve", "mcq"],
     ["sanity", "mcq"],
   ];
 
