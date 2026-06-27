@@ -310,7 +310,7 @@ const EXAMPLE_CLASS_11 = {
             ["$T_{H_2}$", "=", "$T_{O_2}$", "$\\frac{M_{H_2}}{M_{O_2}}$"]
           ],
           distractors: [
-            { tile: "$\\frac{M_{O_2}}{M_{H_2}}$", feedback: "That's the inverted mass ratio; the lighter gas needs the SMALLER temperature, so M(H₂)/M(O₂) sits on top, not its reciprocal." }
+            { tile: "$\\frac{M_{O_2}}{M_{H_2}}$", feedback: "That's the inverted mass ratio; the lighter gas needs the SMALLER temperature, so the hydrogen-to-oxygen molar-mass ratio sits on top, not its reciprocal." }
           ],
           feedbackCorrect: "You've assembled the symbolic temperature relation; the recap substitutes the masses and lands the value.",
           feedbackWrong: "Reassemble the skeleton: the matched temperature is the oxygen temperature scaled by the molar-mass ratio — the recap carries it through to the value."
@@ -703,7 +703,7 @@ Rules:
 - Options should present CHOICES between approaches, principles, or conceptual insights — not numerical results of calculations.
 - NEVER ask "What is the value of X?" with options like "42", "84", "21". That requires computation.
 - INSTEAD ask "Which approach gives you X?" or "What happens to X when Y changes?" or "Which equation correctly sets up this relationship?"
-- The "setup" step should ask "Which equation setup is correct?" — showing 4 equation options, NOT asking the student to derive the equation.
+- The "setup" step is a BUILD step: the student assembles atomic equation tiles into the correct setup (drag-and-drop), NOT picking from 4 equation options and NOT deriving the equation by hand.
 - The "approach" step should ask "How will you derive it?" / "Which simplification gets you there?" — conceptual choices between strategies, NOT asking for arithmetic.
 - Think of each step as a DECISION POINT, not a CALCULATION POINT.
 - The student should feel like they're making strategic choices, like a game — not doing homework.

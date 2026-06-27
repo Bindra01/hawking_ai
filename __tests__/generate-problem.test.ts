@@ -1146,14 +1146,14 @@ describe("validateAndNormalize", () => {
     const steps = problem.solution_flow.steps;
     const terminal = steps[steps.length - 1];
     expect(terminal.type).toBe("form");
-    // Inject committal language into the form step's feedbackCorrect and into a
-    // distractor's feedback (GPT-4o readily emits "correct"). The validator must
-    // NOT throw — it replaces the offending feedback in place with a neutral
-    // fallback (which clears the length minimums) so the retry budget is preserved.
-    terminal.build!.feedbackCorrect =
-      "Correct! You assembled the form perfectly here.";
-    terminal.build!.distractors[0].feedback =
-      "That is incorrect because you used the wrong tile for this case here.";
+    // Inject SHORT committal strings (GPT-4o readily emits "correct"). These are
+    // deliberately BELOW the build-step length minimums (feedbackCorrect/Wrong
+    // >=40, distractor >=30): the validator must NOT throw, which only holds if
+    // sanitize-in-place runs BEFORE validateBuildStep's length gate (the neutral
+    // fallbacks clear the minimums). If the order were reversed, the short
+    // "Correct!" would fail the length check and this test would throw.
+    terminal.build!.feedbackCorrect = "Correct!";
+    terminal.build!.distractors[0].feedback = "Wrong tile.";
 
     withWarnSpy(() => {
       expect(() =>
@@ -1172,6 +1172,18 @@ describe("validateAndNormalize", () => {
       for (const word of banned) {
         expect(fb).not.toContain(word);
       }
+    }
+  });
+
+  it("examples self-validate through validateAndNormalize without throwing", () => {
+    // Run each baked-in example through the FULL contract (every
+    // validateBuildStep clause included), so any future violation is caught here
+    // rather than only at generation time.
+    for (const example of Object.values(__TEST_EXAMPLES)) {
+      const ex = structuredClone(example) as unknown as TestProblem;
+      expect(() =>
+        validateAndNormalize(ex, example.subject, example.topic, example.difficulty)
+      ).not.toThrow();
     }
   });
 
@@ -1196,6 +1208,23 @@ describe("validateAndNormalize", () => {
     // The assembled skeleton must NOT contain the numeric value -253.
     const assembled = formStep.build!.accepted[0].join(" ");
     expect(assembled).not.toContain("253");
+  });
+
+  it("Class-11 terminal form feedback contains no numerals (incl. unicode subscripts)", () => {
+    // The terminal form must stay purely symbolic/non-numeric (#816). Scan every
+    // feedback string on the Class-11 form build for ANY Unicode number — this
+    // catches ASCII digits AND subscript/superscript numerals like ₂.
+    const example = __TEST_EXAMPLES.EXAMPLE_CLASS_11;
+    const steps = example.solution_flow.steps;
+    const build = steps[steps.length - 1].build!;
+    const feedbackStrings = [
+      build.feedbackCorrect,
+      build.feedbackWrong,
+      ...build.distractors.map((d) => d.feedback),
+    ];
+    for (const s of feedbackStrings) {
+      expect(s).not.toMatch(/\p{Number}/u);
+    }
   });
 
   it("examples contain no legacy-only (solve/sanity/connect) steps", () => {
