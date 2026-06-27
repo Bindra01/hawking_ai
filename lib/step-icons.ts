@@ -8,7 +8,8 @@ export const STEP_ICONS: Record<string, string> = {
   sanity: "🧪",
   connect: "🧩",
   why: "💡",
-  solve: "🔒",
+  solve: "🔮",
+  approach: "🧭",
 };
 
 export const DEFAULT_STEP_ICON = "•";

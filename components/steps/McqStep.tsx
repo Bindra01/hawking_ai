@@ -10,6 +10,11 @@ interface McqStepProps {
   submitted: boolean;
   color: string;
   onAnswerChange: (answer: Answer) => void;
+  // When set, the terminal predict step suppresses correct/incorrect cues: the
+  // student's selected option gets a calm slate-teal highlight, no ✓/✗ and no
+  // red text, and no option is marked as "the correct answer". Grading still
+  // flows through evaluateStep — only the visual treatment changes.
+  neutral?: boolean;
 }
 
 export default function McqStep({
@@ -18,6 +23,7 @@ export default function McqStep({
   submitted,
   color,
   onAnswerChange,
+  neutral,
 }: McqStepProps) {
   const options = step.options ?? [];
   const selected = answer && answer.kind === "mcq" ? answer.index : null;
@@ -32,7 +38,16 @@ export default function McqStep({
         let indicator = "";
 
         if (submitted) {
-          if (option.correct) {
+          if (neutral) {
+            // Terminal predict step: highlight only the student's pick with a
+            // calm slate-teal treatment — no ✓/✗, no red text, and no reveal of
+            // which option was "correct".
+            if (i === selected) {
+              borderColor = "#6fb3b8";
+              bg = "#0e2326";
+              radioFill = "#6fb3b8";
+            }
+          } else if (option.correct) {
             borderColor = "#7c3aed";
             bg = "#1a0829";
             radioFill = "#7c3aed";

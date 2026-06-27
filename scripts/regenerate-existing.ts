@@ -105,9 +105,19 @@ function auditSolutionFlow(
     result.passed = false;
   }
 
-  // Check last step is sanity
-  if (newFlow.steps[newFlow.steps.length - 1]?.type !== "sanity") {
-    result.issues.push(`Last step is "${newFlow.steps[newFlow.steps.length - 1]?.type}", not "sanity"`);
+  // Check last step is the terminal predict (solve) step
+  if (newFlow.steps[newFlow.steps.length - 1]?.type !== "solve") {
+    result.issues.push(`Last step is "${newFlow.steps[newFlow.steps.length - 1]?.type}", not "solve"`);
+    result.passed = false;
+  }
+
+  // Flag any legacy-only step types in a regenerated flow (mirrors the
+  // generator's hard block — newly generated problems must not use these).
+  const legacyOnly = newFlow.steps.filter((s) => s.type === "connect" || s.type === "sanity");
+  if (legacyOnly.length > 0) {
+    result.issues.push(
+      `Contains legacy-only step types that cannot be regenerated: ${legacyOnly.map((s) => s.type).join(", ")}`
+    );
     result.passed = false;
   }
 

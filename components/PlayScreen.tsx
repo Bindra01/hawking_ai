@@ -18,6 +18,15 @@ import MathText from "./MathText";
 
 type Phase = "intro" | "playing" | "reveal" | "complete";
 
+// Non-committal reveal copy (legacy …→solve→sanity flows only): the student can
+// CONTINUE after either a right or wrong predict pick, so the card may never
+// congratulate or assert correctness — it stays neutral.
+const REVEAL = {
+  heading: "Here's how it works out",
+  label: "The answer",
+  body: "Given the form you predicted, this is where the numbers land.",
+};
+
 interface PlayScreenProps {
   problem: Problem;
 }
@@ -31,12 +40,8 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   const [results, setResults] = useState<boolean[]>([]);
   const [answers, setAnswers] = useState<(Answer | null)[]>([]);
   const [stepSummaries, setStepSummaries] = useState<StepSummary[]>([]);
-  // Whether the student picked the correct option on the solve step. Drives the
-  // conditional reveal copy — they can CONTINUE after a wrong pick, so the
-  // reveal must never falsely congratulate.
-  const [solveCorrect, setSolveCorrect] = useState(false);
 
-  // Index of the dedicated "solve" (LOCK THE ANSWER) step. -1 for legacy /
+  // Index of the dedicated "solve" (PREDICT THE FORM) step. -1 for legacy /
   // un-regenerated problems that predate the solve step — those flow unchanged
   // (no reveal beat).
   const solveIdx = steps.findIndex((s) => s.type === "solve");
@@ -92,7 +97,6 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
       // The student just answered the solve step (and it's not the last step):
       // show the in-flow reveal card before advancing. Do NOT advance stepIndex
       // yet — sanity remains steps[stepIndex + 1] when we resume from reveal.
-      setSolveCorrect(correct);
       setPhase("reveal");
     } else {
       setStepIndex(stepIndex + 1);
@@ -119,20 +123,6 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   // as complete and the bar sitting between solve and sanity.
   const progressIndex = phase === "reveal" ? solveIdx + 1 : stepIndex;
   const progress = phase === "intro" ? 0 : (progressIndex / steps.length) * 100;
-
-  // Conditional reveal copy: a wrong solve pick can still CONTINUE, so the card
-  // must never falsely congratulate.
-  const reveal = solveCorrect
-    ? {
-        heading: "You've got it!",
-        label: "Your answer",
-        body: "That's the value you set out to find. One last move — let's make sure it holds up.",
-      }
-    : {
-        heading: "Here's the answer",
-        label: "Correct answer",
-        body: "Lock this in — it's the value you set out to find. One last move to make sure it holds up.",
-      };
 
   return (
     <div
@@ -329,7 +319,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                   padding: "28px 22px",
                 }}
               >
-                {/* subtle teal glow behind the medallion */}
+                {/* subtle slate-teal glow behind the medallion */}
                 <div
                   className="absolute pointer-events-none"
                   style={{
@@ -340,7 +330,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                     height: 220,
                     borderRadius: "50%",
                     background:
-                      "radial-gradient(circle, rgba(0,205,156,.16), transparent 70%)",
+                      "radial-gradient(circle, rgba(111,179,184,.16), transparent 70%)",
                   }}
                 />
                 <div
@@ -348,48 +338,48 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                   style={{
                     width: 74,
                     height: 74,
-                    background: "#06241d",
-                    border: "2.5px solid #00cd9c",
+                    background: "#0e2326",
+                    border: "2.5px solid #6fb3b8",
                     fontSize: "34px",
-                    boxShadow: "0 0 0 6px rgba(0,205,156,.12)",
+                    boxShadow: "0 0 0 6px rgba(111,179,184,.12)",
                   }}
                 >
-                  🔒
+                  🔮
                 </div>
                 <div
                   className="relative font-black uppercase"
                   style={{
-                    color: "#00cd9c",
+                    color: "#6fb3b8",
                     fontSize: "11px",
                     letterSpacing: "2px",
                   }}
                 >
-                  Answer Locked
+                  The Answer
                 </div>
                 <div
                   className="relative font-black"
                   style={{ color: "#e5e5e5", fontSize: "26px", lineHeight: 1.1 }}
                 >
-                  {reveal.heading}
+                  {REVEAL.heading}
                 </div>
 
                 <div
                   className="relative w-full rounded-2xl flex flex-col gap-1.5"
                   style={{
-                    background: "#06241d",
-                    border: "2px solid #00cd9c",
+                    background: "#0e2326",
+                    border: "2px solid #6fb3b8",
                     padding: "18px 16px",
                   }}
                 >
                   <div
                     className="font-black uppercase"
                     style={{
-                      color: "#4fd9b8",
+                      color: "#6fb3b8",
                       fontSize: "10px",
                       letterSpacing: "1.8px",
                     }}
                   >
-                    {reveal.label}
+                    {REVEAL.label}
                   </div>
                   <MathText
                     text={problem.final_answer}
@@ -402,7 +392,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                   className="relative font-bold leading-snug"
                   style={{ color: "#afafbf", fontSize: "13px", maxWidth: 320 }}
                 >
-                  {reveal.body}
+                  {REVEAL.body}
                 </div>
               </div>
 

@@ -12,7 +12,7 @@ import ClaimStep from "./steps/ClaimStep";
 import MultiSelectStep from "./steps/MultiSelectStep";
 import BuildStep from "./steps/BuildStep";
 
-const STEP_COLORS: Record<string, string> = {
+export const STEP_COLORS: Record<string, string> = {
   trap: "#ff4b4b",
   identify: "#ff9600",
   principle: "#ce82ff",
@@ -20,7 +20,8 @@ const STEP_COLORS: Record<string, string> = {
   connect: "#ff4b4b",
   sanity: "#7c3aed",
   why: "#ff9600",
-  solve: "#00cd9c",
+  solve: "#6fb3b8",
+  approach: "#5b8cff",
 };
 
 // The selection highlight is always the standard UI blue, regardless of the
@@ -29,7 +30,7 @@ const STEP_COLORS: Record<string, string> = {
 // purple (correct) / red (incorrect) result colors on their own.
 const SELECT_COLOR = "#1cb0f6";
 
-const STEP_BG: Record<string, string> = {
+export const STEP_BG: Record<string, string> = {
   trap: "#2e1a1a",
   identify: "#2e1e0a",
   principle: "#1e0a2e",
@@ -37,7 +38,8 @@ const STEP_BG: Record<string, string> = {
   connect: "#2e1a1a",
   sanity: "#0d0520",
   why: "#2e1e0a",
-  solve: "#06241d",
+  solve: "#0e2326",
+  approach: "#11163a",
 };
 
 interface StepQuestionProps {
@@ -67,6 +69,13 @@ export default function StepQuestion({
   const bg = STEP_BG[step.type] ?? "#1a1a2e";
   const format = getStepFormat(step);
 
+  // The terminal predict step ("PREDICT THE FORM" — a `solve` step that is also
+  // the last step). For new predict-last flows the PlayScreen reveal beat never
+  // fires, so this is the student's final feedback surface and it must stay
+  // non-committal (no correct/incorrect cues). Legacy …→solve→sanity flows have
+  // `solve` NOT last, so isPredict is false there and they keep current behavior.
+  const isPredict = step.type === "solve" && isLast;
+
   const ready = isAnswerReady(step, answer);
 
   function handleAnswerChange(next: Answer) {
@@ -79,7 +88,7 @@ export default function StepQuestion({
     const evaluated = evaluateStep(step, answer);
     setResult(evaluated);
     setSubmitted(true);
-    if (!evaluated.correct) {
+    if (!isPredict && !evaluated.correct) {
       setShake(true);
       setTimeout(() => setShake(false), 420);
     }
@@ -112,7 +121,7 @@ export default function StepQuestion({
         return <BuildStep {...childProps} />;
       case "mcq":
       default:
-        return <McqStep {...childProps} />;
+        return <McqStep {...childProps} neutral={isPredict} />;
     }
   }
 
@@ -150,7 +159,7 @@ export default function StepQuestion({
       {/* Feedback + tip */}
       <AnimatePresence>
         {submitted && result && (
-          <FeedbackCard correct={isCorrect} feedback={result.feedback} />
+          <FeedbackCard correct={isCorrect} feedback={result.feedback} neutral={isPredict} />
         )}
         {showTip && <TipCard tip={step.tip} />}
       </AnimatePresence>
@@ -180,16 +189,20 @@ export default function StepQuestion({
             onClick={handleContinue}
             className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
             style={{
-              background: isCorrect ? "#7c3aed" : "#ff4b4b",
+              // Terminal predict step uses calm slate-teal regardless of
+              // correctness so the button never signals right/wrong.
+              background: isPredict ? "#6fb3b8" : isCorrect ? "#7c3aed" : "#ff4b4b",
               color: "#fff",
-              boxShadow: `0 5px 0 ${isCorrect ? "#5b21b6" : "#cc3333"}`,
+              boxShadow: isPredict
+                ? "0 5px 0 #0e2326"
+                : `0 5px 0 ${isCorrect ? "#5b21b6" : "#cc3333"}`,
               letterSpacing: "1.5px",
               fontSize: "13px",
               border: "none",
               cursor: "pointer",
             }}
           >
-            {!showTip ? "SEE TIP" : isLast ? "FINISH 🎉" : "CONTINUE"}
+            {!showTip ? "SEE TIP" : isPredict ? "SEE RECAP" : isLast ? "FINISH 🎉" : "CONTINUE"}
           </button>
         )}
       </div>

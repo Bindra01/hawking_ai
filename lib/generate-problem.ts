@@ -32,23 +32,36 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Write down the mathematical equation or expression.
    Show the actual algebra/calculus step. Use LaTeX for all math.
 
-5. "connect" (🧩 FAST-TRACK THE SOLVE)
-   Purpose: Connect two ideas, simplify, or make the algebraic leap to the answer.
-   This is where cancellations happen, where two equations combine, where the "aha" moment is.
+5. "approach" (🧭 PLAN THE DERIVATION)
+   Purpose: after the equation is set up, ask HOW the student will get to the
+   answer (integrate vs differentiate, what extra insight/quantity is needed,
+   which simplification gets there). Conceptual mcq, exactly 4 options, exactly 1
+   correct, NO arithmetic — a strategy choice, not a calculation. Use 1-3 of
+   these after "setup".
 
 6. "why" (💡 WHY THIS WORKS)
    Purpose: Explain the deeper physical intuition. Why does this result make sense?
    Use for hard problems where the physics insight is as important as the math.
 
-7. "solve" (🔒 LOCK THE ANSWER)
-   Purpose: Land exactly on the problem's final_answer. The student picks the
-   value/expression they already derived — the single correct option's text MUST
-   BE the problem's final_answer (byte-identical). Comes right AFTER "connect"
-   and right BEFORE "sanity". No fresh arithmetic — it is a recognition step.
-
-8. "sanity" (🧪 SANITY CHECK)
-   Purpose: Verify the answer makes physical sense. ALWAYS the LAST step.
-   Check: units, limiting cases, order of magnitude, physical intuition.
+7. "solve" (🔮 PREDICT THE FORM)
+   Purpose: the FINAL step. The student predicts what the final answer
+   EXPRESSION/FORM looks like (a number is just the expression after substituting
+   values). mcq, exactly 4 options, exactly 1 correct whose text IS the problem's
+   final_answer (byte-identical). Feedback is NON-COMMITTAL — do NOT celebrate or
+   say 'Correct!'; frame it as 'given the form you predicted, the answer works out
+   to <final_answer>' / acknowledge the form the student picked rather than
+   asserting exact-value correctness.
+   CRITICAL FEEDBACK-TONE EXCEPTION (terminal "solve" step ONLY — this overrides
+   the global SAME-FAMILY-DISTRACTOR "name the error" rule for this one step):
+   EVERY option's feedback — the correct option AND all distractors — must avoid
+   the words "correct", "wrong", "incorrect", "mistake", "you made … error", "you
+   should have", and must NOT tell the student their pick was right or wrong.
+   Distractor feedback must neutrally acknowledge the FORM the student picked and
+   defer the reconciliation to the worked answer, e.g. "That's the half-power
+   form; the worked expression in the recap shows where the exponent lands" — NOT
+   "You used the square root instead of the fourth root." Only the terminal
+   "solve" step gets this exception — "approach"/"principle"/"why" distractors
+   keep naming the error normally.
 
 FIRST STEP VARIETY:
 Problems should NOT always start with a "trap" step. Vary the opening step type based on what best hooks the student into the problem. Good openers include:
@@ -143,10 +156,15 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     // separate tiles. (A relation INSIDE a subscript/argument, e.g. "$E_{x=0}$"
     // or "$v(t=0)$", is part of a single term and is fine.)
 
-* all OTHER types ("principle", "connect", "why", "solve", "sanity")  => emit "options":
+* all OTHER types ("principle", "why", "approach", "solve")  => emit "options":
     exactly 4 options, exactly 1 correct (the existing MCQ rules below apply).
     For the "solve" step, the single correct option's text MUST equal the
-    problem's final_answer.
+    problem's final_answer, and ALL of its option feedback (correct option AND
+    every distractor) must be non-committal — frame it around the FORM the student
+    predicted, defer the worked result to the recap, and NEVER use
+    'correct'/'wrong'/'incorrect'/'mistake' or say the student's pick was right or
+    wrong. This is the ONE exception to the same-family-distractor 'name the error'
+    rule, which still applies to every other step type.
 
 Do NOT add an "options" array to trap/identify/setup steps, and do NOT add
 claim/multiselect/build objects to the MCQ types.
@@ -216,43 +234,43 @@ const EXAMPLE_CLASS_11 = {
         tip: "When equating speeds, square both sides first to eliminate the square root."
       },
       {
-        type: "connect",
-        label: "FAST-TRACK THE SOLVE",
-        icon: "🧩",
-        prompt: "T(H₂) = 20 K. The question asks for °C. Which conversion approach is correct?",
+        type: "approach",
+        label: "PLAN THE DERIVATION",
+        icon: "🧭",
+        prompt: "The speed-balance equation `3R(320)/32 = 3RT/2` is set up. What's the cleanest next move to reach T for H₂?",
         options: [
-          { text: "Subtract 273: 20 - 273 = -253°C", correct: true, feedback: "Correct. Convert back: °C = K - 273." },
-          { text: "Add 273: 20 + 273 = 293°C", correct: false, feedback: "You added instead of subtracting. The conversion from Kelvin to Celsius always subtracts 273, because 0°C = 273 K. Going the other direction (°C → K) is when you add. So 20 K = 20 - 273 = -253°C.", distractor_type: "procedural_slip" as const },
-          { text: "Just negate: -20°C", correct: false, feedback: "Negating doesn't convert units. The Kelvin and Celsius scales are offset by 273, not by a sign flip. K → °C requires subtracting 273: 20 - 273 = -253°C. The negative sign in the answer comes from the subtraction, not from negating the Kelvin value.", distractor_type: "half_right" as const },
-          { text: "Multiply by 5/9 then subtract 32 (Fahrenheit conversion)", correct: false, feedback: "That's the Fahrenheit-to-Celsius conversion formula, not Kelvin-to-Celsius. The Kelvin and Celsius scales have the same degree size — they're just offset by 273. So the conversion is simply °C = K - 273. No multiplication factor is needed.", distractor_type: "misconception" as const }
+          { text: "Cancel the common `3R`, then solve the proportion `320/32 = T/2` for T", correct: true, feedback: "Right — the 3R is common to both sides, so cancelling it collapses the problem to a clean proportion in T." },
+          { text: "Square both sides again before cancelling anything", correct: false, feedback: "The square roots were already removed when the RMS expressions were equated, so squaring again does nothing useful here. The shared 3R simply cancels, leaving the proportion 320/32 = T/2 to solve for T.", distractor_type: "procedural_slip" as const },
+          { text: "Cross-multiply the two whole fractions before simplifying", correct: false, feedback: "Cross-multiplying the full fractions just reintroduces the 3R on both sides that you would then have to cancel anyway. Cancelling the common 3R first is cleaner and leaves the simple proportion 320/32 = T/2.", distractor_type: "half_right" as const },
+          { text: "Convert 320 K back to °C before solving for T", correct: false, feedback: "Converting units mid-derivation mixes scales and invites sign errors. Keep everything in Kelvin while solving the proportion, and only convert the final T to °C at the very end.", distractor_type: "misconception" as const }
         ],
-        tip: "K → °C: subtract 273. °C → K: add 273. Never just negate."
+        tip: "Cancel common factors before cross-multiplying — it turns a messy equation into a clean proportion."
+      },
+      {
+        type: "approach",
+        label: "PLAN THE DERIVATION",
+        icon: "🧭",
+        prompt: "Solving the proportion gives T(H₂) = 20 K, but the question asks for °C. What's the right final move to land the answer?",
+        options: [
+          { text: "Convert the Kelvin result back to °C by subtracting 273", correct: true, feedback: "Exactly — the answer is requested in °C, and K → °C subtracts 273, so the final step is 20 − 273." },
+          { text: "Add 273 to the Kelvin value to reach °C", correct: false, feedback: "Adding 273 is the °C → K direction, not the K → °C direction you need here. Since 0°C = 273 K, going from Kelvin to Celsius subtracts 273, so the final move is 20 − 273.", distractor_type: "procedural_slip" as const },
+          { text: "Negate the Kelvin value to get the Celsius temperature", correct: false, feedback: "A sign flip is not a unit conversion — the Kelvin and Celsius scales are offset by 273, not by a sign. The Celsius value comes from subtracting 273 from the Kelvin result, not from negating it.", distractor_type: "half_right" as const },
+          { text: "Apply the Fahrenheit formula: multiply by 9/5 and add 32", correct: false, feedback: "That formula converts to Fahrenheit, but the question asks for Celsius. Kelvin and Celsius share the same degree size and differ only by the 273 offset, so the conversion is just K − 273.", distractor_type: "misconception" as const }
+        ],
+        tip: "Decide the final unit step before computing digits: K → °C subtracts 273."
       },
       {
         type: "solve",
-        label: "LOCK THE ANSWER",
-        icon: "🔒",
-        prompt: "You converted T(H₂) = 20 K back to Celsius. Lock in the final answer for this problem — which value is it?",
+        label: "PREDICT THE FORM",
+        icon: "🔮",
+        prompt: "Before computing the digits, predict the FORM the final answer takes — a Celsius temperature well below zero. Which is it?",
         options: [
-          { text: "-253°C", correct: true, feedback: "Locked in. -253°C (= 20 K) is the temperature at which H₂'s RMS speed matches O₂ at 47°C." },
-          { text: "20 K", correct: false, feedback: "That's the temperature in Kelvin, but the question asks for °C. You still need the final K → °C conversion: 20 - 273 = -253°C. Don't hand in the intermediate Kelvin value as the final answer.", distractor_type: "procedural_slip" as const },
-          { text: "293°C", correct: false, feedback: "You added 273 instead of subtracting it. Going from Kelvin to Celsius always subtracts 273 (since 0°C = 273 K), so 20 K = 20 - 273 = -253°C, not 293°C. The sign flips negative because 20 K is far below the freezing point of water.", distractor_type: "misconception" as const },
-          { text: "-20°C", correct: false, feedback: "You just negated the Kelvin value instead of converting it. The Kelvin and Celsius scales are offset by 273, not related by a sign flip, so 20 K = 20 - 273 = -253°C. Negating alone never converts between the two scales.", distractor_type: "half_right" as const }
+          { text: "-253°C", correct: true, feedback: "Given the form you predicted, the numbers work out to -253°C — a sub-zero Celsius temperature, as the reasoning pointed to." },
+          { text: "20 K", correct: false, feedback: "That's the Kelvin form before the final unit step; the worked answer carries it through to °C to land on the sub-zero Celsius value the reasoning anticipated.", distractor_type: "procedural_slip" as const },
+          { text: "293°C", correct: false, feedback: "That's the form you'd get by adding the 273 offset; the worked conversion in the recap lands at a sub-zero Celsius value rather than a high positive one.", distractor_type: "misconception" as const },
+          { text: "-20°C", correct: false, feedback: "That's the form from a sign flip rather than the 273 offset; the worked conversion in the recap settles much further below zero.", distractor_type: "half_right" as const }
         ],
-        tip: "The final answer is the value in the units the question asks for — finish every conversion before you lock it in."
-      },
-      {
-        type: "sanity",
-        label: "SANITY CHECK",
-        icon: "🧪",
-        prompt: "You found -253°C (= 20 K), near absolute zero. H₂ is 16× lighter than O₂ but needs the same RMS speed. Does this hold up?",
-        options: [
-          { text: "Yes — lighter molecules move faster at the same T, so H₂ needs very low T to match heavy O₂", correct: true, feedback: "Exactly. Since v ∝ √(T/M), a 16× lighter molecule needs 16× lower temperature for the same speed." },
-          { text: "No — temperature can't be that low for a real gas", correct: false, feedback: "The math is correct even if H₂ would liquefy at this temperature. The question asks for the temperature value, not whether it's physically achievable in practice. In JEE problems, ideal gas assumptions apply unless stated otherwise.", distractor_type: "half_right" as const },
-          { text: "No — lighter molecules should need higher temperature", correct: false, feedback: "Opposite! Lighter molecules are FASTER at the same temperature (v_rms ∝ 1/√M). To SLOW them down to match the speed of heavier O₂, you need a very low temperature. Think of it as: less mass = less thermal energy needed for the same speed.", distractor_type: "misconception" as const },
-          { text: "Yes — but only because we assumed ideal gas behavior", correct: false, feedback: "The ideal gas assumption is standard in JEE problems, but that's not why the answer makes sense. The answer makes physical sense because of the mass-speed relationship: v_rms ∝ √(T/M). A 16× lighter molecule at the same temperature moves 4× faster, so it needs a dramatically lower temperature to slow down to match. The idealness of the gas is a separate consideration.", distractor_type: "procedural_slip" as const }
-        ],
-        tip: "v_rms ∝ √(T/M). Lighter gas = faster at same T = needs lower T to match heavier gas."
+        tip: "Predict the FORM of the answer — units and sign — before you trust the digits."
       }
     ]
   }
@@ -315,43 +333,43 @@ const EXAMPLE_COLLEGE = {
         tip: "Force from potential: F = -dU/dr. For U = kr² that is 2kr — keep the factor of 2."
       },
       {
-        type: "connect",
-        label: "FAST-TRACK THE SOLVE",
-        icon: "🧩",
-        prompt: "From $r^4 = L^2/(2mk)$, which expression correctly isolates r?",
+        type: "approach",
+        label: "PLAN THE DERIVATION",
+        icon: "🧭",
+        prompt: "Force balance gives `2kr = mv²/r` and angular momentum gives `L = mvr`. How do you combine them to isolate r?",
         options: [
-          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$ — take the fourth root", correct: true, feedback: "Clean. Fourth root of both sides." },
-          { text: "$r = \\sqrt{\\frac{L^2}{2mk}}$ — take the square root", correct: false, feedback: "That's the square root (power 1/2), but you need the fourth root (power 1/4) since r⁴ = L²/(2mk). The exponent rule is: if r^n = X, then r = X^(1/n). Here n = 4, so you need the 1/4 power, not 1/2. This is a common error when dealing with higher-power equations.", distractor_type: "procedural_slip" as const },
-          { text: "$r = \\frac{L}{\\sqrt{2mk}}$ — simplify the fraction under the root", correct: false, feedback: "This would be correct if r² = L²/(2mk), but we have r⁴. You've effectively taken the square root twice on the left (r⁴ → r) but only once on the right (L²/(2mk) → L/√(2mk)). Take the fourth root consistently: r = (L²/2mk)^(1/4).", distractor_type: "half_right" as const },
-          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/2}$ then square root again", correct: false, feedback: "Taking the square root gives r² = (L²/2mk)^(1/2), which is correct as an intermediate step. But then taking the square root again gives r = (L²/2mk)^(1/4) — the same answer as option A. However, writing it as a two-step process introduces opportunities for error. The direct fourth root r = (L²/2mk)^(1/4) is cleaner and less error-prone.", distractor_type: "misconception" as const }
+          { text: "Eliminate v using `v = L/(mr)`, substitute into the force balance, then collect powers of r", correct: true, feedback: "Right — substituting v = L/(mr) removes v entirely and leaves a single equation in r to collect and solve." },
+          { text: "Differentiate the potential a second time to get another relation", correct: false, feedback: "A second derivative of U gives the curvature of the well, not a new constraint linking L and r. The clean route is to eliminate v with v = L/(mr) and substitute into the force balance.", distractor_type: "misconception" as const },
+          { text: "Set the kinetic energy equal to the potential energy and solve", correct: false, feedback: "Equating K and U is a virial-style shortcut that does not hold for a circular orbit in a kr² well, so it gives the wrong relation. Use force balance with v eliminated via L = mvr instead.", distractor_type: "half_right" as const },
+          { text: "Reuse the gravitational orbit relation `r = L²/(GMm²)`", correct: false, feedback: "That relation assumes a 1/r² force, but here F = 2kr from U = kr², so it does not apply. Combine the actual force balance with angular momentum to isolate r.", distractor_type: "procedural_slip" as const }
         ],
-        tip: "r^n = X → r = X^(1/n). Don't confuse square root with fourth root."
+        tip: "To combine two relations, eliminate the shared variable first — here v drops out via L = mvr."
+      },
+      {
+        type: "approach",
+        label: "PLAN THE DERIVATION",
+        icon: "🧭",
+        prompt: "Combining the relations gives `r⁴ = L²/(2mk)`. Which root isolates r?",
+        options: [
+          { text: "Take the fourth root, since the combined relation is `r⁴ = L²/(2mk)`", correct: true, feedback: "Exactly — r is raised to the fourth power, so the fourth root of both sides isolates r directly." },
+          { text: "Take the square root of both sides", correct: false, feedback: "A square root only undoes a squared term, but r appears to the fourth power here, so it leaves an r² behind. Apply the fourth root to isolate r in one clean step.", distractor_type: "procedural_slip" as const },
+          { text: "Take the cube root of both sides", correct: false, feedback: "The cube root would be right for r³, but the relation is r⁴ = L²/(2mk). Matching the root to the power means taking the fourth root, not the cube root.", distractor_type: "half_right" as const },
+          { text: "Invert the fraction first, then take a root", correct: false, feedback: "Flipping the fraction changes which way r responds to L and k, which is physically backwards. Keep L²/(2mk) as is and take the fourth root to isolate r.", distractor_type: "misconception" as const }
+        ],
+        tip: "Match the root to the power: r raised to the nth power is isolated by the nth root."
       },
       {
         type: "solve",
-        label: "LOCK THE ANSWER",
-        icon: "🔒",
-        prompt: "You isolated r by taking the fourth root of $r^4 = L^2/(2mk)$. Lock in the final expression for the orbit radius.",
+        label: "PREDICT THE FORM",
+        icon: "🔮",
+        prompt: "Predict the FORM of the orbit radius — a fourth root of a ratio of L², m, and k. Which expression is it?",
         options: [
-          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$", correct: true, feedback: "Locked in. The orbit radius is the fourth root of $L^2/(2mk)$ — exactly what force balance plus angular momentum demand." },
-          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/2}$", correct: false, feedback: "That's the square root, but you needed the fourth root since $r^4 = L^2/(2mk)$. If $r^n = X$ then $r = X^{1/n}$, and here n = 4, so the exponent is 1/4, not 1/2. This drops half of the required root.", distractor_type: "procedural_slip" as const },
-          { text: "$r = \\frac{L}{\\sqrt{2mk}}$", correct: false, feedback: "This is what you'd get if $r^2 = L^2/(2mk)$, but the relation is $r^4 = L^2/(2mk)$. You took the square root once instead of the fourth root, so the L stays to the first power instead of becoming $L^{1/2}$. The correct form is the fourth root of the whole expression.", distractor_type: "half_right" as const },
-          { text: "$r = \\left(\\frac{2mk}{L^2}\\right)^{1/4}$", correct: false, feedback: "You inverted the fraction. From $r^4 = L^2/(2mk)$ the fourth root keeps $L^2$ on top and $2mk$ on the bottom, so it's $(L^2/2mk)^{1/4}$, not its reciprocal. Flipping numerator and denominator would make r shrink when L grows, which is physically backwards.", distractor_type: "misconception" as const }
+          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$", correct: true, feedback: "Given the form you predicted, the algebra lands on `$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$` — a fourth root, matching the structure you anticipated." },
+          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/2}$", correct: false, feedback: "That's the half-power form; the worked expression in the recap shows where the exponent settles for r to come out as a length.", distractor_type: "procedural_slip" as const },
+          { text: "$r = \\frac{L}{\\sqrt{2mk}}$", correct: false, feedback: "That's the form where L stays to the first power; the worked expression in the recap carries the full fourth root through to r.", distractor_type: "half_right" as const },
+          { text: "$r = \\left(\\frac{2mk}{L^2}\\right)^{1/4}$", correct: false, feedback: "That's the inverted-ratio form; the worked expression in the recap keeps L² on top and 2mk underneath for r to grow with L.", distractor_type: "misconception" as const }
         ],
-        tip: "Once you've isolated the variable, the final answer is that exact expression — don't invert or under-root it."
-      },
-      {
-        type: "sanity",
-        label: "SANITY CHECK",
-        icon: "🧪",
-        prompt: "You found $r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$. If you increase k (stiffer potential), does the orbit radius behave as it should?",
-        options: [
-          { text: "r decreases — stiffer potential pulls the particle closer, like a stiffer spring", correct: true, feedback: "Correct. k in the denominator means larger k → smaller r. A stronger restoring force confines the orbit." },
-          { text: "r increases — stronger force means the particle moves outward", correct: false, feedback: "Stronger restoring force pulls inward, not outward. Think of a stiffer spring — it keeps the mass closer to center. In the formula, k is in the denominator, confirming larger k → smaller r. Physical intuition and math agree.", distractor_type: "misconception" as const },
-          { text: "r stays the same — orbit radius depends only on L and m", correct: false, feedback: "k appears explicitly in the formula: r = (L²/2mk)^(1/4). The potential strength directly affects the orbit size. Ignoring a parameter that appears in the answer is a sign-check error — always verify which variables appear in your final expression.", distractor_type: "half_right" as const },
-          { text: "r decreases, but only proportionally (halve k → halve r)", correct: false, feedback: "The dependence is r ∝ k^(-1/4), not r ∝ 1/k. Doubling k doesn't halve r — it reduces r by a factor of 2^(1/4) ≈ 1.19. The 1/4 power makes the dependence much weaker than linear. Always check the exponent when reasoning about proportionality.", distractor_type: "procedural_slip" as const }
-        ],
-        tip: "Always check limiting cases: what happens when parameters increase or decrease?"
+        tip: "Predict the FORM — the root, the ratio, and which symbol sits on top — before trusting the final expression."
       }
     ]
   }
@@ -441,28 +459,28 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
-- Use 6 steps. Focus on building correct problem-solving habits.
+- Use 5-6 steps. Focus on building correct problem-solving habits.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Recommended step pattern: identify/trap/principle → principle → setup → connect → solve → sanity`,
+- Recommended step pattern: identify/trap/principle → principle → setup → approach (×1-2) → predict`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
-- Use 6 steps. Problems should require multi-step reasoning.
+- Use 5-6 steps. Problems should require multi-step reasoning.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: identify/trap/principle → identify → setup → connect → solve → sanity`,
+- Recommended step pattern: identify/trap/principle → identify → setup → approach (×1-2) → predict`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
 - Use 6-7 steps. Problems should require deep physical insight.
-- Include a "why" step to explain the deeper physics behind a key result.
+- Optionally include a "why" step to explain the deeper physics behind a key result.
 - The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
-- Recommended step pattern: identify → principle → setup → connect → why → solve → sanity`,
+- Recommended step pattern: identify → principle → setup → approach (×2) → why? → predict`,
 };
 
 // ─── GENERATION PIPELINE ─────────────────────────────────────────────────────
@@ -616,10 +634,10 @@ Rules:
 - NEVER ask "What is the value of X?" with options like "42", "84", "21". That requires computation.
 - INSTEAD ask "Which approach gives you X?" or "What happens to X when Y changes?" or "Which equation correctly sets up this relationship?"
 - The "setup" step should ask "Which equation setup is correct?" — showing 4 equation options, NOT asking the student to derive the equation.
-- The "connect" step should ask "What's the key simplification?" — showing conceptual leaps, NOT asking for arithmetic.
+- The "approach" step should ask "How will you derive it?" / "Which simplification gets you there?" — conceptual choices between strategies, NOT asking for arithmetic.
 - Think of each step as a DECISION POINT, not a CALCULATION POINT.
 - The student should feel like they're making strategic choices, like a game — not doing homework.
-- EXCEPTION — the dedicated "solve" step: this ONE step asks the student to LOCK IN the final answer, so its correct option text IS the final numerical/symbolic answer (equal to final_answer). Even so, it must be answerable by recognition/THINKING, not fresh pen-and-paper arithmetic — the student picks the answer they already derived through the "setup"/"connect" steps, not a value they must newly compute here.
+- EXCEPTION — the dedicated terminal "solve" step (PREDICT THE FORM): this ONE step asks the student to PREDICT the FORM the final answer takes, so its correct option text IS the final numerical/symbolic answer (equal to final_answer). Even so, it must be answerable by recognition/THINKING, not fresh pen-and-paper arithmetic — the student predicts the form they will arrive at from the "setup"/"approach" steps, not a value they must newly compute here. Its feedback is NON-COMMITTAL (no "correct"/"wrong"/celebration — frame it around the form the student predicted).
 
 CRITICAL QUALITY RULES:
 
@@ -645,6 +663,17 @@ CRITICAL QUALITY RULES:
      c) Redirect toward the correct approach ("Instead, use...")
    - Wrong feedback MUST be minimum 3 sentences and 40+ words. Never just say "incorrect."
    - The three wrong options should represent DIFFERENT types of errors.
+   - EXCEPTION — the terminal "solve" (PREDICT THE FORM) step: the rules a)/b)/c)
+     above do NOT apply to it. On this ONE step you must NOT name an error or say
+     anything is wrong/incorrect. ALL of its option feedback (the correct option
+     AND every distractor) must be NON-COMMITTAL — neutrally acknowledge the FORM
+     the student picked and defer the worked result to the recap (e.g. "That's the
+     half-power form; the worked expression in the recap shows where the exponent
+     lands"). BANNED words/phrases on this step: "correct", "wrong", "incorrect",
+     "mistake", "instead of", "you should have", "you used", "you added", "you
+     subtracted". Do NOT celebrate and do NOT tell the student their pick was right
+     or wrong. Every OTHER step type (principle/why/approach) keeps rules a)/b)/c)
+     and names the error normally.
 
 4. CORRECT ANSWER FEEDBACK:
    - 1-2 sentences, concise and encouraging.
@@ -663,11 +692,10 @@ CRITICAL QUALITY RULES:
    - "title": Short descriptive title (~80 chars max)
    - "goal": "Find: [answer]" format
    - "final_answer": The numerical/symbolic answer
-   - Last step MUST be type "sanity" (an MCQ step with options)
-   - The step IMMEDIATELY BEFORE sanity MUST be type "solve" (an MCQ whose single correct option text is the final_answer)
+   - Last step MUST be type "solve" (PREDICT THE FORM): an mcq whose single correct option text equals final_answer, with non-committal feedback (no celebration).
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap → "claim" object; identify → "multiselect" object; setup → "build" object;
-     principle/connect/why/solve/sanity → "options" (exactly 4: 1 correct, 3 wrong).
+     principle/why/approach/solve → "options" (exactly 4: 1 correct, 3 wrong).
    - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
    - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
 }
@@ -765,7 +793,8 @@ const STEP_LABELS: Record<string, string> = {
   principle: "RECALL THE PRINCIPLE",
   setup: "SET UP THE MATH",
   connect: "FAST-TRACK THE SOLVE",
-  solve: "LOCK THE ANSWER",
+  approach: "PLAN THE DERIVATION",
+  solve: "PREDICT THE FORM",
   sanity: "SANITY CHECK",
   why: "WHY THIS WORKS",
 };
@@ -805,20 +834,35 @@ export function validateAndNormalize(
     throw new Error(`Expected 4-7 steps, got ${steps.length}`);
   }
 
-  // Last step must be sanity
-  if (steps[steps.length - 1].type !== "sanity") {
-    throw new Error('Last step must be type "sanity"');
+  // Last step must be the terminal "solve" (PREDICT THE FORM) step.
+  if (steps[steps.length - 1].type !== "solve") {
+    throw new Error('Last step must be type "solve"');
   }
 
-  // The step immediately before sanity must be a single "solve" step.
-  // ORDER MATTERS: do the count check FIRST, then the adjacency check, so the
-  // thrown error is deterministic for a given flow.
+  // Exactly one "solve" (predict) step; it is now terminal, so there is no
+  // adjacency check — the last-step check above already pins its position.
   const solveCount = steps.filter((s) => s.type === "solve").length;
   const solveIdx = steps.findIndex((s) => s.type === "solve");
   if (solveCount !== 1) {
     throw new Error(`Expected exactly 1 "solve" step, got ${solveCount}`);
-  } else if (solveIdx !== steps.length - 2) {
-    throw new Error('Step before "sanity" must be type "solve"');
+  }
+
+  // Bound the number of conceptual "approach" steps. Lower bound 0 is allowed
+  // (fewer is fine — fail-soft tolerance); the only hard ceiling is >3.
+  const approachCount = steps.filter((s) => s.type === "approach").length;
+  if (approachCount > 3) {
+    throw new Error(`Expected at most 3 "approach" steps, got ${approachCount}`);
+  }
+
+  // HARD BLOCK: newly generated problems must not use retired legacy-only step
+  // types. They remain valid for rendering already-stored legacy/seeded problems,
+  // but generation (this path) must never emit them. A leaked legacy type throws,
+  // which the retry loop turns into a regeneration.
+  const legacyOnly = steps.filter((s) => s.type === "connect" || s.type === "sanity");
+  if (legacyOnly.length > 0) {
+    throw new Error(
+      `Legacy-only step types cannot be generated: ${legacyOnly.map((s) => s.type).join(", ")}`
+    );
   }
 
   // Validate each step
@@ -915,6 +959,44 @@ export function validateAndNormalize(
     console.warn(
       `Solve step's correct option ("${solveCorrect.text}") may not match final_answer ("${problem.final_answer}")`
     );
+  }
+
+  // SANITIZE (not throw): the terminal solve step (PREDICT THE FORM) must have
+  // non-committal feedback on ALL options (correct AND distractors). The prompt
+  // instructs the model to avoid these words, but GPT-4o drifts often — and
+  // "correct" in particular is extremely common in LLM output. Throwing here
+  // would burn the small retry budget (MAX_RETRIES) and surface spurious hard
+  // generation failures to the user. Instead we replace any option's offending
+  // feedback in place with a neutral fallback. This guarantees neutrality with
+  // zero added failure rate; the recap below the step carries the real
+  // derivation, so a generic neutral line is acceptable for the predict step.
+  const SOLVE_BANNED_WORDS = [
+    "correct",
+    "wrong",
+    "incorrect",
+    "mistake",
+    "instead of",
+    "you should have",
+    "you used",
+    "you added",
+    "you subtracted",
+  ];
+  const NEUTRAL_PREDICT_FALLBACK =
+    "See the recap below for the full derivation and where this form lands.";
+  if (solveStep.options) {
+    for (const opt of solveStep.options) {
+      if (!opt.feedback) continue;
+      const feedbackLower = opt.feedback.toLowerCase();
+      const hasBanned = SOLVE_BANNED_WORDS.some((banned) =>
+        feedbackLower.includes(banned)
+      );
+      if (hasBanned) {
+        console.warn(
+          `Solve step option feedback contained committal language; replacing with neutral fallback. Option text: "${opt.text.substring(0, 60)}"`
+        );
+        opt.feedback = NEUTRAL_PREDICT_FALLBACK;
+      }
+    }
   }
 }
 

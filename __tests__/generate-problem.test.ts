@@ -6,6 +6,12 @@ function wrongFeedback(detail: string = "you misapplied the formula"): string {
   return `This is incorrect because ${detail}. You should review the correct approach and apply it carefully here.`;
 }
 
+// Helper to generate neutral solve-step feedback (non-committal, no banned words).
+// Used exclusively in makeSolveStep() to satisfy the predict-step banned-word validator.
+function neutralSolveFeedback(detail: string = "the form you picked"): string {
+  return `Given the form you anticipated — ${detail} — the derivation in the recap carries it through to the final numerical result.`;
+}
+
 // Helper to generate format feedback meeting the 40-char minimum
 function longFeedback(detail: string = "this is the reasoning"): string {
   return `Here is the explanation: ${detail}, so review it carefully.`;
@@ -83,21 +89,43 @@ function makeMcqStep(type: string, prompt: string): Step {
   };
 }
 
+// A valid approach step (type "approach"). Same mcq shape as makeMcqStep but
+// typed "approach" (PLAN THE DERIVATION — a conceptual strategy choice).
+function makeApproachStep(prompt: string): Step {
+  return {
+    type: "approach",
+    label: "PLAN THE DERIVATION",
+    icon: "🧭",
+    prompt,
+    options: [
+      { text: "Correct strategy choice", correct: true, feedback: "Yes, that is the cleanest next move!" },
+      { text: "Wrong strategy one here", correct: false, feedback: wrongFeedback("you picked a detour that does not simplify the algebra"), distractor_type: "misconception" as const },
+      { text: "Wrong strategy two here", correct: false, feedback: wrongFeedback("you reached for a method that does not apply in this regime"), distractor_type: "procedural_slip" as const },
+      { text: "Wrong strategy three here", correct: false, feedback: wrongFeedback("you chose an approach that adds steps without progress"), distractor_type: "half_right" as const },
+    ],
+    tip: "Plan the cleanest route to the answer",
+  };
+}
+
 // A valid solve step (type "solve"). Its correct option text is the fixture
 // final_answer "10 m/s" so the warn-only equality check stays quiet by default.
+// The terminal predict step is re-themed (PREDICT THE FORM / 🔮).
+// NOTE: feedback strings MUST be non-committal (no banned words like "correct",
+// "incorrect", "wrong", "mistake", "you should have", etc.) — the new hard-block
+// validator in validateAndNormalize enforces this.
 function makeSolveStep(prompt: string): Step {
   return {
     type: "solve",
-    label: "LOCK THE ANSWER",
-    icon: "🔒",
+    label: "PREDICT THE FORM",
+    icon: "🔮",
     prompt,
     options: [
-      { text: "10 m/s", correct: true, feedback: "Locked in, that is the final answer!" },
-      { text: "Wrong answer one here", correct: false, feedback: wrongFeedback("you used the wrong units"), distractor_type: "misconception" as const },
-      { text: "Wrong answer two here", correct: false, feedback: wrongFeedback("you confused velocity with acceleration"), distractor_type: "procedural_slip" as const },
-      { text: "Wrong answer three here", correct: false, feedback: wrongFeedback("you applied a formula outside its valid range"), distractor_type: "half_right" as const },
+      { text: "10 m/s", correct: true, feedback: "Given the form you predicted, the derivation in the recap lands at 10 m/s — exactly the value the setup pointed toward." },
+      { text: "Wrong answer one here", correct: false, feedback: neutralSolveFeedback("a form with different units than the setup implies"), distractor_type: "misconception" as const },
+      { text: "Wrong answer two here", correct: false, feedback: neutralSolveFeedback("a velocity-acceleration mix that the recap resolves"), distractor_type: "procedural_slip" as const },
+      { text: "Wrong answer three here", correct: false, feedback: neutralSolveFeedback("a form outside the valid range the approach established"), distractor_type: "half_right" as const },
     ],
-    tip: "Lock in the answer you already derived",
+    tip: "Predict the form the final answer takes before computing",
   };
 }
 
@@ -161,8 +189,10 @@ function makeBuildStep(prompt: string): Step {
 }
 
 // Helper to create a valid problem for mutation in tests.
-// Step layout: 0 principle (mcq), 1 trap (claim), 2 identify (multiselect),
-// 3 setup (build), 4 connect (mcq), 5 solve (mcq), 6 sanity (mcq). (7 steps.)
+// Step layout (6 steps): 0 principle (mcq), 1 trap (claim),
+// 2 identify (multiselect), 3 setup (build), 4 approach (mcq),
+// 5 solve (mcq, PREDICT THE FORM — terminal). The key invariant is the last
+// step is "solve"; the non-terminal order just needs to be otherwise valid.
 function makeValidProblem(): TestProblem {
   return {
     title: "Test Problem",
@@ -179,16 +209,15 @@ function makeValidProblem(): TestProblem {
         makeClaimStep("Your instinct is to ignore air resistance entirely here — sound right, or is that a trap?"),
         makeMultiSelectStep("Tap every quantity that actually controls the outcome of this throw."),
         makeBuildStep("Build the kinematic equation that relates the given quantities."),
-        makeMcqStep("connect", "What's the key simplification that fast-tracks the solve here?"),
-        makeSolveStep("Lock in the final answer for this projectile problem."),
-        makeMcqStep("sanity", "Does the final answer make physical sense given the setup?"),
+        makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
+        makeSolveStep("Predict the form the final answer takes for this projectile problem."),
       ],
     },
   };
 }
 
-// Set the text of the solve step's correct option (solve is index 5 in the
-// makeValidProblem() layout).
+// Set the text of the solve step's correct option (solve is the terminal step,
+// index 5 in the makeValidProblem() layout).
 function setSolveCorrectText(problem: TestProblem, text: string): void {
   problem.solution_flow.steps[5].options!.find((o) => o.correct)!.text = text;
 }
@@ -234,8 +263,8 @@ describe("validateAndNormalize", () => {
     expect(steps[1].format).toBe("claim"); // trap
     expect(steps[2].format).toBe("multiselect"); // identify
     expect(steps[3].format).toBe("build"); // setup
+    expect(steps[4].format).toBe("mcq"); // approach
     expect(steps[5].format).toBe("mcq"); // solve
-    expect(steps[6].format).toBe("mcq"); // sanity
   });
 
   it("throws when title is missing", () => {
@@ -272,22 +301,27 @@ describe("validateAndNormalize", () => {
 
   it("throws when there are too many steps (> 7)", () => {
     const problem = makeValidProblem();
-    const extraStep = makeMcqStep("connect", "Another connecting step with a sufficiently long prompt here.");
-    // 7 + 1 = 8 steps; insert before solve so the flow stays solve-before-sanity.
-    problem.solution_flow.steps.splice(4, 0, extraStep);
+    // 6 + 2 = 8 steps; insert before the terminal predict step so the flow
+    // stays solve-last (the count check fires before the last-step check).
+    problem.solution_flow.steps.splice(
+      4,
+      0,
+      makeMcqStep("why", "Why does this principle govern the behaviour we observe here?"),
+      makeMcqStep("why", "Why is this simplification justified for the given regime here?")
+    );
     expect(problem.solution_flow.steps.length).toBe(8);
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("Expected 4-7 steps, got 8");
   });
 
-  it("throws when last step is not sanity", () => {
+  it("throws when last step is not solve", () => {
     const problem = makeValidProblem();
     const steps = problem.solution_flow.steps;
-    steps[steps.length - 1] = makeMcqStep("connect", "A connect step standing in for the final step here.");
+    steps[steps.length - 1] = makeMcqStep("why", "A why step standing in for the terminal predict step here.");
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('Last step must be type "sanity"');
+    ).toThrow('Last step must be type "solve"');
   });
 
   it("throws when step.type is invalid", () => {
@@ -319,7 +353,7 @@ describe("validateAndNormalize", () => {
 
   it("does not apply the hook gate to non-first steps", () => {
     const problem = makeValidProblem();
-    // step 4 is an mcq connect step; short prompt should be fine (>0 chars)
+    // step 4 is an mcq approach step; short prompt should be fine (>0 chars)
     problem.solution_flow.steps[4].prompt = "Short";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
@@ -356,11 +390,12 @@ describe("validateAndNormalize", () => {
 
   it("accepts a problem with exactly 4 steps (minimum)", () => {
     const problem = makeValidProblem();
+    // Minimal solve-last flow: identify → setup → approach → solve.
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
       makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
-      makeSolveStep("Lock in the final answer you derived for this problem."),
-      makeMcqStep("sanity", "Does the final answer make physical sense given the setup?"),
+      makeBuildStep("Build the equation that relates the given quantities."),
+      makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
+      makeSolveStep("Predict the form the final answer takes for this problem."),
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
@@ -369,8 +404,15 @@ describe("validateAndNormalize", () => {
 
   it("accepts a problem with exactly 7 steps (maximum)", () => {
     const problem = makeValidProblem();
-    // makeValidProblem() already builds a valid 7-step flow with solve before sanity.
+    // 7-step solve-last flow: principle → trap → identify → setup → why →
+    // approach → solve. (Adds a why beat to the 6-step base; stays <=3 approach.)
+    problem.solution_flow.steps.splice(
+      4,
+      0,
+      makeMcqStep("why", "Why does this principle govern the behaviour we observe here?")
+    );
     expect(problem.solution_flow.steps.length).toBe(7);
+    expect(problem.solution_flow.steps[6].type).toBe("solve");
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
@@ -889,42 +931,133 @@ describe("validateAndNormalize", () => {
     ).toThrow('stale "options" field');
   });
 
-  // ─── solve step: count + adjacency + answer-match ─────────────────────────
+  // ─── solve step: terminal position + count + approach ceiling + answer-match ─
 
   it("throws when there is no solve step", () => {
     const problem = makeValidProblem();
-    // Replace the solve step (index 5) with a connect mcq -> zero solve steps,
-    // count stays 7. The count check fires before the adjacency check.
+    // Replace the terminal solve step (index 5) with a why mcq -> zero solve
+    // steps. With solve now terminal, the last-step check catches this first.
     problem.solution_flow.steps[5] = makeMcqStep(
-      "connect",
-      "Another connecting step standing in for the solve step here."
+      "why",
+      "Another reasoning step standing in for the terminal predict step here."
     );
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('Expected exactly 1 "solve" step');
+    ).toThrow('Last step must be type "solve"');
   });
 
-  it("throws when the step before sanity is not solve (mis-positioned, still exactly one)", () => {
+  it("accepts the predict (solve) step as the terminal step", () => {
     const problem = makeValidProblem();
     const steps = problem.solution_flow.steps;
-    // Swap connect (index 4) with solve (index 5): exactly one solve remains but
-    // it sits at index 4, and a non-solve (connect) is immediately before sanity.
-    [steps[4], steps[5]] = [steps[5], steps[4]];
+    // Invariant: the predict (solve) step is last in a valid flow.
+    expect(steps[steps.length - 1].type).toBe("solve");
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).toThrow('Step before "sanity" must be type "solve"');
+    ).not.toThrow();
+  });
+
+  it("accepts a legal zero-approach solve-last flow", () => {
+    const problem = makeValidProblem();
+    // The contract explicitly allows ZERO approach steps (lower bound 0).
+    // identify → principle → setup → solve has no approach steps and ends in solve.
+    problem.solution_flow.steps = [
+      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
+      makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
+      makeBuildStep("Build the equation that relates the given quantities."),
+      makeSolveStep("Predict the form the final answer takes for this problem."),
+    ];
+    expect(problem.solution_flow.steps.some((s) => s.type === "approach")).toBe(false);
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
+  it("throws when there are more than 3 approach steps", () => {
+    const problem = makeValidProblem();
+    // principle → approach ×4 → solve (6 steps, last = solve, exactly 1 solve),
+    // so we reach the approach ceiling check with 4 approach steps.
+    problem.solution_flow.steps = [
+      makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
+      makeApproachStep("First strategy beat: what's the cleanest opening move toward the answer?"),
+      makeApproachStep("Second strategy beat: which simplification keeps the algebra clean?"),
+      makeApproachStep("Third strategy beat: what extra insight do you still need here?"),
+      makeApproachStep("Fourth strategy beat: how do you reduce this to a single unknown?"),
+      makeSolveStep("Predict the form the final answer takes for this problem."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow('Expected at most 3 "approach" steps, got 4');
   });
 
   it("throws when there is more than one solve step", () => {
     const problem = makeValidProblem();
-    // Replace the connect step (index 4) with a second solve step. Total stays 7
-    // (<=7, so the 4-7 count check passes) and we reach the solve-count check.
+    // Replace the approach step (index 4) with a second solve step. Total stays
+    // 6 (<=7) and last step is still solve, so we reach the solve-count check.
     problem.solution_flow.steps[4] = makeSolveStep(
-      "A second lock-in step that should not be allowed here."
+      "A second predict step that should not be allowed here."
     );
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('Expected exactly 1 "solve" step, got 2');
+  });
+
+  it("rejects newly generated connect steps (legacy-only hard block)", () => {
+    const problem = makeValidProblem();
+    // An otherwise solve-last flow that smuggles in a legacy-only connect step.
+    problem.solution_flow.steps = [
+      makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
+      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
+      makeBuildStep("Build the equation that relates the given quantities."),
+      makeMcqStep("connect", "What's the key simplification that fast-tracks the solve here?"),
+      makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
+      makeSolveStep("Predict the form the final answer takes for this problem."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("Legacy-only step types cannot be generated");
+  });
+
+  it("rejects newly generated sanity steps (legacy-only hard block)", () => {
+    const problem = makeValidProblem();
+    // An otherwise solve-last flow that smuggles in a legacy-only sanity step.
+    problem.solution_flow.steps = [
+      makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
+      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
+      makeBuildStep("Build the equation that relates the given quantities."),
+      makeMcqStep("sanity", "Does the running result make physical sense given the setup?"),
+      makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
+      makeSolveStep("Predict the form the final answer takes for this problem."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow("Legacy-only step types cannot be generated");
+  });
+
+  it("sanitizes (does not throw) committal feedback on the terminal solve step", () => {
+    const problem = makeValidProblem();
+    const steps = problem.solution_flow.steps;
+    const terminal = steps[steps.length - 1];
+    expect(terminal.type).toBe("solve");
+    // Inject committal language into a distractor's feedback (GPT-4o readily
+    // emits "correct"). The validator must NOT throw — it replaces the offending
+    // feedback in place with a neutral fallback so the retry budget is preserved.
+    const distractor = terminal.options!.find((o) => !o.correct)!;
+    distractor.feedback =
+      "That is incorrect because you used the wrong formula for this case here.";
+
+    withWarnSpy(() => {
+      expect(() =>
+        validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+      ).not.toThrow();
+    });
+
+    const banned = ["correct", "wrong", "incorrect", "mistake", "you used"];
+    for (const opt of terminal.options ?? []) {
+      const fb = opt.feedback.toLowerCase();
+      for (const word of banned) {
+        expect(fb).not.toContain(word);
+      }
+    }
   });
 
   it("warns but does not throw when solve correct option text does not match final_answer", () => {
@@ -1009,6 +1142,50 @@ describe("validateAndNormalize", () => {
       const correct = solveStep!.options!.find((o) => o.correct);
       expect(correct).toBeDefined();
       expect(correct!.text).toBe(example.final_answer);
+    }
+  });
+
+  it("examples contain no legacy-only (sanity/connect) steps", () => {
+    for (const example of Object.values(__TEST_EXAMPLES)) {
+      const types = example.solution_flow.steps.map((s) => s.type);
+      expect(types).not.toContain("sanity");
+      expect(types).not.toContain("connect");
+    }
+  });
+
+  it("examples end on the terminal predict (solve) step", () => {
+    for (const example of Object.values(__TEST_EXAMPLES)) {
+      const steps = example.solution_flow.steps;
+      expect(steps[steps.length - 1].type).toBe("solve");
+    }
+  });
+
+  it("terminal solve step feedback avoids correctness-revealing wording", () => {
+    // The terminal predict step's UI is neutral, but evaluateStep still surfaces
+    // the selected option's feedback string — so EVERY option's feedback (correct
+    // option AND all distractors) must stay non-committal at the example level.
+    const banned = [
+      "correct",
+      "wrong",
+      "incorrect",
+      "mistake",
+      "you made",
+      "you should have",
+      "instead of",
+      "you used",
+      "you added",
+      "you subtracted",
+    ];
+    for (const example of Object.values(__TEST_EXAMPLES)) {
+      const steps = example.solution_flow.steps;
+      const terminal = steps[steps.length - 1];
+      expect(terminal.type).toBe("solve");
+      for (const opt of terminal.options ?? []) {
+        const feedback = opt.feedback.toLowerCase();
+        for (const word of banned) {
+          expect(feedback).not.toContain(word);
+        }
+      }
     }
   });
 });

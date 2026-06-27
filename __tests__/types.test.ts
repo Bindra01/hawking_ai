@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { formatForType, getStepFormat, type Step, type StepType } from "@/lib/types";
+import { stepIcon } from "@/lib/step-icons";
+import { STEP_COLORS, STEP_BG } from "@/components/StepQuestion";
 
 describe("formatForType", () => {
   const cases: Array<[StepType, string]> = [
@@ -11,10 +13,32 @@ describe("formatForType", () => {
     ["why", "mcq"],
     ["solve", "mcq"],
     ["sanity", "mcq"],
+    ["approach", "mcq"],
   ];
 
   it.each(cases)("maps %s -> %s", (type, expected) => {
     expect(formatForType(type)).toBe(expected);
+  });
+});
+
+// Map-lookup safety net: tsc cannot guarantee every map carries the `approach`
+// key (the maps are typed Record<string, string> with default fallbacks), so
+// these assertions are the executable guarantee that the new/re-themed step
+// types resolve to their intended format, icon, and design tokens.
+describe("step-type maps carry approach + re-themed solve", () => {
+  it("stepIcon resolves approach and re-themed solve", () => {
+    expect(stepIcon("approach")).toBe("🧭");
+    expect(stepIcon("solve")).toBe("🔮");
+  });
+
+  it("STEP_COLORS carries approach + re-themed solve tokens", () => {
+    expect(STEP_COLORS.approach).toBe("#5b8cff");
+    expect(STEP_COLORS.solve).toBe("#6fb3b8");
+  });
+
+  it("STEP_BG carries approach + re-themed solve tokens", () => {
+    expect(STEP_BG.approach).toBe("#11163a");
+    expect(STEP_BG.solve).toBe("#0e2326");
   });
 });
 

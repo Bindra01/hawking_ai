@@ -1,6 +1,6 @@
 export type Subject = "mechanics" | "electrodynamics" | "thermodynamics" | "quantum_mechanics";
 export type Difficulty = "class_11" | "class_12" | "college";
-export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve";
+export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach";
 export type ProblemStatus = "draft" | "approved" | "published" | "rejected";
 
 /**
@@ -76,6 +76,7 @@ export const VALID_STEP_TYPES: StepType[] = [
   "why",
   "solve",
   "sanity",
+  "approach",
 ];
 
 /**
@@ -95,6 +96,7 @@ export function formatForType(type: StepType): StepFormat {
     case "why":
     case "solve":
     case "sanity":
+    case "approach":
       return "mcq";
     default:
       return "mcq";
