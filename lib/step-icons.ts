@@ -10,6 +10,10 @@ export const STEP_ICONS: Record<string, string> = {
   why: "💡",
   solve: "🔮",
   approach: "🧭",
+  depends: "🎛️",
+  scale: "📈",
+  limit: "🔭",
+  form: "🏗️",
 };
 
 export const DEFAULT_STEP_ICON = "•";

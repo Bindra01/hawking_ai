@@ -22,6 +22,10 @@ export const STEP_COLORS: Record<string, string> = {
   why: "#ff9600",
   solve: "#6fb3b8",
   approach: "#5b8cff",
+  depends: "#38bdf8",
+  scale: "#34d399",
+  limit: "#fbbf24",
+  form: "#5eead4",
 };
 
 // The selection highlight is always the standard UI blue, regardless of the
@@ -40,6 +44,10 @@ export const STEP_BG: Record<string, string> = {
   why: "#2e1e0a",
   solve: "#0e2326",
   approach: "#11163a",
+  depends: "#0b2438",
+  scale: "#08291f",
+  limit: "#2a2008",
+  form: "#06251f",
 };
 
 interface StepQuestionProps {
@@ -75,6 +83,14 @@ export default function StepQuestion({
   // non-committal (no correct/incorrect cues). Legacy …→solve→sanity flows have
   // `solve` NOT last, so isPredict is false there and they keep current behavior.
   const isPredict = step.type === "solve" && isLast;
+
+  // The terminal "ASSEMBLE THE FORM" step (a `form` build that is also the last
+  // step). Decision #817 = soften tone, keep grading: BuildStep keeps its
+  // correct/incorrect tile coloring, but the terminal CTA is neutralized to
+  // "SEE RECAP" (the exact value lands in the recap, not here). Keyed off the
+  // `form` type ONLY — NOT `format === "build" && isLast` — so legacy terminal
+  // build steps are unaffected.
+  const isTerminalForm = step.type === "form" && isLast;
 
   const ready = isAnswerReady(step, answer);
 
@@ -202,7 +218,7 @@ export default function StepQuestion({
               cursor: "pointer",
             }}
           >
-            {!showTip ? "SEE TIP" : isPredict ? "SEE RECAP" : isLast ? "FINISH 🎉" : "CONTINUE"}
+            {!showTip ? "SEE TIP" : isPredict || isTerminalForm ? "SEE RECAP" : isLast ? "FINISH 🎉" : "CONTINUE"}
           </button>
         )}
       </div>

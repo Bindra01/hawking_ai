@@ -100,26 +100,34 @@ function auditSolutionFlow(
   };
 
   // Check step count
-  if (newFlow.steps.length < 4 || newFlow.steps.length > 7) {
-    result.issues.push(`Step count ${newFlow.steps.length} outside 4-7 range`);
+  if (newFlow.steps.length < 4 || newFlow.steps.length > 8) {
+    result.issues.push(`Step count ${newFlow.steps.length} outside 4-8 range`);
     result.passed = false;
   }
 
-  // Check last step is the terminal predict (solve) step
-  if (newFlow.steps[newFlow.steps.length - 1]?.type !== "solve") {
-    result.issues.push(`Last step is "${newFlow.steps[newFlow.steps.length - 1]?.type}", not "solve"`);
+  // Check last step is the terminal "form" (ASSEMBLE THE FORM) build step
+  if (newFlow.steps[newFlow.steps.length - 1]?.type !== "form") {
+    result.issues.push(`Last step is "${newFlow.steps[newFlow.steps.length - 1]?.type}", not "form"`);
     result.passed = false;
   }
 
   // Flag any legacy-only step types in a regenerated flow (mirrors the
   // generator's hard block — newly generated problems must not use these).
-  const legacyOnly = newFlow.steps.filter((s) => s.type === "connect" || s.type === "sanity");
+  // `solve` (PREDICT THE FORM) is retired from generation alongside connect/sanity.
+  const legacyOnly = newFlow.steps.filter(
+    (s) => s.type === "connect" || s.type === "sanity" || s.type === "solve"
+  );
   if (legacyOnly.length > 0) {
     result.issues.push(
       `Contains legacy-only step types that cannot be regenerated: ${legacyOnly.map((s) => s.type).join(", ")}`
     );
     result.passed = false;
   }
+
+  // Whether this flow uses the new terminal `form` build (vs a legacy `solve`
+  // mcq). Drives which soft answer-reference check runs below.
+  const terminalType = newFlow.steps[newFlow.steps.length - 1]?.type;
+  const isFormTerminal = terminalType === "form";
 
   for (let i = 0; i < newFlow.steps.length; i++) {
     const step = newFlow.steps[i];
@@ -222,24 +230,44 @@ function auditSolutionFlow(
     }
   }
 
-  // Check if final answer is referenced in the step chain (mcq correct options only;
-  // other formats derive the answer implicitly so this remains a soft warning).
-  const finalAnswer = problem.final_answer.toLowerCase().trim();
-  const allCorrectTexts = newFlow.steps
-    .filter((s) => getStepFormat(s) === "mcq")
-    .flatMap((s) =>
-      (s.options ?? [])
-        .filter((o) => o.correct)
-        .map((o) => o.text.toLowerCase() + " " + o.feedback.toLowerCase())
-    );
-  const answerReferenced = allCorrectTexts.some((t) => {
-    // Check for numeric/symbolic containment (fuzzy)
-    const shortAnswer = finalAnswer.replace(/[^a-z0-9./-]/g, "");
-    return t.includes(shortAnswer) || t.includes(finalAnswer);
-  });
-  if (!answerReferenced) {
-    result.issues.push(`Final answer "${problem.final_answer}" not clearly referenced in any correct option`);
-    // Warning, not a hard fail — the answer may be derived implicitly
+  // Soft answer-reference check (non-fatal). For the new `form`-terminal flow the
+  // answer is assembled SYMBOLICALLY in the terminal build (and the exact value
+  // lives only in the recap), so the legacy "final answer text appears in some
+  // mcq correct option" check would fire on nearly every problem. Instead, for
+  // form-terminal flows we just confirm the terminal build has a non-trivial
+  // accepted arrangement (the assembled skeleton). Legacy solve flows keep the
+  // old final-answer-text check.
+  if (isFormTerminal) {
+    const terminal = newFlow.steps[newFlow.steps.length - 1];
+    const accepted = terminal.build?.accepted ?? [];
+    const hasSkeleton = accepted.some((arr) => Array.isArray(arr) && arr.length >= 2);
+    if (!hasSkeleton) {
+      result.issues.push(
+        `Terminal form step has no accepted arrangement of length >= 2 to assemble`
+      );
+      // Warning, not a hard fail — structural-only soft check.
+    }
+  } else {
+    // Check if final answer is referenced in the step chain (mcq correct options
+    // only; other formats derive the answer implicitly so this remains a soft
+    // warning). Applies to legacy solve-terminal flows.
+    const finalAnswer = problem.final_answer.toLowerCase().trim();
+    const allCorrectTexts = newFlow.steps
+      .filter((s) => getStepFormat(s) === "mcq")
+      .flatMap((s) =>
+        (s.options ?? [])
+          .filter((o) => o.correct)
+          .map((o) => o.text.toLowerCase() + " " + o.feedback.toLowerCase())
+      );
+    const answerReferenced = allCorrectTexts.some((t) => {
+      // Check for numeric/symbolic containment (fuzzy)
+      const shortAnswer = finalAnswer.replace(/[^a-z0-9./-]/g, "");
+      return t.includes(shortAnswer) || t.includes(finalAnswer);
+    });
+    if (!answerReferenced) {
+      result.issues.push(`Final answer "${problem.final_answer}" not clearly referenced in any correct option`);
+      // Warning, not a hard fail — the answer may be derived implicitly
+    }
   }
 
   return result;

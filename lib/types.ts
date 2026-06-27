@@ -1,6 +1,6 @@
 export type Subject = "mechanics" | "electrodynamics" | "thermodynamics" | "quantum_mechanics";
 export type Difficulty = "class_11" | "class_12" | "college";
-export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach";
+export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach" | "depends" | "scale" | "limit" | "form";
 export type ProblemStatus = "draft" | "approved" | "published" | "rejected";
 
 /**
@@ -77,6 +77,10 @@ export const VALID_STEP_TYPES: StepType[] = [
   "solve",
   "sanity",
   "approach",
+  "depends",
+  "scale",
+  "limit",
+  "form",
 ];
 
 /**
@@ -90,6 +94,14 @@ export function formatForType(type: StepType): StepFormat {
     case "identify":
       return "multiselect";
     case "setup":
+      return "build";
+    case "depends":
+      return "multiselect";
+    case "scale":
+      return "mcq";
+    case "limit":
+      return "claim";
+    case "form":
       return "build";
     case "principle":
     case "connect":

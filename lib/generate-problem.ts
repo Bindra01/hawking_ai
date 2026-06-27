@@ -43,25 +43,38 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Explain the deeper physical intuition. Why does this result make sense?
    Use for hard problems where the physics insight is as important as the math.
 
-7. "solve" (🔮 PREDICT THE FORM)
-   Purpose: the FINAL step. The student predicts what the final answer
-   EXPRESSION/FORM looks like (a number is just the expression after substituting
-   values). mcq, exactly 4 options, exactly 1 correct whose text IS the problem's
-   final_answer (byte-identical). Feedback is NON-COMMITTAL — do NOT celebrate or
-   say 'Correct!'; frame it as 'given the form you predicted, the answer works out
-   to <final_answer>' / acknowledge the form the student picked rather than
-   asserting exact-value correctness.
-   CRITICAL FEEDBACK-TONE EXCEPTION (terminal "solve" step ONLY — this overrides
-   the global SAME-FAMILY-DISTRACTOR "name the error" rule for this one step):
-   EVERY option's feedback — the correct option AND all distractors — must avoid
-   the words "correct", "wrong", "incorrect", "mistake", "you made … error", "you
-   should have", and must NOT tell the student their pick was right or wrong.
-   Distractor feedback must neutrally acknowledge the FORM the student picked and
-   defer the reconciliation to the worked answer, e.g. "That's the half-power
-   form; the worked expression in the recap shows where the exponent lands" — NOT
-   "You used the square root instead of the fourth root." Only the terminal
-   "solve" step gets this exception — "approach"/"principle"/"why" distractors
-   keep naming the error normally.
+7. THE TERMINAL REASONING CHAIN — after "setup", reason about the STRUCTURE of
+   the answer (never compute it). These four types replace the retired "solve"
+   step. They run in order and ALWAYS operate on the SYMBOLIC answer, even when
+   the final_answer is a single number — the number is revealed only in the recap.
+
+   A. "depends" (🎛️ WHAT IT INVOLVES) — multiselect.
+      Purpose: which quantities does the answer actually involve? Tap the real
+      ones; leave the same-family red herrings (e.g. a quantity from a neighboring
+      law that does NOT enter here). 4-6 items, >=1 matters:true AND >=1
+      matters:false, feedbackCorrect/feedbackWrong 40+ chars.
+
+   B. "scale" (📈 HOW IT SCALES) — mcq.
+      Purpose: how does the answer scale with ONE variable (the exponent /
+      proportionality)? NO arithmetic — pure exponent reasoning (e.g. "r ∝ L^{1/2}").
+      Exactly 4 options, exactly 1 correct. May appear 1-2× (one per variable).
+
+   C. "limit" (🔭 CHECK THE EXTREME) — claim.
+      Purpose: stress-test a limiting/extreme case as a sounds-right vs it's-a-trap
+      claim (e.g. "stiffen the well and the orbit grows without bound" — a trap if
+      it actually shrinks). statement 15+, isTrap boolean, feedbackTrap/feedbackSound
+      40+ chars.
+
+   D. "form" (🏗️ ASSEMBLE THE FORM) — build (the TERMINAL step).
+      Purpose: assemble the SYMBOLIC answer SKELETON from atomic structural tiles
+      the student already reasoned out — the root, the ratio, which symbol sits on
+      top. NO substituted numbers; "=" is always its own tile. The exact value is
+      revealed only in the recap, never picked here. Feedback is NON-COMMITTAL —
+      no "correct"/"wrong"/"exactly right"/"perfect"; calmly note the form is
+      assembled and the recap carries it through to the value.
+
+   (The retired "solve" / PREDICT THE FORM mcq is NO LONGER generated — it stays
+   in the type system only so legacy DB problems keep rendering.)
 
 FIRST STEP VARIETY:
 Problems should NOT always start with a "trap" step. Vary the opening step type based on what best hooks the student into the problem. Good openers include:
@@ -108,15 +121,17 @@ ever consider. A distractor that is obviously irrelevant teaches nothing.
 
 PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always options):
 
-* type "trap"  => emit a "claim" object (NO "options"):
+* type "trap" OR "limit"  => emit a "claim" object (NO "options"):
     {
       "statement": "<the bold claim, stated as if true>",
       "isTrap": true | false,            // true = the claim is false / a trap
       "feedbackTrap": "<shown when student taps IT'S A TRAP, 40+ chars>",
       "feedbackSound": "<shown when student taps SOUNDS RIGHT, 40+ chars>"
     }
+    // "limit" (CHECK THE EXTREME) stress-tests a limiting/extreme case as a
+    // sounds-right vs it's-a-trap claim about how the answer behaves.
 
-* type "identify"  => emit a "multiselect" object (NO "options"):
+* type "identify" OR "depends"  => emit a "multiselect" object (NO "options"):
     {
       "items": [ { "text": "<quantity/fact>", "matters": true|false }, ... ],
       // 4-6 items; AT LEAST ONE matters:true AND AT LEAST ONE matters:false.
@@ -124,8 +139,10 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
       "feedbackCorrect": "<40+ chars>",
       "feedbackWrong": "<40+ chars>"
     }
+    // "depends" (WHAT IT INVOLVES) asks which quantities the ANSWER involves —
+    // the real symbols vs same-family red herrings — before assembling the form.
 
-* type "setup"  => emit a "build" object (NO "options"):
+* type "setup" OR "form"  => emit a "build" object (NO "options"):
     {
       "tiles": [ "<unique token>", ... ],   // 3-10 UNIQUE tokens, incl. 1-3 distractor tiles
       "accepted": [ [ "<token>", "<token>", ... ] ],
@@ -155,19 +172,23 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     // right-hand side (further split each side into its terms/factors) all become
     // separate tiles. (A relation INSIDE a subscript/argument, e.g. "$E_{x=0}$"
     // or "$v(t=0)$", is part of a single term and is fine.)
+    // FORM STEP (ASSEMBLE THE FORM, TERMINAL): the tiles are the STRUCTURAL atomic
+    // fragments of the SYMBOLIC answer skeleton — the root, the ratio, the symbols
+    // — with NO substituted numbers (even when the final_answer is numeric, the
+    // form stays symbolic; the number appears only in the recap). "=" is its own
+    // tile. ALL of its feedback (feedbackCorrect, feedbackWrong, and every
+    // distractor feedback) must be NON-COMMITTAL — no 'correct'/'wrong'/'incorrect'/
+    // 'mistake'/'exactly right'/'perfect'; calmly note the form is assembled and
+    // the recap carries it through to the value.
 
-* all OTHER types ("principle", "why", "approach", "solve")  => emit "options":
+* all OTHER types ("principle", "why", "approach", "scale")  => emit "options":
     exactly 4 options, exactly 1 correct (the existing MCQ rules below apply).
-    For the "solve" step, the single correct option's text MUST equal the
-    problem's final_answer, and ALL of its option feedback (correct option AND
-    every distractor) must be non-committal — frame it around the FORM the student
-    predicted, defer the worked result to the recap, and NEVER use
-    'correct'/'wrong'/'incorrect'/'mistake' or say the student's pick was right or
-    wrong. This is the ONE exception to the same-family-distractor 'name the error'
-    rule, which still applies to every other step type.
+    The "scale" (HOW IT SCALES) step asks how the answer scales with ONE variable
+    using EXPONENT/PROPORTIONALITY reasoning only (e.g. "r ∝ L^{1/2}") — NO
+    arithmetic, and its options are scaling forms, not numbers.
 
-Do NOT add an "options" array to trap/identify/setup steps, and do NOT add
-claim/multiselect/build objects to the MCQ types.
+Do NOT add an "options" array to trap/identify/setup/depends/limit/form steps,
+and do NOT add claim/multiselect/build objects to the MCQ types.
 `;
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
@@ -234,43 +255,66 @@ const EXAMPLE_CLASS_11 = {
         tip: "When equating speeds, square both sides first to eliminate the square root."
       },
       {
-        type: "approach",
-        label: "PLAN THE DERIVATION",
-        icon: "🧭",
-        prompt: "The speed-balance equation `3R(320)/32 = 3RT/2` is set up. What's the cleanest next move to reach T for H₂?",
-        options: [
-          { text: "Cancel the common `3R`, then solve the proportion `320/32 = T/2` for T", correct: true, feedback: "Right — the 3R is common to both sides, so cancelling it collapses the problem to a clean proportion in T." },
-          { text: "Square both sides again before cancelling anything", correct: false, feedback: "The square roots were already removed when the RMS expressions were equated, so squaring again does nothing useful here. The shared 3R simply cancels, leaving the proportion 320/32 = T/2 to solve for T.", distractor_type: "procedural_slip" as const },
-          { text: "Cross-multiply the two whole fractions before simplifying", correct: false, feedback: "Cross-multiplying the full fractions just reintroduces the 3R on both sides that you would then have to cancel anyway. Cancelling the common 3R first is cleaner and leaves the simple proportion 320/32 = T/2.", distractor_type: "half_right" as const },
-          { text: "Convert 320 K back to °C before solving for T", correct: false, feedback: "Converting units mid-derivation mixes scales and invites sign errors. Keep everything in Kelvin while solving the proportion, and only convert the final T to °C at the very end.", distractor_type: "misconception" as const }
-        ],
-        tip: "Cancel common factors before cross-multiplying — it turns a messy equation into a clean proportion."
+        type: "depends",
+        label: "WHAT IT INVOLVES",
+        icon: "🎛️",
+        prompt: "Before assembling the matched temperature, tap every quantity that actually sets the H₂ temperature in this RMS-speed balance.",
+        multiselect: {
+          items: [
+            { text: "The O₂ temperature, in Kelvin", matters: true },
+            { text: "The molar-mass ratio of H₂ to O₂", matters: true },
+            { text: "The pressure of either gas sample", matters: false },
+            { text: "The number of moles of gas present", matters: false },
+            { text: "The volume of the container", matters: false }
+          ],
+          feedbackCorrect: "Right — only the O₂ temperature (in Kelvin) and the molar-mass ratio enter the matched H₂ temperature, since v_rms = √(3RT/M).",
+          feedbackWrong: "The matched temperature follows from v_rms = √(3RT/M): it depends only on the O₂ temperature and the molar-mass ratio. Pressure, moles, and volume never enter."
+        },
+        tip: "Strip the answer down to the quantities that truly drive it before building the relation."
       },
       {
-        type: "approach",
-        label: "PLAN THE DERIVATION",
-        icon: "🧭",
-        prompt: "Solving the proportion gives T(H₂) = 20 K, but the question asks for °C. What's the right final move to land the answer?",
+        type: "scale",
+        label: "HOW IT SCALES",
+        icon: "📈",
+        prompt: "Holding the O₂ temperature fixed, how does the matched H₂ temperature scale with the molar-mass ratio M(H₂)/M(O₂)?",
         options: [
-          { text: "Convert the Kelvin result back to °C by subtracting 273", correct: true, feedback: "Exactly — the answer is requested in °C, and K → °C subtracts 273, so the final step is 20 − 273." },
-          { text: "Add 273 to the Kelvin value to reach °C", correct: false, feedback: "Adding 273 is the °C → K direction, not the K → °C direction you need here. Since 0°C = 273 K, going from Kelvin to Celsius subtracts 273, so the final move is 20 − 273.", distractor_type: "procedural_slip" as const },
-          { text: "Negate the Kelvin value to get the Celsius temperature", correct: false, feedback: "A sign flip is not a unit conversion — the Kelvin and Celsius scales are offset by 273, not by a sign. The Celsius value comes from subtracting 273 from the Kelvin result, not from negating it.", distractor_type: "half_right" as const },
-          { text: "Apply the Fahrenheit formula: multiply by 9/5 and add 32", correct: false, feedback: "That formula converts to Fahrenheit, but the question asks for Celsius. Kelvin and Celsius share the same degree size and differ only by the 273 offset, so the conversion is just K − 273.", distractor_type: "misconception" as const }
+          { text: "Linearly: T ∝ (M(H₂)/M(O₂))", correct: true, feedback: "Right — since v_rms² ∝ T/M, equal speeds force T ∝ M, so the matched temperature is linear in the molar-mass ratio." },
+          { text: "As the square root: T ∝ √(M(H₂)/M(O₂))", correct: false, feedback: "The square root belongs to the SPEED, not the temperature. v_rms ∝ √(T/M), so the speeds match when T/M is equal, which makes T linear in M — not a square root of the ratio.", distractor_type: "half_right" as const },
+          { text: "Quadratically: T ∝ (M(H₂)/M(O₂))²", correct: false, feedback: "Squaring the ratio double-counts the mass dependence. v_rms² ∝ T/M is linear in both T and M, so matching speeds makes T scale with the first power of the ratio, not the square.", distractor_type: "procedural_slip" as const },
+          { text: "Inversely: T ∝ (M(O₂)/M(H₂))", correct: false, feedback: "Inverting the ratio points the dependence the wrong way. Because T ∝ M at fixed speed, the lighter gas needs the SMALLER temperature, so T grows with M(H₂)/M(O₂), not its reciprocal.", distractor_type: "misconception" as const }
         ],
-        tip: "Decide the final unit step before computing digits: K → °C subtracts 273."
+        tip: "Read the exponent off the governing relation: v_rms² ∝ T/M makes T linear in M."
       },
       {
-        type: "solve",
-        label: "PREDICT THE FORM",
-        icon: "🔮",
-        prompt: "Before computing the digits, predict the FORM the final answer takes — a Celsius temperature well below zero. Which is it?",
-        options: [
-          { text: "-253°C", correct: true, feedback: "Given the form you predicted, the numbers work out to -253°C — a sub-zero Celsius temperature, as the reasoning pointed to." },
-          { text: "20 K", correct: false, feedback: "That's the Kelvin form before the final unit step; the worked answer carries it through to °C to land on the sub-zero Celsius value the reasoning anticipated.", distractor_type: "procedural_slip" as const },
-          { text: "293°C", correct: false, feedback: "That's the form you'd get by adding the 273 offset; the worked conversion in the recap lands at a sub-zero Celsius value rather than a high positive one.", distractor_type: "misconception" as const },
-          { text: "-20°C", correct: false, feedback: "That's the form from a sign flip rather than the 273 offset; the worked conversion in the recap settles much further below zero.", distractor_type: "half_right" as const }
-        ],
-        tip: "Predict the FORM of the answer — units and sign — before you trust the digits."
+        type: "limit",
+        label: "CHECK THE EXTREME",
+        icon: "🔭",
+        prompt: "Stress-test the result at an extreme. Sound right, or is it a trap?",
+        claim: {
+          statement: "Because H₂ is so much lighter than O₂, it must match O₂'s RMS speed at a HIGHER temperature.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. Since v_rms² ∝ T/M, a lighter gas reaches the same RMS speed at a LOWER temperature, not a higher one. H₂ matches O₂'s speed far below zero.",
+          feedbackSound: "Not quite — this is a trap. v_rms² ∝ T/M, so the lighter gas needs LESS temperature to hit the same speed. H₂ matches O₂'s RMS speed at a much lower temperature."
+        },
+        tip: "Push a variable to its extreme and check the trend matches the proportionality you found."
+      },
+      {
+        type: "form",
+        label: "ASSEMBLE THE FORM",
+        icon: "🏗️",
+        prompt: "Assemble the SYMBOLIC relation for the matched H₂ temperature from the structural tiles. Build the formula — numbers come later.",
+        build: {
+          tiles: ["$T_{H_2}$", "=", "$T_{O_2}$", "$\\frac{M_{H_2}}{M_{O_2}}$", "$\\frac{M_{O_2}}{M_{H_2}}$"],
+          accepted: [
+            ["$T_{H_2}$", "=", "$T_{O_2}$", "$\\frac{M_{H_2}}{M_{O_2}}$"]
+          ],
+          distractors: [
+            { tile: "$\\frac{M_{O_2}}{M_{H_2}}$", feedback: "That's the inverted mass ratio; the lighter gas needs the SMALLER temperature, so M(H₂)/M(O₂) sits on top, not its reciprocal." }
+          ],
+          feedbackCorrect: "You've assembled the symbolic temperature relation; the recap substitutes the masses and lands the value.",
+          feedbackWrong: "Reassemble the skeleton: the matched temperature is the oxygen temperature scaled by the molar-mass ratio — the recap carries it through to the value."
+        },
+        tip: "Build the FORMULA first; numbers go in only at the recap."
       }
     ]
   }
@@ -333,50 +377,75 @@ const EXAMPLE_COLLEGE = {
         tip: "Force from potential: F = -dU/dr. For U = kr² that is 2kr — keep the factor of 2."
       },
       {
-        type: "approach",
-        label: "PLAN THE DERIVATION",
-        icon: "🧭",
-        prompt: "Force balance gives `2kr = mv²/r` and angular momentum gives `L = mvr`. How do you combine them to isolate r?",
-        options: [
-          { text: "Eliminate v using `v = L/(mr)`, substitute into the force balance, then collect powers of r", correct: true, feedback: "Right — substituting v = L/(mr) removes v entirely and leaves a single equation in r to collect and solve." },
-          { text: "Differentiate the potential a second time to get another relation", correct: false, feedback: "A second derivative of U gives the curvature of the well, not a new constraint linking L and r. The clean route is to eliminate v with v = L/(mr) and substitute into the force balance.", distractor_type: "misconception" as const },
-          { text: "Set the kinetic energy equal to the potential energy and solve", correct: false, feedback: "Equating K and U is a virial-style shortcut that does not hold for a circular orbit in a kr² well, so it gives the wrong relation. Use force balance with v eliminated via L = mvr instead.", distractor_type: "half_right" as const },
-          { text: "Reuse the gravitational orbit relation `r = L²/(GMm²)`", correct: false, feedback: "That relation assumes a 1/r² force, but here F = 2kr from U = kr², so it does not apply. Combine the actual force balance with angular momentum to isolate r.", distractor_type: "procedural_slip" as const }
-        ],
-        tip: "To combine two relations, eliminate the shared variable first — here v drops out via L = mvr."
+        type: "depends",
+        label: "WHAT IT INVOLVES",
+        icon: "🎛️",
+        prompt: "Before assembling anything, tap every quantity that the orbit radius actually involves for this harmonic well.",
+        multiselect: {
+          items: [
+            { text: "L (the angular momentum)", matters: true },
+            { text: "m (the particle mass)", matters: true },
+            { text: "k (the well stiffness)", matters: true },
+            { text: "G (the gravitational constant)", matters: false },
+            { text: "the orbital speed v", matters: false },
+            { text: "the elapsed time t", matters: false }
+          ],
+          feedbackCorrect: "Right — only L, m, and k set the orbit radius here. There is no gravity (no G), and v is eliminated through L = mvr.",
+          feedbackWrong: "The radius depends only on L, m, and k. G belongs to a 1/r² field that isn't present, v is eliminated via L = mvr, and time never enters a circular orbit's radius."
+        },
+        tip: "List the symbols the answer truly involves, and drop the same-family red herrings, before building it."
       },
       {
-        type: "approach",
-        label: "PLAN THE DERIVATION",
-        icon: "🧭",
-        prompt: "Combining the relations gives `r⁴ = L²/(2mk)`. Which root isolates r?",
+        type: "scale",
+        label: "HOW IT SCALES",
+        icon: "📈",
+        prompt: "Holding m and k fixed, how does the orbit radius r scale with the angular momentum L?",
         options: [
-          { text: "Take the fourth root, since the combined relation is `r⁴ = L²/(2mk)`", correct: true, feedback: "Exactly — r is raised to the fourth power, so the fourth root of both sides isolates r directly." },
-          { text: "Take the square root of both sides", correct: false, feedback: "A square root only undoes a squared term, but r appears to the fourth power here, so it leaves an r² behind. Apply the fourth root to isolate r in one clean step.", distractor_type: "procedural_slip" as const },
-          { text: "Take the cube root of both sides", correct: false, feedback: "The cube root would be right for r³, but the relation is r⁴ = L²/(2mk). Matching the root to the power means taking the fourth root, not the cube root.", distractor_type: "half_right" as const },
-          { text: "Invert the fraction first, then take a root", correct: false, feedback: "Flipping the fraction changes which way r responds to L and k, which is physically backwards. Keep L²/(2mk) as is and take the fourth root to isolate r.", distractor_type: "misconception" as const }
+          { text: "r ∝ L^{1/2}", correct: true, feedback: "Right — from r⁴ ∝ L², taking the fourth root gives r ∝ L^{1/2}, so the radius grows as the square root of L." },
+          { text: "r ∝ L²", correct: false, feedback: "That's the dependence of r⁴, not r. The force balance gives r⁴ ∝ L², so the fourth root pulls the exponent down to 1/2 — the radius itself scales as L^{1/2}, not L².", distractor_type: "procedural_slip" as const },
+          { text: "r ∝ L", correct: false, feedback: "Linear scaling skips the fourth root. Because r⁴ ∝ L², the radius scales as the fourth root of L², which is L^{1/2}, so r grows more slowly than linearly in L.", distractor_type: "half_right" as const },
+          { text: "r ∝ 1/L", correct: false, feedback: "An inverse dependence points the wrong way. More angular momentum pushes the orbit OUT, so r increases with L; the relation r⁴ ∝ L² gives r ∝ L^{1/2}, a growing function.", distractor_type: "misconception" as const }
         ],
-        tip: "Match the root to the power: r raised to the nth power is isolated by the nth root."
+        tip: "Read the exponent off the power relation: r⁴ ∝ L² means r ∝ L^{1/2}."
       },
       {
-        type: "solve",
-        label: "PREDICT THE FORM",
-        icon: "🔮",
-        prompt: "Predict the FORM of the orbit radius — a fourth root of a ratio of L², m, and k. Which expression is it?",
-        options: [
-          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$", correct: true, feedback: "Given the form you predicted, the algebra lands on `$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$` — a fourth root, matching the structure you anticipated." },
-          { text: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/2}$", correct: false, feedback: "That's the half-power form; the worked expression in the recap shows where the exponent settles for r to come out as a length.", distractor_type: "procedural_slip" as const },
-          { text: "$r = \\frac{L}{\\sqrt{2mk}}$", correct: false, feedback: "That's the form where L stays to the first power; the worked expression in the recap carries the full fourth root through to r.", distractor_type: "half_right" as const },
-          { text: "$r = \\left(\\frac{2mk}{L^2}\\right)^{1/4}$", correct: false, feedback: "That's the inverted-ratio form; the worked expression in the recap keeps L² on top and 2mk underneath for r to grow with L.", distractor_type: "misconception" as const }
-        ],
-        tip: "Predict the FORM — the root, the ratio, and which symbol sits on top — before trusting the final expression."
+        type: "limit",
+        label: "CHECK THE EXTREME",
+        icon: "🔭",
+        prompt: "Stress-test the radius at an extreme. Sound right, or is it a trap?",
+        claim: {
+          statement: "Stiffen the well without bound (k → ∞) and the circular orbit grows without bound too.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. Since r ∝ k^{-1/4}, a stiffer well pulls the orbit IN: as k → ∞ the radius shrinks toward zero, it does not grow.",
+          feedbackSound: "Not quite — this is a trap. r ∝ k^{-1/4}, so a larger k gives a SMALLER radius. Stiffening the well tightens the orbit rather than expanding it."
+        },
+        tip: "Send one parameter to an extreme and check the trend matches the exponent's sign."
+      },
+      {
+        type: "form",
+        label: "ASSEMBLE THE FORM",
+        icon: "🏗️",
+        prompt: "Assemble the SHAPE of the orbit radius from the structural tiles — the root and the ratio. Build the form; the value comes later.",
+        build: {
+          tiles: ["r", "=", "$\\left(\\frac{L^2}{2mk}\\right)^{1/4}$", "$\\frac{L^2}{2mk}$", "$\\left(\\frac{2mk}{L^2}\\right)^{1/4}$"],
+          accepted: [
+            ["r", "=", "$\\left(\\frac{L^2}{2mk}\\right)^{1/4}$"]
+          ],
+          distractors: [
+            { tile: "$\\frac{L^2}{2mk}$", feedback: "That's the ratio before the fourth root; r is the fourth root of it, not the ratio itself." },
+            { tile: "$\\left(\\frac{2mk}{L^2}\\right)^{1/4}$", feedback: "That's the inverted ratio; keep L² on top so r grows with L, not shrinks." }
+          ],
+          feedbackCorrect: "You've assembled the symbolic form r = (L²/2mk)^{1/4}; the recap below shows the worked derivation.",
+          feedbackWrong: "Reassemble the skeleton: r equals the fourth root of L²/(2mk) — the recap carries it through."
+        },
+        tip: "Assemble the SHAPE of the answer — the root and the ratio — and let the recap fill in the value."
       }
     ]
   }
 };
 
-// Exposed for the test suite's guard that each example's `solve` correct option
-// text stays byte-identical to that example's `final_answer`.
+// Exposed for the test suite's guard that each example's terminal `form` step
+// assembles the SYMBOLIC answer skeleton (accepted[0]) and ends the flow.
 export const __TEST_EXAMPLES = { EXAMPLE_CLASS_11, EXAMPLE_COLLEGE };
 
 // ─── MISCONCEPTION CATALOG ──────────────────────────────────────────────────
@@ -459,28 +528,28 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
-- Use 5-6 steps. Focus on building correct problem-solving habits.
+- Use 5-6 steps (max 8). Focus on building correct problem-solving habits.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Recommended step pattern: identify/trap/principle → principle → setup → approach (×1-2) → predict`,
+- Recommended step pattern: identify/trap/principle → setup → depends → scale (×1-2) → limit → form`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
-- Use 5-6 steps. Problems should require multi-step reasoning.
+- Use 5-7 steps (max 8). Problems should require multi-step reasoning.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: identify/trap/principle → identify → setup → approach (×1-2) → predict`,
+- Recommended step pattern: identify/trap/principle → setup → depends → scale (×1-2) → limit → form`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
-- Use 6-7 steps. Problems should require deep physical insight.
+- Use 6-8 steps. Problems should require deep physical insight.
 - Optionally include a "why" step to explain the deeper physics behind a key result.
 - The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
-- Recommended step pattern: identify → principle → setup → approach (×2) → why? → predict`,
+- Recommended step pattern: trap/identify → principle → setup → depends → scale (×1-2) → limit → form`,
 };
 
 // ─── GENERATION PIPELINE ─────────────────────────────────────────────────────
@@ -637,7 +706,7 @@ Rules:
 - The "approach" step should ask "How will you derive it?" / "Which simplification gets you there?" — conceptual choices between strategies, NOT asking for arithmetic.
 - Think of each step as a DECISION POINT, not a CALCULATION POINT.
 - The student should feel like they're making strategic choices, like a game — not doing homework.
-- EXCEPTION — the dedicated terminal "solve" step (PREDICT THE FORM): this ONE step asks the student to PREDICT the FORM the final answer takes, so its correct option text IS the final numerical/symbolic answer (equal to final_answer). Even so, it must be answerable by recognition/THINKING, not fresh pen-and-paper arithmetic — the student predicts the form they will arrive at from the "setup"/"approach" steps, not a value they must newly compute here. Its feedback is NON-COMMITTAL (no "correct"/"wrong"/celebration — frame it around the form the student predicted).
+- TERMINAL REASONING CHAIN — instead of asking for the worked value, the problem ends by reasoning about the answer's STRUCTURE: "depends" (which quantities the answer involves), "scale" (how it scales with one variable, exponent reasoning, NO arithmetic), "limit" (a sounds-right vs it's-a-trap claim about an extreme), then "form" (ASSEMBLE THE FORM, TERMINAL): a build step where the student assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers. The exact value is revealed only in the recap, never picked here. The "form" step's feedback is NON-COMMITTAL (no "correct"/"wrong"/celebration — calmly note the form is assembled and the recap carries it through).
 
 CRITICAL QUALITY RULES:
 
@@ -663,17 +732,17 @@ CRITICAL QUALITY RULES:
      c) Redirect toward the correct approach ("Instead, use...")
    - Wrong feedback MUST be minimum 3 sentences and 40+ words. Never just say "incorrect."
    - The three wrong options should represent DIFFERENT types of errors.
-   - EXCEPTION — the terminal "solve" (PREDICT THE FORM) step: the rules a)/b)/c)
-     above do NOT apply to it. On this ONE step you must NOT name an error or say
-     anything is wrong/incorrect. ALL of its option feedback (the correct option
-     AND every distractor) must be NON-COMMITTAL — neutrally acknowledge the FORM
-     the student picked and defer the worked result to the recap (e.g. "That's the
-     half-power form; the worked expression in the recap shows where the exponent
-     lands"). BANNED words/phrases on this step: "correct", "wrong", "incorrect",
-     "mistake", "instead of", "you should have", "you used", "you added", "you
-     subtracted". Do NOT celebrate and do NOT tell the student their pick was right
-     or wrong. Every OTHER step type (principle/why/approach) keeps rules a)/b)/c)
-     and names the error normally.
+   - EXCEPTION — the terminal "form" (ASSEMBLE THE FORM) build step: the rules
+     a)/b)/c) above do NOT apply to its feedback. On this ONE step you must NOT
+     name an error or say anything is wrong/incorrect. ALL of its feedback
+     (feedbackCorrect, feedbackWrong, AND every distractor feedback) must be
+     NON-COMMITTAL — calmly note the form is assembled and defer the worked value
+     to the recap (e.g. "That tile reshapes the form; the recap shows where the
+     structure settles"). BANNED words/phrases on this step: "correct", "wrong",
+     "incorrect", "mistake", "exactly right", "perfect", "nailed", "you got it",
+     "instead of", "you should have", "you used", "you added", "you subtracted".
+     Do NOT celebrate. Every OTHER step type (principle/why/approach/scale) keeps
+     rules a)/b)/c) and names the error normally.
 
 4. CORRECT ANSWER FEEDBACK:
    - 1-2 sentences, concise and encouraging.
@@ -692,10 +761,11 @@ CRITICAL QUALITY RULES:
    - "title": Short descriptive title (~80 chars max)
    - "goal": "Find: [answer]" format
    - "final_answer": The numerical/symbolic answer
-   - Last step MUST be type "solve" (PREDICT THE FORM): an mcq whose single correct option text equals final_answer, with non-committal feedback (no celebration).
+   - Last step MUST be type "form" (ASSEMBLE THE FORM): a build step that assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers, with non-committal feedback (no celebration). The exact value is revealed only in the recap.
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
-     trap → "claim" object; identify → "multiselect" object; setup → "build" object;
-     principle/why/approach/solve → "options" (exactly 4: 1 correct, 3 wrong).
+     trap/limit → "claim" object; identify/depends → "multiselect" object;
+     setup/form → "build" object; principle/why/approach/scale → "options"
+     (exactly 4: 1 correct, 3 wrong).
    - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
    - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
 }
@@ -797,6 +867,10 @@ const STEP_LABELS: Record<string, string> = {
   solve: "PREDICT THE FORM",
   sanity: "SANITY CHECK",
   why: "WHY THIS WORKS",
+  depends: "WHAT IT INVOLVES",
+  scale: "HOW IT SCALES",
+  limit: "CHECK THE EXTREME",
+  form: "ASSEMBLE THE FORM",
 };
 
 
@@ -830,21 +904,20 @@ export function validateAndNormalize(
     throw new Error("solution_flow.steps must be an array");
   }
 
-  if (steps.length < 4 || steps.length > 7) {
-    throw new Error(`Expected 4-7 steps, got ${steps.length}`);
+  if (steps.length < 4 || steps.length > 8) {
+    throw new Error(`Expected 4-8 steps, got ${steps.length}`);
   }
 
-  // Last step must be the terminal "solve" (PREDICT THE FORM) step.
-  if (steps[steps.length - 1].type !== "solve") {
-    throw new Error('Last step must be type "solve"');
+  // Last step must be the terminal "form" (ASSEMBLE THE FORM) build step.
+  if (steps[steps.length - 1].type !== "form") {
+    throw new Error('Last step must be type "form"');
   }
 
-  // Exactly one "solve" (predict) step; it is now terminal, so there is no
+  // Exactly one "form" (assemble) step; it is the terminal step, so there is no
   // adjacency check — the last-step check above already pins its position.
-  const solveCount = steps.filter((s) => s.type === "solve").length;
-  const solveIdx = steps.findIndex((s) => s.type === "solve");
-  if (solveCount !== 1) {
-    throw new Error(`Expected exactly 1 "solve" step, got ${solveCount}`);
+  const formCount = steps.filter((s) => s.type === "form").length;
+  if (formCount !== 1) {
+    throw new Error(`Expected exactly 1 "form" step, got ${formCount}`);
   }
 
   // Bound the number of conceptual "approach" steps. Lower bound 0 is allowed
@@ -854,11 +927,22 @@ export function validateAndNormalize(
     throw new Error(`Expected at most 3 "approach" steps, got ${approachCount}`);
   }
 
+  // Bound the number of "scale" (HOW IT SCALES) steps. The scaling beat may
+  // appear 1-2× (e.g. one per independent variable); more than 2 is rejected.
+  const scaleCount = steps.filter((s) => s.type === "scale").length;
+  if (scaleCount > 2) {
+    throw new Error(`Expected at most 2 "scale" steps, got ${scaleCount}`);
+  }
+
   // HARD BLOCK: newly generated problems must not use retired legacy-only step
   // types. They remain valid for rendering already-stored legacy/seeded problems,
   // but generation (this path) must never emit them. A leaked legacy type throws,
-  // which the retry loop turns into a regeneration.
-  const legacyOnly = steps.filter((s) => s.type === "connect" || s.type === "sanity");
+  // which the retry loop turns into a regeneration. `solve` (PREDICT THE FORM) is
+  // retired from generation alongside `connect`/`sanity`: it stays renderable for
+  // legacy DB problems but the terminal beat is now the `form` build step.
+  const legacyOnly = steps.filter(
+    (s) => s.type === "connect" || s.type === "sanity" || s.type === "solve"
+  );
   if (legacyOnly.length > 0) {
     throw new Error(
       `Legacy-only step types cannot be generated: ${legacyOnly.map((s) => s.type).join(", ")}`
@@ -941,61 +1025,80 @@ export function validateAndNormalize(
         validateMultiSelectStep(step, i);
         break;
       case "build":
+        // For the terminal `form` build step, neutralize committal/celebratory
+        // feedback IN PLACE before validating — the length checks must hold AFTER
+        // substitution, so this must run before validateBuildStep. Legacy `setup`
+        // build steps keep their normal (gradable) feedback untouched.
+        if (step.type === "form" && step.build) {
+          sanitizeFormFeedback(step.build);
+        }
         validateBuildStep(step, i);
         break;
     }
   }
 
-  // WARN-ONLY: the solve step's single correct option text should canonically
-  // equal the problem's final_answer. GPT-4o formats answers differently across
-  // surfaces, so a mismatch only warns (a hard fail causes spurious retries);
-  // the byte-exact example JSONs are what drive compliance.
-  const solveStep = steps[solveIdx];
-  const solveCorrect = solveStep.options?.find((o) => o.correct);
-  if (
-    solveCorrect &&
-    normalizeAnswer(solveCorrect.text) !== normalizeAnswer(problem.final_answer)
-  ) {
-    console.warn(
-      `Solve step's correct option ("${solveCorrect.text}") may not match final_answer ("${problem.final_answer}")`
-    );
-  }
+  // NOTE: the terminal `form` build step's feedback is sanitized in place inside
+  // the per-step validation loop above, BEFORE validateBuildStep runs (see the
+  // `case "build"` branch). Ordering is critical: a short committal string like
+  // "Correct!" would otherwise fail the >=40 length check before the neutral
+  // fallback could replace it. The exact numeric/symbolic value is revealed only
+  // in the recap (CompletionScreen), never assembled with substituted numbers.
+}
 
-  // SANITIZE (not throw): the terminal solve step (PREDICT THE FORM) must have
-  // non-committal feedback on ALL options (correct AND distractors). The prompt
-  // instructs the model to avoid these words, but GPT-4o drifts often — and
-  // "correct" in particular is extremely common in LLM output. Throwing here
-  // would burn the small retry budget (MAX_RETRIES) and surface spurious hard
-  // generation failures to the user. Instead we replace any option's offending
-  // feedback in place with a neutral fallback. This guarantees neutrality with
-  // zero added failure rate; the recap below the step carries the real
-  // derivation, so a generic neutral line is acceptable for the predict step.
-  const SOLVE_BANNED_WORDS = [
-    "correct",
-    "wrong",
-    "incorrect",
-    "mistake",
-    "instead of",
-    "you should have",
-    "you used",
-    "you added",
-    "you subtracted",
-  ];
-  const NEUTRAL_PREDICT_FALLBACK =
-    "See the recap below for the full derivation and where this form lands.";
-  if (solveStep.options) {
-    for (const opt of solveStep.options) {
-      if (!opt.feedback) continue;
-      const feedbackLower = opt.feedback.toLowerCase();
-      const hasBanned = SOLVE_BANNED_WORDS.some((banned) =>
-        feedbackLower.includes(banned)
+// Committal/celebratory words the terminal `form` step's feedback must avoid.
+// GPT-4o drifts toward these ("correct" in particular) despite the prompt, so we
+// sanitize in place rather than hard-throw (which would burn the retry budget).
+const FORM_BANNED_WORDS = [
+  "correct",
+  "wrong",
+  "incorrect",
+  "mistake",
+  "exactly right",
+  "perfect",
+  "nailed",
+  "you got it",
+  "instead of",
+  "you should have",
+  "you used",
+  "you added",
+  "you subtracted",
+];
+// Fallback for feedbackCorrect/feedbackWrong (91 chars, clears the 40 minimum).
+const NEUTRAL_FORM_FEEDBACK_FALLBACK =
+  "You've assembled the symbolic form — the recap below carries it through to the final value.";
+// Fallback for distractor feedback (73 chars, clears the 30 minimum).
+const NEUTRAL_FORM_DISTRACTOR_FALLBACK =
+  "That tile reshapes the form; the recap shows where the structure settles.";
+
+/**
+ * SANITIZE-IN-PLACE (not throw): neutralize committal/celebratory wording on the
+ * terminal `form` build step's feedbackCorrect, feedbackWrong, and each
+ * distractor feedback. Must run BEFORE validateBuildStep so the length checks
+ * still hold after substitution (both fallbacks exceed the 40/30 minimums).
+ */
+function sanitizeFormFeedback(build: GeneratedBuild): void {
+  const hasBanned = (s: string) => {
+    const lower = s.toLowerCase();
+    return FORM_BANNED_WORDS.some((banned) => lower.includes(banned));
+  };
+  if (build.feedbackCorrect && hasBanned(build.feedbackCorrect)) {
+    console.warn(
+      "Form step feedbackCorrect contained committal language; replacing with neutral fallback."
+    );
+    build.feedbackCorrect = NEUTRAL_FORM_FEEDBACK_FALLBACK;
+  }
+  if (build.feedbackWrong && hasBanned(build.feedbackWrong)) {
+    console.warn(
+      "Form step feedbackWrong contained committal language; replacing with neutral fallback."
+    );
+    build.feedbackWrong = NEUTRAL_FORM_FEEDBACK_FALLBACK;
+  }
+  for (const d of build.distractors ?? []) {
+    if (d.feedback && hasBanned(d.feedback)) {
+      console.warn(
+        `Form step distractor feedback contained committal language; replacing with neutral fallback. Tile: "${(d.tile ?? "").substring(0, 40)}"`
       );
-      if (hasBanned) {
-        console.warn(
-          `Solve step option feedback contained committal language; replacing with neutral fallback. Option text: "${opt.text.substring(0, 60)}"`
-        );
-        opt.feedback = NEUTRAL_PREDICT_FALLBACK;
-      }
+      d.feedback = NEUTRAL_FORM_DISTRACTOR_FALLBACK;
     }
   }
 }
