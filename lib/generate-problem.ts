@@ -1,5 +1,6 @@
 import {
   formatForType,
+  LEGACY_ONLY_STEP_TYPES,
   StepFormat,
   StepType,
   VALID_STEP_TYPES,
@@ -935,13 +936,12 @@ export function validateAndNormalize(
   }
 
   // HARD BLOCK: newly generated problems must not use retired legacy-only step
-  // types. They remain valid for rendering already-stored legacy/seeded problems,
-  // but generation (this path) must never emit them. A leaked legacy type throws,
-  // which the retry loop turns into a regeneration. `solve` (PREDICT THE FORM) is
-  // retired from generation alongside `connect`/`sanity`: it stays renderable for
-  // legacy DB problems but the terminal beat is now the `form` build step.
-  const legacyOnly = steps.filter(
-    (s) => s.type === "connect" || s.type === "sanity" || s.type === "solve"
+  // types (see LEGACY_ONLY_STEP_TYPES). They remain valid for rendering already-
+  // stored legacy/seeded problems, but generation (this path) must never emit
+  // them. A leaked legacy type throws, which the retry loop turns into a
+  // regeneration.
+  const legacyOnly = steps.filter((s) =>
+    LEGACY_ONLY_STEP_TYPES.includes(s.type as StepType)
   );
   if (legacyOnly.length > 0) {
     throw new Error(
@@ -1101,44 +1101,6 @@ function sanitizeFormFeedback(build: GeneratedBuild): void {
       d.feedback = NEUTRAL_FORM_DISTRACTOR_FALLBACK;
     }
   }
-}
-
-/**
- * Canonicalize an answer string so that cross-surface formatting differences
- * (LaTeX wrappers, \frac vs a/b, superscript unicode, exponent grouping,
- * unicode minus, degree sign, whitespace) collapse to a comparable form. Used
- * by the warn-only solve/final_answer equality check. Order matters — \frac is
- * canonicalized BEFORE braces are stripped.
- */
-export function normalizeAnswer(s: string): string {
-  let out = (s ?? "").toLowerCase();
-  // Strip math delimiters.
-  out = out.replace(/\$/g, "");
-  // Canonicalize \frac{a}{b} -> a/b BEFORE stripping braces.
-  out = out.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "$1/$2");
-  // Strip all LaTeX wrappers/commands (\left, \right, and any other backslash-command).
-  out = out.replace(/\\[a-zA-Z]+/g, "");
-  // Map superscript unicode digits to plain digits.
-  const superMap: Record<string, string> = {
-    "\u2070": "0",
-    "\u00b9": "1",
-    "\u00b2": "2",
-    "\u00b3": "3",
-    "\u2074": "4",
-    "\u2075": "5",
-    "\u2076": "6",
-    "\u2077": "7",
-    "\u2078": "8",
-    "\u2079": "9",
-  };
-  out = out.replace(/[\u2070\u00b9\u00b2\u00b3\u2074-\u2079]/g, (c) => superMap[c] || c);
-  // Strip grouping/exponent punctuation so ^{1/4} and ^(1/4) both -> 1/4.
-  out = out.replace(/[\^{}()]/g, "");
-  // Unify minus and strip degree.
-  out = out.replace(/\u2212/g, "-").replace(/\u00b0/g, "");
-  // Remove all whitespace.
-  out = out.replace(/\s+/g, "");
-  return out;
 }
 
 function shuffleInPlace<T>(arr: T[]): void {

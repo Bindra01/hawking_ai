@@ -13,7 +13,7 @@
 
 import { PrismaClient } from "@prisma/client";
 import { regenerateSteps, RegenerateStepsInput } from "../lib/generate-problem";
-import { Step, getStepFormat } from "../lib/types";
+import { Step, getStepFormat, LEGACY_ONLY_STEP_TYPES } from "../lib/types";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -113,9 +113,8 @@ function auditSolutionFlow(
 
   // Flag any legacy-only step types in a regenerated flow (mirrors the
   // generator's hard block — newly generated problems must not use these).
-  // `solve` (PREDICT THE FORM) is retired from generation alongside connect/sanity.
-  const legacyOnly = newFlow.steps.filter(
-    (s) => s.type === "connect" || s.type === "sanity" || s.type === "solve"
+  const legacyOnly = newFlow.steps.filter((s) =>
+    LEGACY_ONLY_STEP_TYPES.includes(s.type)
   );
   if (legacyOnly.length > 0) {
     result.issues.push(

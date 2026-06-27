@@ -84,6 +84,15 @@ export const VALID_STEP_TYPES: StepType[] = [
 ];
 
 /**
+ * Step types that remain renderable for already-stored legacy/seeded problems
+ * but must NEVER be emitted by new generation. The generator's hard block and
+ * the regeneration auditor both reject a flow containing any of these.
+ * `solve` (PREDICT THE FORM) was retired alongside `connect`/`sanity` when the
+ * terminal beat became the `form` (ASSEMBLE THE FORM) build step.
+ */
+export const LEGACY_ONLY_STEP_TYPES: StepType[] = ["connect", "sanity", "solve"];
+
+/**
  * Canonical step-type → format map. Used by the generator and by validation,
  * which always overwrites `step.format` from the step's `type`.
  */
