@@ -559,6 +559,47 @@ describe("validateAndNormalize", () => {
     ).toThrow('First step must be type "principle"');
   });
 
+  it("throws when the opener is a trap step (trap must never be at index 0)", () => {
+    // The trap step is kept in the system but may ONLY appear mid-flow.
+    // A trap opener must be explicitly rejected before the principle check so
+    // the error message is unambiguous.
+    const problem = makeValidProblem();
+    problem.solution_flow.steps[0] = makeClaimStep(
+      "Your instinct is to use the wrong formula here — sound right, or is that a trap?"
+    );
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow('trap step must never be the first step');
+  });
+
+  it("throws when the second step is not a setup step", () => {
+    // After principle@0 the validator requires setup@1 (the central governing
+    // equation). Any other type at index 1 must be rejected.
+    const problem = makeValidProblem();
+    // Replace step[1] (currently a setup from makeValidOpening()) with a roadmap.
+    problem.solution_flow.steps[1] = makeRoadmapStep(
+      "Tap the high-level moves into the order that leads to the answer."
+    );
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow('Second step must be type "setup"');
+  });
+
+  it("accepts a principle→setup flow with a mid-flow trap (valid ordering)", () => {
+    // Trap is allowed at index >= 2. This validates the happy-path where the
+    // trap appears between the fixed opening and the terminal form.
+    const problem = makeValidProblem();
+    problem.solution_flow.steps = [
+      ...makeValidOpening(),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeClaimStep("Your instinct is to ignore the boundary conditions here — sound right, or is that a trap?"),
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
   it("throws when a step is missing prompt", () => {
     const problem = makeValidProblem();
     delete (problem.solution_flow.steps[0] as Record<string, unknown>).prompt;
