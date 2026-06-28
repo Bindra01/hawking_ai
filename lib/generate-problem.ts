@@ -764,7 +764,7 @@ interface GeneratedProblem {
   };
 }
 
-const MAX_RETRIES = 2;
+const MAX_RETRIES = 4;
 
 // ─── MISCONCEPTION LOOKUP ───────────────────────────────────────────────────
 
