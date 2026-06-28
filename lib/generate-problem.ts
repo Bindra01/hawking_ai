@@ -22,10 +22,11 @@ STEP TYPES — choose the right ones based on the problem's structure:
 
 2. "principle" (⚡ RECALL THE PRINCIPLE)
    Purpose: Identify the correct physics law, theorem, or formula to apply.
-   Use when the problem requires choosing between multiple possible approaches.
-   For hard problems, this step should distinguish between superficially similar principles.
-   This is the ONE allowed multiple-choice strategy beat — rely on it sparingly
-   (at most one MCQ per problem; everything else is build/claim/multiselect).
+   This is ALWAYS the FIRST step (index 0): the key principle/concept needed to
+   solve the problem. For hard problems it should distinguish between
+   superficially similar principles.
+   This is the ONE allowed multiple-choice beat — there is EXACTLY one MCQ per
+   problem (this opener); everything else is build/claim/multiselect.
 
 3. "identify" (🎯 IDENTIFY THE KEY)
    Purpose: Identify the key variable, quantity, constraint, or boundary condition.
@@ -90,39 +91,49 @@ STEP TYPES — choose the right ones based on the problem's structure:
       no "correct"/"wrong"/"exactly right"/"perfect"; calmly note the form is
       assembled and the recap carries it through to the value.
 
-   LEAN MECHANIC MIX (HARD REQUIREMENT): a generated flow has AT MOST ONE multiple-
-   choice step ("principle"). The roadmap (build) is the spine; feeds (multiselect)
-   carries data-flow; produces (claim) carries recognition; the terminal form
-   (build) assembles the skeleton. Do NOT pad the flow with extra MCQ beats.
+   LEAN MECHANIC MIX (HARD REQUIREMENT): a generated flow has EXACTLY ONE multiple-
+   choice step ("principle") — the mandatory opener at index 0. The setup (build)
+   carries the central equation; the roadmap (build) is the spine; feeds
+   (multiselect) carries data-flow; produces (claim) carries recognition; the
+   terminal form (build) assembles the skeleton. Do NOT pad the flow with extra
+   MCQ beats.
 
    (The retired "solve"/"depends"/"scale"/"limit" types are NO LONGER generated —
    they stay in the type system only so legacy DB problems keep rendering.)
 
-FIRST STEP VARIETY:
-Problems should NOT always start with a "trap" step. Vary the opening step type based on what best hooks the student into the problem. Good openers include:
-- "trap" — but with varied phrasing, NOT always "Most students get this wrong..." Use creative hooks like:
-  "Before you start calculating, there's a hidden assumption here..."
-  "This problem looks straightforward, but there's a catch..."
-  "What's the first thing you'd instinctively do? That might be wrong..."
-- "identify" — "What's the key insight that unlocks this problem?", "Before diving into equations, what's really going on here?"
-- "principle" — "Which physics framework should you reach for?", "Two laws seem to apply here. Which one actually works?"
-- "why" — "Before solving, let's build intuition. What should the answer look like?"
-Pick the best opener based on the problem's structure, not by defaulting to trap every time.
+FIXED OPENING (HARD REQUIREMENT):
+Every flow ALWAYS opens with the SAME two steps, in this order:
+- STEP 1 (index 0) is a "principle" (⚡ RECALL THE PRINCIPLE) MCQ: the key
+  physics principle/concept needed to solve THIS problem. Ask "which
+  principle/concept unlocks this problem?" with 4 options, exactly 1 correct
+  (the right law/concept) and 3 plausible same-family wrong principles. The
+  prompt must be a punchy, problem-specific line of at least 40 characters.
+- STEP 2 (index 1) is a "setup" (🔧 SET UP THE MATH) build step: the central
+  governing equation that must be solved. Its framing should also surface that
+  some formulas/quantities needed to solve that central equation are NOT given
+  in the problem and must be found first — weave that idea into the setup
+  prompt. This setup equation MUST be a DIFFERENT relation than the terminal
+  "form" skeleton.
+After those two fixed openers comes the roadmap (🗺️ MAP THE DERIVATION) and the
+rest of the derivation, always ending in the terminal "form" step.
+The "trap" (SOUNDS RIGHT / IT'S A TRAP) step may STILL be used LATER in a flow
+as a mid-flow beat, but it must NEVER be the first step.
 `;
 
 // ─── PER-FORMAT CONTENT + HOOK + DISTRACTOR RULES ────────────────────────────
 
 const PER_FORMAT_GUIDE = `
 STEP 1 HOOK (HARD REQUIREMENT):
-The FIRST step's "prompt" MUST open with a punchy, problem-specific line that
-names what the student would INSTINCTIVELY (and wrongly) do on THIS exact problem,
-and creates tension ("...but that's exactly the trap", "...and that's where most
-people lose the marks"). It must be at least 40 characters and must be DIFFERENT
-for every problem — there is NO fixed canned sentence. Do NOT reuse a template
-like "Most students get this wrong because...". Write a fresh, specific opener
-that could only belong to THIS problem.
-(The FIRST STEP VARIETY rule above still applies: the opener may be a trap,
-identify, principle, or why step — do NOT force a trap-first opener.)
+The FIRST step is ALWAYS the "principle" (⚡ RECALL THE PRINCIPLE) MCQ. Its
+"prompt" MUST open with a punchy, problem-specific line that asks which
+principle/concept unlocks THIS exact problem — a fresh question that could only
+belong to this problem. It must be at least 40 characters and must be DIFFERENT
+for every problem — there is NO fixed canned sentence. Do NOT reuse a template.
+STEP 2 is ALWAYS the "setup" (🔧 SET UP THE MATH) build step assembling the
+central governing equation; its prompt should also surface that some
+formulas/quantities needed to solve that equation are NOT given and must be
+found first. Do NOT open on a trap/instinctive-mistake framing — the trap step,
+if used, is a MID-FLOW beat, never the first step.
 
 SAME-FAMILY DISTRACTORS (HARD REQUIREMENT):
 Every wrong option, wrong tile, and non-mattering item MUST be a mistake a
@@ -225,8 +236,10 @@ steps, and do NOT add claim/multiselect/build objects to the "principle" MCQ typ
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
-// Class 11 — LEAN 2-move projectile roadmap (4 steps): trap -> roadmap (2 moves)
-// -> feeds -> form. setup/form use the Contract-C `equation` shape; roadmap uses
+// Class 11 — LEAN projectile flow (5 steps): principle -> setup -> roadmap
+// (2 moves) -> feeds -> form. The fixed opening is principle (RECALL THE
+// PRINCIPLE MCQ) then setup (the central governing equation, distinct from the
+// terminal form). setup/form use the Contract-C `equation` shape; roadmap uses
 // the `moves` contract. CODE assembles every build step's tiles/accepted from
 // these constrained arrays (see assembleBuildFromContract).
 const EXAMPLE_CLASS_11 = {
@@ -241,17 +254,37 @@ const EXAMPLE_CLASS_11 = {
   solution_flow: {
     steps: [
       {
-        type: "trap",
-        label: "SPOT THE TRAP",
-        icon: "⚠️",
-        prompt: "Your instinct is to multiply the launch speed by the time of flight — but only the HORIZONTAL velocity carries the projectile downrange. Sound right, or is that a trap?",
-        claim: {
-          statement: "The range is just the full launch speed multiplied by the total time in the air.",
-          isTrap: true,
-          feedbackTrap: "Right — it's a trap. Only the horizontal component v·cosθ moves the projectile downrange; the full speed overcounts the horizontal distance.",
-          feedbackSound: "Not quite — this is a trap. The vertical component does no horizontal work, so the range uses v·cosθ times the flight time, not the full speed."
+        type: "principle",
+        label: "RECALL THE PRINCIPLE",
+        icon: "⚡",
+        prompt: "A projectile is launched at an angle on level ground. Which principle lets you find how far downrange it lands?",
+        options: [
+          { text: "Treat the horizontal and vertical motions as independent — uniform horizontal velocity, uniformly accelerated vertical fall.", correct: true, feedback: "Exactly — projectile motion separates into independent horizontal and vertical motions that share only the time." },
+          { text: "Apply conservation of mechanical energy between launch and landing to get the range.", correct: false, feedback: "Energy conservation only ties speed to height; launch and landing sit at the same height, so it tells you nothing about the horizontal range.", distractor_type: "misconception" as const },
+          { text: "Use the full launch speed with the total time, treating the motion as one-dimensional.", correct: false, feedback: "The motion is two-dimensional; collapsing it to one dimension ignores that only the horizontal velocity component carries the projectile downrange.", distractor_type: "procedural_slip" as const },
+          { text: "Assume the projectile travels in a straight line at the launch angle until it lands.", correct: false, feedback: "Gravity curves the path into a parabola; a straight-line assumption drops the vertical acceleration that sets the time of flight entirely.", distractor_type: "half_right" as const }
+        ],
+        tip: "Projectile motion always splits into independent horizontal and vertical parts."
+      },
+      {
+        type: "setup",
+        label: "SET UP THE MATH",
+        icon: "🔧",
+        prompt: "The range is the horizontal velocity carried over the whole flight — but the time of flight isn't given. Assemble the central relation for the range; you'll find that missing time from the vertical motion next.",
+        build: {
+          equation: {
+            lhs_terms: ["R"],
+            relation: "=",
+            rhs_terms: ["$v\\cos\\theta$", "$t$"],
+            distractor_terms: [
+              { term: "$v\\sin\\theta$", feedback: "That is the vertical component; it sets the time of flight, not the horizontal distance the projectile covers." },
+              { term: "$v$", feedback: "The full speed overcounts the horizontal motion; only the horizontal component v·cosθ carries the projectile downrange." }
+            ]
+          },
+          feedbackCorrect: "Right — the range is the horizontal velocity v·cosθ carried over the flight time t, which you still need to find.",
+          feedbackWrong: "The range is the horizontal velocity times the flight time: v·cosθ multiplied by t, not the full speed or the vertical component."
         },
-        tip: "Resolve velocity into components first — only the horizontal one sets the range."
+        tip: "Range = horizontal velocity × time of flight; find the time from the vertical motion."
       },
       {
         type: "roadmap",
@@ -314,8 +347,10 @@ const EXAMPLE_CLASS_11 = {
   }
 };
 
-// Class 12 — LEAN 3-move roadmap (6 steps): trap -> roadmap (3 moves) -> feeds
-// -> produces -> setup -> form. Tuned between the class-11 and college examples.
+// Class 12 — LEAN 3-move roadmap (6 steps): principle -> setup -> roadmap
+// (3 moves) -> feeds -> produces -> form. The fixed opening is principle then
+// setup (the central force-balance equation, distinct from the terminal form).
+// Tuned between the class-11 and college examples.
 const EXAMPLE_CLASS_12 = {
   title: "Radius of an electron's circular orbit in a uniform magnetic field",
   subject: "electrodynamics",
@@ -328,17 +363,37 @@ const EXAMPLE_CLASS_12 = {
   solution_flow: {
     steps: [
       {
-        type: "trap",
-        label: "SPOT THE TRAP",
-        icon: "⚠️",
-        prompt: "You see a charge in a field and reach for the electric force qE — but here the field is MAGNETIC, and the force depends on the velocity. Sound right, or is that a trap?",
-        claim: {
-          statement: "The force bending the electron is just qE, the same electric force a charge feels in any field.",
-          isTrap: true,
-          feedbackTrap: "Right — it's a trap. A magnetic field exerts qvB, which depends on the speed and is always perpendicular to the velocity, not the speed-independent qE.",
-          feedbackSound: "Not quite — this is a trap. The magnetic force is qvB, perpendicular to v, so it supplies the centripetal force; qE is the wrong law here."
+        type: "principle",
+        label: "RECALL THE PRINCIPLE",
+        icon: "⚡",
+        prompt: "An electron moves through a uniform magnetic field perpendicular to its velocity. Which principle governs the radius of its circular orbit?",
+        options: [
+          { text: "The magnetic force qvB is perpendicular to the velocity and supplies the centripetal force for circular motion.", correct: true, feedback: "Exactly — the speed-dependent magnetic force acts as the centripetal force that bends the electron into a circle." },
+          { text: "The electric force qE acts on the charge and provides the centripetal force.", correct: false, feedback: "There is no electric field here; the bending force is magnetic, qvB, which depends on the speed, unlike the speed-independent qE.", distractor_type: "misconception" as const },
+          { text: "Conservation of energy fixes the orbit radius as the field does work on the electron.", correct: false, feedback: "A magnetic force is always perpendicular to the velocity, so it does NO work; energy is constant and cannot set the radius.", distractor_type: "half_right" as const },
+          { text: "Gravity on the electron balances the magnetic force to set the orbit.", correct: false, feedback: "Gravity on an electron is utterly negligible next to the magnetic force, so it plays no role in the centripetal balance.", distractor_type: "procedural_slip" as const }
+        ],
+        tip: "A magnetic force perpendicular to v can only bend the path — it supplies the centripetal force."
+      },
+      {
+        type: "setup",
+        label: "SET UP THE MATH",
+        icon: "🔧",
+        prompt: "Build the central force-balance equation: the magnetic force supplies the centripetal force. You'll need the speed and field to finish, but first assemble the governing relation from the tiles.",
+        build: {
+          equation: {
+            lhs_terms: ["$qvB$"],
+            relation: "=",
+            rhs_terms: ["$\\frac{mv^2}{r}$"],
+            distractor_terms: [
+              { term: "$qE$", feedback: "There is no electric field here; the bending force is magnetic, qvB, not the electric force qE." },
+              { term: "$mg$", feedback: "Gravity on an electron is negligible against the magnetic force and has no place in this centripetal balance." }
+            ]
+          },
+          feedbackCorrect: "Clean. The magnetic force qvB supplies exactly the centripetal force mv²/r needed for the circular orbit.",
+          feedbackWrong: "Balance the magnetic force against the centripetal requirement: qvB = mv²/r, with no electric or gravitational term."
         },
-        tip: "Read whether the field is electric or magnetic before choosing the force law."
+        tip: "Set the real force equal to the centripetal requirement, then cancel a power of v."
       },
       {
         type: "roadmap",
@@ -393,26 +448,6 @@ const EXAMPLE_CLASS_12 = {
         tip: "Name what a move actually produces — an intermediate relation is not the final answer."
       },
       {
-        type: "setup",
-        label: "SET UP THE MATH",
-        icon: "🔧",
-        prompt: "Build the force-balance equation: the magnetic force supplies the centripetal force. Assemble the tiles into the correct relation.",
-        build: {
-          equation: {
-            lhs_terms: ["$qvB$"],
-            relation: "=",
-            rhs_terms: ["$\\frac{mv^2}{r}$"],
-            distractor_terms: [
-              { term: "$qE$", feedback: "There is no electric field here; the bending force is magnetic, qvB, not the electric force qE." },
-              { term: "$mg$", feedback: "Gravity on an electron is negligible against the magnetic force and has no place in this centripetal balance." }
-            ]
-          },
-          feedbackCorrect: "Clean. The magnetic force qvB supplies exactly the centripetal force mv²/r needed for the circular orbit.",
-          feedbackWrong: "Balance the magnetic force against the centripetal requirement: qvB = mv²/r, with no electric or gravitational term."
-        },
-        tip: "Set the real force equal to the centripetal requirement, then cancel a power of v."
-      },
-      {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
@@ -436,8 +471,10 @@ const EXAMPLE_CLASS_12 = {
   }
 };
 
-// College — LEAN Schrödinger / infinite square well (7 steps): trap -> roadmap
-// -> feeds -> produces -> setup -> feeds (BCs) -> form. The richest example;
+// College — LEAN Schrödinger / infinite square well (7 steps): principle ->
+// setup -> roadmap -> feeds -> produces -> feeds (BCs) -> form. The fixed
+// opening is principle then setup (the time-independent Schrödinger equation,
+// distinct from the terminal energy-level form). The richest example;
 // demonstrates the full derivation-roadmap spine plus both Contract-C builds.
 const EXAMPLE_COLLEGE = {
   title: "Energy levels of a particle in a 1-D infinite square well of width L",
@@ -451,17 +488,37 @@ const EXAMPLE_COLLEGE = {
   solution_flow: {
     steps: [
       {
-        type: "trap",
-        label: "SPOT THE TRAP",
-        icon: "⚠️",
-        prompt: "You reach for a free-particle plane wave e^{ikx} — but the infinite walls change everything. Sound right, or is that a trap?",
-        claim: {
-          statement: "Inside the well the particle is free, so its state is just a single travelling plane wave.",
-          isTrap: true,
-          feedbackTrap: "Right — it's a trap. A single travelling wave never vanishes at both walls; the confinement forces a standing-wave combination that the boundary conditions then quantize.",
-          feedbackSound: "Not quite — this is a trap. The walls demand the wavefunction vanish at both edges, which a lone travelling plane wave cannot do; you need a standing wave."
+        type: "principle",
+        label: "RECALL THE PRINCIPLE",
+        icon: "⚡",
+        prompt: "A particle is confined to a 1-D infinite square well. Which principle determines its allowed energy levels?",
+        options: [
+          { text: "The stationary states obey the time-independent Schrödinger equation, and the infinite walls impose boundary conditions that quantize the energy.", correct: true, feedback: "Exactly — solving the time-independent equation subject to the walls' boundary conditions is what quantizes the allowed energies." },
+          { text: "The particle is free inside the well, so a single travelling plane wave e^{ikx} gives the states directly.", correct: false, feedback: "A lone travelling wave never vanishes at both walls; the confinement forces a standing-wave combination that the boundary conditions then quantize.", distractor_type: "misconception" as const },
+          { text: "Classical energy quantization from the equipartition theorem sets the levels.", correct: false, feedback: "Equipartition is a thermodynamic average over many states; it cannot produce the discrete quantum energy levels of a single confined particle.", distractor_type: "procedural_slip" as const },
+          { text: "Normalizing the wavefunction alone fixes the allowed energies.", correct: false, feedback: "Normalization fixes only the amplitude; it is the boundary conditions, not normalization, that quantize the energy.", distractor_type: "half_right" as const }
+        ],
+        tip: "Confinement plus the time-independent Schrödinger equation is what quantizes energy."
+      },
+      {
+        type: "setup",
+        label: "SET UP THE MATH",
+        icon: "🔧",
+        prompt: "Build the central governing equation — the time-independent Schrödinger equation inside the well. You'll still need the wall boundary conditions, not given as numbers, to quantize it; first assemble the relation from the tiles.",
+        build: {
+          equation: {
+            lhs_terms: ["$-\\frac{\\hbar^2}{2m}\\frac{d^2\\psi}{dx^2}$"],
+            relation: "=",
+            rhs_terms: ["$E\\psi$"],
+            distractor_terms: [
+              { term: "$i\\hbar\\frac{\\partial\\psi}{\\partial t}$", feedback: "That is the time-dependent right-hand side; the stationary states obey the time-INDEPENDENT equation, so the energy term belongs here instead." },
+              { term: "$V(x)\\psi$", feedback: "Inside the well the potential is zero, so a V(x)Ψ term contributes nothing and does not belong in the interior equation." }
+            ]
+          },
+          feedbackCorrect: "Clean. With V = 0 inside, the kinetic term alone equals EΨ — the time-independent Schrödinger equation for the well.",
+          feedbackWrong: "Set the interior kinetic term equal to EΨ: there is no potential term and no time-derivative inside the well."
         },
-        tip: "Before reusing a free-particle solution, check whether boundaries pin the state down."
+        tip: "Inside the well V = 0, so the time-independent equation is purely the kinetic term equal to EΨ."
       },
       {
         type: "roadmap",
@@ -513,26 +570,6 @@ const EXAMPLE_COLLEGE = {
           feedbackSound: "Not quite — this is a trap. The solve-inside move yields the general wavefunction, not the energies; the boundary conditions must still quantize it afterward."
         },
         tip: "Predict what a move actually produces — a general solution, not the final answer."
-      },
-      {
-        type: "setup",
-        label: "SET UP THE MATH",
-        icon: "🔧",
-        prompt: "Build the time-independent Schrödinger equation for the particle inside the well. Assemble the tiles into the correct relation.",
-        build: {
-          equation: {
-            lhs_terms: ["$-\\frac{\\hbar^2}{2m}\\frac{d^2\\psi}{dx^2}$"],
-            relation: "=",
-            rhs_terms: ["$E\\psi$"],
-            distractor_terms: [
-              { term: "$i\\hbar\\frac{\\partial\\psi}{\\partial t}$", feedback: "That is the time-dependent right-hand side; the stationary states obey the time-INDEPENDENT equation, so the energy term belongs here instead." },
-              { term: "$V(x)\\psi$", feedback: "Inside the well the potential is zero, so a V(x)Ψ term contributes nothing and does not belong in the interior equation." }
-            ]
-          },
-          feedbackCorrect: "Clean. With V = 0 inside, the kinetic term alone equals EΨ — the time-independent Schrödinger equation for the well.",
-          feedbackWrong: "Set the interior kinetic term equal to EΨ: there is no potential term and no time-derivative inside the well."
-        },
-        tip: "Inside the well V = 0, so the time-independent equation is purely the kinetic term equal to EΨ."
       },
       {
         type: "feeds",
@@ -668,32 +705,38 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
 - Use 4-6 steps (max 8). Focus on building correct problem-solving habits.
-- Start with the step type that best hooks the student into the problem.
-- The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
+- ALWAYS open with "principle" (the key concept/law for THIS problem), then
+  "setup" (the central governing equation), then the rest.
+- A mid-flow "trap" step (if used) should target the most common beginner mistake (wrong units, wrong formula, sign errors) — but it is NEVER the first step.
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Keep the derivation roadmap SHORT (2 moves). The roadmap may gracefully collapse
-  to: trap/identify → roadmap (2 moves) → feeds → form.`,
+- Keep the derivation roadmap SHORT (2 moves). Recommended step pattern:
+  principle → setup → roadmap (2 moves) → feeds → form (it may gracefully
+  collapse to principle → setup → roadmap (2 moves) → form).
+- The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. Class 11 is where the governing relation most often equals the answer, so pick a distinct governing law (a definition/balance/conservation relation), not the rearranged answer.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
 - Use 5-7 steps (max 8). Problems should require multi-step reasoning.
-- Start with the step type that best hooks the student into the problem.
-- The trap step should target a subtle conceptual error (not just arithmetic).
+- ALWAYS open with "principle" (the key concept/law for THIS problem), then
+  "setup" (the central governing equation), then the rest.
+- A mid-flow "trap" step (if used) should target a subtle conceptual error (not just arithmetic) — but it is NEVER the first step.
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: trap/identify → roadmap (2-3 moves) → feeds → produces → setup → form.
+- Recommended step pattern: principle → setup → roadmap (2-3 moves) → feeds → produces → form.
 - The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. If there is no genuine intermediate relation distinct from the final form, make "setup" capture an EARLIER governing law (the balance/conservation/definition relation) rather than restating the answer.
 - If you emit two "feeds" steps, each must target a DIFFERENT move and consume DISJOINT inputs — never two feeds about the same quantities.`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
 - Use 6-8 steps. Problems should require deep physical insight.
-- The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
+- ALWAYS open with "principle" (the key concept/law for THIS problem), then
+  "setup" (the central governing equation), then the rest.
+- A mid-flow "trap" step (if used) should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results) — but it is NEVER the first step.
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
-- Recommended step pattern: trap/identify → roadmap → feeds → produces → setup → feeds (constraints) → form.
+- Recommended step pattern: principle → setup → roadmap → feeds → produces → feeds (constraints) → form.
 - The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. If there is no genuine intermediate relation distinct from the final form, make "setup" capture an EARLIER governing law (the balance/conservation/definition relation) rather than restating the answer.
 - The two "feeds" steps (the data-flow feed and the constraints feed) must each target a DIFFERENT move and consume DISJOINT inputs — never two feeds about the same quantities.
-- At most ONE multiple-choice (principle) beat, and often zero — lean on roadmap/feeds/produces instead.`,
+- EXACTLY ONE multiple-choice (principle) beat — the mandatory opener at index 0. Do NOT add a second MCQ; lean on roadmap/feeds/produces for the rest.`,
 };
 
 // ─── GENERATION PIPELINE ─────────────────────────────────────────────────────
@@ -866,7 +909,7 @@ Rules:
 - Think of each step as a DECISION POINT, not a CALCULATION POINT.
 - The student should feel like they're making strategic choices, like a game — not doing homework.
 - THE DERIVATION ROADMAP — instead of asking for the worked value, gamify the derivation itself: "roadmap" (MAP THE DERIVATION, a build step where the student taps prose MOVE-tiles into the correct order — the spine), "feeds" (WHAT GOES IN, multiselect — tap the inputs a move consumes), "produces" (WHAT IT PRODUCES, a sounds-right vs it's-a-trap claim about what a move just produced), and "setup" (an equation built from the Contract-C term arrays). The problem ALWAYS ends in "form" (ASSEMBLE THE FORM, TERMINAL): a build step where the student assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers. The exact value is revealed only in the recap, never picked here. The "form" step's feedback is NON-COMMITTAL (no "correct"/"wrong"/celebration — calmly note the form is assembled and the recap carries it through).
-- LEAN, NOT QUIZZY: at most ONE multiple-choice ("principle") beat per problem, often zero. The roadmap (build), feeds (multiselect), and produces (claim) carry the flow.
+- LEAN, NOT QUIZZY: EXACTLY ONE multiple-choice ("principle") beat per problem — the mandatory opener at index 0. The setup (build), roadmap (build), feeds (multiselect), and produces (claim) carry the rest of the flow.
 
 CRITICAL QUALITY RULES:
 
@@ -879,7 +922,7 @@ CRITICAL QUALITY RULES:
    - Steps must form a logical narrative. Each step's answer feeds into the next step.
    - The student should feel like they're being guided by an expert tutor, not quizzed randomly.
    - Never ask a step that doesn't contribute to reaching the final answer.
-   - The first step should address the biggest obstacle (usually the trap or identifying the key insight).
+   - The first step is ALWAYS the "principle" MCQ (the key principle/concept that unlocks the problem); the second is ALWAYS the "setup" central governing equation.
    - Cognitive scaffolding: use the "fading" principle — give more support in early steps, less in later steps. Each step should require exactly one decision from the student.
 
 3. WRONG ANSWER OPTIONS — THIS IS THE MOST IMPORTANT PART:
@@ -954,8 +997,8 @@ export async function generateProblem(
 BEFORE generating the JSON, think through these steps internally:
 1. Pick a specific, interesting problem that tests a key concept in ${topic}.
 2. Solve the problem yourself completely — find the final answer.
-3. Identify the #1 mistake students make on this type of problem (this becomes the trap step).
-4. Design the step-by-step thinking chain that an expert tutor would walk through.
+3. Identify the key principle/concept that unlocks the problem (this becomes the "principle" opener) and the central governing equation (this becomes the "setup" step).
+4. Design the step-by-step thinking chain that an expert tutor would walk through, always opening principle → setup.
 5. For each step, think of three plausible wrong answers that represent real student errors.
 
 Here is an example of the EXACT JSON format and quality bar you must match:
@@ -1120,6 +1163,27 @@ export function validateAndNormalize(
     throw new Error(`Expected at most 3 "approach" steps, got ${approachCount}`);
   }
 
+  // FIXED OPENING (decisions #827/#828): every generated flow MUST open with a
+  // "principle" step (RECALL THE PRINCIPLE) at index 0, followed by a "setup"
+  // step (the central governing equation) at index 1. The "trap" step is kept in
+  // the system but must NEVER be the first step — it may appear mid-flow only.
+  // These throws feed the existing retry loop.
+  if (steps[0].type === "trap") {
+    throw new Error(
+      'trap step must never be the first step (the flow must open with "principle"); a trap may only appear mid-flow'
+    );
+  }
+  if (steps[0].type !== "principle") {
+    throw new Error(
+      `First step must be type "principle" (RECALL THE PRINCIPLE), got "${steps[0].type}"`
+    );
+  }
+  if (steps[1].type !== "setup") {
+    throw new Error(
+      `Second step must be type "setup" (the central governing equation), got "${steps[1].type}"`
+    );
+  }
+
   // HARD BLOCK: newly generated problems must not use retired legacy-only step
   // types (see LEGACY_ONLY_STEP_TYPES — now includes depends/scale/limit, which
   // the derivation-roadmap pedagogy replaced). They remain valid for rendering
@@ -1193,10 +1257,13 @@ export function validateAndNormalize(
       throw new Error(`Step ${i} has an empty tip`);
     }
 
-    // HARD HOOK GATE: the first step's prompt must be a substantial hook.
+    // HARD HOOK GATE: the first step is the "principle" MCQ opener (RECALL THE
+    // PRINCIPLE). Its prompt must still be a substantial, problem-specific line
+    // (a punchy "which principle/concept unlocks this problem?" question), so
+    // the 40-char minimum continues to apply to this opener.
     if (i === 0 && step.prompt.trim().length < 40) {
       throw new Error(
-        `Step 0 (hook) prompt must be at least 40 characters, got ${step.prompt.trim().length}`
+        `Step 0 (principle hook) prompt must be at least 40 characters, got ${step.prompt.trim().length}`
       );
     }
 

@@ -364,11 +364,13 @@ function makeBuildStep(prompt: string): Step {
 }
 
 // Helper to create a valid problem for mutation in tests.
-// Step layout (6 steps): 0 principle (mcq), 1 trap (claim),
-// 2 identify (multiselect), 3 setup (build), 4 approach (mcq),
-// 5 form (build, ASSEMBLE THE FORM — terminal). The key invariant is the last
-// step is "form"; the non-terminal order just needs to be otherwise valid. The
-// fixed [0..4] indices keep the per-format tests below aligned by index.
+// Step layout (6 steps): 0 principle (mcq, RECALL THE PRINCIPLE — mandatory
+// opener), 1 setup (build — the central governing equation, mandatory second
+// step), 2 identify (multiselect), 3 trap (claim — a mid-flow beat, never
+// first), 4 approach (mcq), 5 form (build, ASSEMBLE THE FORM — terminal).
+// Invariants: step 0 is "principle", step 1 is "setup", the last step is
+// "form", and the trap appears mid-flow (never at index 0). The fixed indices
+// keep the per-format tests below aligned by index.
 function makeValidProblem(): TestProblem {
   return {
     title: "Test Problem",
@@ -382,9 +384,9 @@ function makeValidProblem(): TestProblem {
     solution_flow: {
       steps: [
         makeMcqStep("principle", "Which physics framework should you reach for on this specific projectile problem?"),
-        makeClaimStep("Your instinct is to ignore air resistance entirely here — sound right, or is that a trap?"),
+        makeBuildStep("Build the central kinematic equation that relates the given quantities; some quantities you need are not given yet."),
         makeMultiSelectStep("Tap every quantity that actually controls the outcome of this throw."),
-        makeBuildStep("Build the kinematic equation that relates the given quantities."),
+        makeClaimStep("Your instinct is to ignore air resistance entirely here — sound right, or is that a trap?"),
         makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
         makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles — numbers come later."),
       ],
@@ -430,9 +432,9 @@ describe("validateAndNormalize", () => {
     validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
     const steps = problem.solution_flow.steps;
     expect(steps[0].format).toBe("mcq"); // principle
-    expect(steps[1].format).toBe("claim"); // trap
+    expect(steps[1].format).toBe("build"); // setup
     expect(steps[2].format).toBe("multiselect"); // identify
-    expect(steps[3].format).toBe("build"); // setup
+    expect(steps[3].format).toBe("claim"); // trap
     expect(steps[4].format).toBe("mcq"); // approach
     expect(steps[5].format).toBe("build"); // form
   });
@@ -497,7 +499,9 @@ describe("validateAndNormalize", () => {
 
   it("throws when step.type is invalid", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[0].type = "bogus";
+    // Steps 0/1 are the mandatory principle/setup opener, so corrupt a mid-flow
+    // step's type to reach the per-step invalid-type check.
+    problem.solution_flow.steps[2].type = "bogus";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('invalid type "bogus"');
@@ -531,16 +535,16 @@ describe("validateAndNormalize", () => {
     ).not.toThrow();
   });
 
-  it("accepts a non-trap 'key' opener (identify) that passes the hook gate", () => {
-    // Opener policy: a problem may open on the KEY (identify/principle) rather
-    // than a trap. A substantial identify opener must satisfy the hook gate.
+  it("throws when the opener is not a principle step (identify at index 0)", () => {
+    // Opener policy (decisions #827/#828): the flow MUST open with a "principle"
+    // step. An identify opener that used to be allowed is now rejected.
     const problem = makeValidProblem();
     problem.solution_flow.steps[0] = makeMultiSelectStep(
       "Before reaching for any equation, tap every quantity that actually controls the outcome of this problem."
     );
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
-    ).not.toThrow();
+    ).toThrow('First step must be type "principle"');
   });
 
   it("throws when a step is missing prompt", () => {
@@ -561,11 +565,11 @@ describe("validateAndNormalize", () => {
 
   it("accepts a problem with exactly 4 steps (minimum)", () => {
     const problem = makeValidProblem();
-    // Minimal LEAN form-last flow: identify → roadmap → feeds → form.
+    // Minimal LEAN form-last flow: principle → setup → roadmap → form.
     problem.solution_flow.steps = [
-      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
+      makeMcqStep("principle", "Which physics framework should you reach for on this specific problem?"),
+      makeBuildStep("Build the central governing equation that relates the given quantities here."),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
-      makeFeedsStep("Tap every input the range-finding move actually consumes here."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
@@ -575,9 +579,9 @@ describe("validateAndNormalize", () => {
 
   it("accepts a problem with exactly 8 steps (maximum)", () => {
     const problem = makeValidProblem();
-    // 8-step LEAN form-last flow: trap → roadmap → feeds → produces → setup →
-    // feeds → approach → form. One mcq (approach) max; everything else is
-    // build/claim/multiselect.
+    // 8-step LEAN form-last flow: principle → setup → roadmap → feeds →
+    // produces → feeds → approach → form. The fixed opening is principle then
+    // setup; everything else is build/claim/multiselect plus one approach mcq.
     // The two feeds beats target DIFFERENT moves with DISJOINT matters:true
     // inputs (the disjointness guard requires this for two feeds steps).
     const secondFeeds = makeFeedsStep("Tap every input the constraint move actually consumes here.");
@@ -592,11 +596,11 @@ describe("validateAndNormalize", () => {
       feedbackWrong: longFeedback("the constraint move consumes the boundary condition and width, not the kinematic inputs"),
     };
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to reach for the wrong force law here — sound right, or a trap?"),
+      makeMcqStep("principle", "Which physics framework should you reach for on this specific problem?"),
+      makeEquationSetupStep("Build the central force-balance equation from the structural tiles here."),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFeedsStep("Tap every input the first move actually consumes here."),
       makeProducesStep("You solved the equation — is that the final answer, or is it a trap?"),
-      makeEquationSetupStep("Build the force-balance equation from the structural tiles here."),
       secondFeeds,
       makeApproachStep("With the setup done, what's the cleanest next move to reach the answer?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
@@ -746,12 +750,12 @@ describe("validateAndNormalize", () => {
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
-    expect(problem.solution_flow.steps[1].claim).toBeDefined();
+    expect(problem.solution_flow.steps[3].claim).toBeDefined();
   });
 
   it("throws when claim object is missing on a trap step", () => {
     const problem = makeValidProblem();
-    delete problem.solution_flow.steps[1].claim;
+    delete problem.solution_flow.steps[3].claim;
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('missing required "claim" object');
@@ -759,7 +763,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when claim.statement is missing/too short", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[1].claim!.statement = "too short";
+    problem.solution_flow.steps[3].claim!.statement = "too short";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("claim.statement must be at least 15 chars");
@@ -767,7 +771,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when claim.isTrap is not a boolean", () => {
     const problem = makeValidProblem();
-    (problem.solution_flow.steps[1].claim as Record<string, unknown>).isTrap = "yes";
+    (problem.solution_flow.steps[3].claim as Record<string, unknown>).isTrap = "yes";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("claim.isTrap must be a boolean");
@@ -775,7 +779,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when claim.feedbackTrap is missing/too short", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[1].claim!.feedbackTrap = "short";
+    problem.solution_flow.steps[3].claim!.feedbackTrap = "short";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("claim.feedbackTrap must be at least 40 chars");
@@ -783,7 +787,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when claim.feedbackSound is missing/too short", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[1].claim!.feedbackSound = "short";
+    problem.solution_flow.steps[3].claim!.feedbackSound = "short";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("claim.feedbackSound must be at least 40 chars");
@@ -866,12 +870,12 @@ describe("validateAndNormalize", () => {
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
-    expect(problem.solution_flow.steps[3].build).toBeDefined();
+    expect(problem.solution_flow.steps[1].build).toBeDefined();
   });
 
   it("throws when build object is missing on a setup step", () => {
     const problem = makeValidProblem();
-    delete problem.solution_flow.steps[3].build;
+    delete problem.solution_flow.steps[1].build;
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('missing required "build" object');
@@ -879,7 +883,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when build.tiles has a duplicate tile", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["a", "=", "b", "a", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["a", "=", "b", "a", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("duplicate tile");
@@ -887,7 +891,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when an accepted token is not in tiles", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.accepted = [["a", "=", "z"]];
+    problem.solution_flow.steps[1].build!.accepted = [["a", "=", "z"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('references token "z" not in tiles');
@@ -895,7 +899,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when an accepted arrangement repeats a tile", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.accepted = [["a", "=", "a"]];
+    problem.solution_flow.steps[1].build!.accepted = [["a", "=", "a"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('repeats token "a"');
@@ -903,7 +907,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when an accepted arrangement is too short", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.accepted = [["a"]];
+    problem.solution_flow.steps[1].build!.accepted = [["a"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("arrangement must have length >= 2");
@@ -911,7 +915,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when accepted is empty", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.accepted = [];
+    problem.solution_flow.steps[1].build!.accepted = [];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("build.accepted must be a non-empty array");
@@ -919,7 +923,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when distractors is empty", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.distractors = [];
+    problem.solution_flow.steps[1].build!.distractors = [];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("build.distractors must have at least 1 entry");
@@ -927,7 +931,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a distractor tile is not in tiles", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.distractors = [
+    problem.solution_flow.steps[1].build!.distractors = [
       { tile: "zzz", feedback: longFeedback("this tile is not even in the tray") },
     ];
     expect(() =>
@@ -938,7 +942,7 @@ describe("validateAndNormalize", () => {
   it("throws when a distractor tile also appears in an accepted arrangement", () => {
     const problem = makeValidProblem();
     // "a" is part of the accepted arrangement ["a","=","b"]
-    problem.solution_flow.steps[3].build!.distractors = [
+    problem.solution_flow.steps[1].build!.distractors = [
       { tile: "a", feedback: longFeedback("a is actually part of the correct answer") },
     ];
     expect(() =>
@@ -948,7 +952,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a distractor feedback is below 30 chars", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.distractors = [
+    problem.solution_flow.steps[1].build!.distractors = [
       { tile: "x", feedback: "too short" },
     ];
     expect(() =>
@@ -958,7 +962,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when build.feedbackWrong is too short", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.feedbackWrong = "short";
+    problem.solution_flow.steps[1].build!.feedbackWrong = "short";
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("build.feedbackWrong must be at least 40 chars");
@@ -967,7 +971,7 @@ describe("validateAndNormalize", () => {
   it("throws when a build tile is a complete equation (content on both sides of '=')", () => {
     const problem = makeValidProblem();
     // Each tile is a whole, already-assembled equation -> nothing to arrange.
-    problem.solution_flow.steps[3].build!.tiles = ["$F = ma$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$F = ma$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -975,7 +979,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a build tile is a partial relation (content on only one side of '=')", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["$F =$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$F =$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -983,7 +987,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a build tile is a complete inequality relation (\\leq with both sides)", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["$v \\leq c$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$v \\leq c$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -991,7 +995,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a build tile is a complete Unicode inequality (≠ with both sides)", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["$x \u2260 0$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$x \u2260 0$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -1001,8 +1005,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     // The only relation-bearing tile here is the bare "=" separator; it must
     // NOT be rejected by the embedded-relation guard.
-    problem.solution_flow.steps[3].build!.tiles = ["$2kr$", "=", "$mv^2/r$", "x", "y"];
-    problem.solution_flow.steps[3].build!.accepted = [["$2kr$", "=", "$mv^2/r$"]];
+    problem.solution_flow.steps[1].build!.tiles = ["$2kr$", "=", "$mv^2/r$", "x", "y"];
+    problem.solution_flow.steps[1].build!.accepted = [["$2kr$", "=", "$mv^2/r$"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
@@ -1012,8 +1016,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     // "$E_{x=0}$" and "$v(t=0)$" carry "=" only INSIDE braces/parens — they are
     // single atomic terms (evaluation conditions), not assembled relations.
-    problem.solution_flow.steps[3].build!.tiles = ["$E_{x=0}$", "=", "$v(t=0)$", "x", "y"];
-    problem.solution_flow.steps[3].build!.accepted = [["$E_{x=0}$", "=", "$v(t=0)$"]];
+    problem.solution_flow.steps[1].build!.tiles = ["$E_{x=0}$", "=", "$v(t=0)$", "x", "y"];
+    problem.solution_flow.steps[1].build!.accepted = [["$E_{x=0}$", "=", "$v(t=0)$"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
@@ -1021,7 +1025,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a whole equation is wrapped in plain parentheses", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["$(F = ma)$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$(F = ma)$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -1029,7 +1033,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a whole equation is wrapped in \\left( ... \\right)", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["$\\left(F = ma\\right)$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$\\left(F = ma\\right)$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -1039,8 +1043,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     // "{x=0}" is a single grouped condition term; bare braces must NOT be
     // unwrapped and rejected as a top-level relation.
-    problem.solution_flow.steps[3].build!.tiles = ["${x=0}$", "=", "$kr$", "x", "y"];
-    problem.solution_flow.steps[3].build!.accepted = [["${x=0}$", "=", "$kr$"]];
+    problem.solution_flow.steps[1].build!.tiles = ["${x=0}$", "=", "$kr$", "x", "y"];
+    problem.solution_flow.steps[1].build!.accepted = [["${x=0}$", "=", "$kr$"]];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
@@ -1048,7 +1052,7 @@ describe("validateAndNormalize", () => {
 
   it("throws when a build tile is a complete \\leqslant inequality", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = ["$v \\leqslant c$", "=", "b", "x", "y"];
+    problem.solution_flow.steps[1].build!.tiles = ["$v \\leqslant c$", "=", "b", "x", "y"];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow("embeds a relation operator");
@@ -1057,14 +1061,14 @@ describe("validateAndNormalize", () => {
   it("does not mistake the LaTeX command \\left for the relation \\le", () => {
     const problem = makeValidProblem();
     // "\left." starts with "\le" but is NOT a relation operator.
-    problem.solution_flow.steps[3].build!.tiles = [
+    problem.solution_flow.steps[1].build!.tiles = [
       "$\\left.\\frac{dV}{dr}\\right|_{r=R}$",
       "=",
       "$kr$",
       "x",
       "y",
     ];
-    problem.solution_flow.steps[3].build!.accepted = [
+    problem.solution_flow.steps[1].build!.accepted = [
       ["$\\left.\\frac{dV}{dr}\\right|_{r=R}$", "=", "$kr$"],
     ];
     expect(() =>
@@ -1074,15 +1078,15 @@ describe("validateAndNormalize", () => {
 
   it("accepts LaTeX-wrapped fragment tiles that contain no relation operator", () => {
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3].build!.tiles = [
+    problem.solution_flow.steps[1].build!.tiles = [
       "$2kr$",
       "=",
       "$\\frac{mv^2}{r}$",
       "$\\frac{GMm}{r^2}$",
       "$kr$",
     ];
-    problem.solution_flow.steps[3].build!.accepted = [["$2kr$", "=", "$\\frac{mv^2}{r}$"]];
-    problem.solution_flow.steps[3].build!.distractors = [
+    problem.solution_flow.steps[1].build!.accepted = [["$2kr$", "=", "$\\frac{mv^2}{r}$"]];
+    problem.solution_flow.steps[1].build!.distractors = [
       { tile: "$\\frac{GMm}{r^2}$", feedback: longFeedback("there is no gravitational term here") },
       { tile: "$kr$", feedback: longFeedback("you dropped the factor of 2 from the derivative") },
     ];
@@ -1094,7 +1098,7 @@ describe("validateAndNormalize", () => {
   it("throws when a build tile is unused in any accepted arrangement and has no distractor", () => {
     const problem = makeValidProblem();
     // Add an extra tile that is neither in an accepted arrangement nor a distractor.
-    problem.solution_flow.steps[3].build!.tiles!.push("orphan");
+    problem.solution_flow.steps[1].build!.tiles!.push("orphan");
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow('build tile "orphan" is unused');
@@ -1113,7 +1117,7 @@ describe("validateAndNormalize", () => {
   it("throws when a step carries a stale content field from another format", () => {
     const problem = makeValidProblem();
     // A trap step (claim) that still has leftover MCQ options.
-    problem.solution_flow.steps[1].options = [
+    problem.solution_flow.steps[3].options = [
       { text: "Leftover option", correct: true, feedback: "stale feedback here" },
     ];
     expect(() =>
@@ -1149,11 +1153,11 @@ describe("validateAndNormalize", () => {
   it("accepts a legal zero-approach form-last flow", () => {
     const problem = makeValidProblem();
     // The contract explicitly allows ZERO approach steps (lower bound 0).
-    // identify → principle → setup → form has no approach steps and ends in form.
+    // principle → setup → roadmap → form has no approach steps and ends in form.
     problem.solution_flow.steps = [
-      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
-      makeBuildStep("Build the equation that relates the given quantities."),
+      makeBuildStep("Build the central governing equation that relates the given quantities."),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(problem.solution_flow.steps.some((s) => s.type === "approach")).toBe(false);
@@ -1190,9 +1194,11 @@ describe("validateAndNormalize", () => {
       makeLimitStep("Send the stiffness to its extreme — sound right, or is that a trap?"),
     ]) {
       const problem = makeValidProblem();
+      // Principle@0 + setup@1 satisfy the fixed-opening guards so execution
+      // reaches the legacy-only hard block, which the smuggled legacy step trips.
       problem.solution_flow.steps = [
-        makeClaimStep("Your instinct is to reach for the wrong force law here — sound right, or a trap?"),
-        makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+        makeMcqStep("principle", "Which governing principle should you reach for on this specific problem?"),
+        makeBuildStep("Build the central equation that relates the given quantities here."),
         legacy,
         makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
       ];
@@ -1220,8 +1226,8 @@ describe("validateAndNormalize", () => {
     // NON-terminal position (so the last-step=form check passes first).
     problem.solution_flow.steps = [
       makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
-      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeBuildStep("Build the equation that relates the given quantities."),
+      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeSolveStep("Predict the form the final answer takes for this problem."),
       makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
@@ -1236,8 +1242,8 @@ describe("validateAndNormalize", () => {
     // An otherwise form-last flow that smuggles in a legacy-only connect step.
     problem.solution_flow.steps = [
       makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
-      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeBuildStep("Build the equation that relates the given quantities."),
+      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeMcqStep("connect", "What's the key simplification that fast-tracks the solve here?"),
       makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
@@ -1252,8 +1258,8 @@ describe("validateAndNormalize", () => {
     // An otherwise form-last flow that smuggles in a legacy-only sanity step.
     problem.solution_flow.steps = [
       makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
-      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeBuildStep("Build the equation that relates the given quantities."),
+      makeMultiSelectStep("Tap every quantity that actually controls the outcome here."),
       makeMcqStep("sanity", "Does the running result make physical sense given the setup?"),
       makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
@@ -1392,13 +1398,14 @@ describe("validateAndNormalize", () => {
   it("assembles a roadmap moves contract: every correct move is the accepted order", () => {
     const problem = makeValidProblem();
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to reach for the wrong force law here — sound right, or a trap?"),
+      makeMcqStep("principle", "Which governing principle should you reach for on this specific problem?"),
+      makeBuildStep("Build the central equation that relates the given quantities here."),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFeedsStep("Tap every input the first move actually consumes here."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
-    const build = problem.solution_flow.steps[1].build!;
+    const build = problem.solution_flow.steps[2].build!;
     expect(build.accepted).toEqual([
       [
         "Split the motion into horizontal and vertical components",
@@ -1433,7 +1440,8 @@ describe("validateAndNormalize", () => {
     bad.type = "roadmap";
     bad.label = "MAP THE DERIVATION";
     bad.icon = "🗺️";
-    problem.solution_flow.steps[1] = bad;
+    // Place the bad roadmap at a mid-flow index (step 1 is the mandatory setup).
+    problem.solution_flow.steps[2] = bad;
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).toThrow(/roadmap.*moves.*not.*equation/i);
@@ -1549,9 +1557,9 @@ describe("validateAndNormalize", () => {
       feedbackWrong: neutralFormFeedback("a reshaped RMS skeleton; the recap values it"),
     };
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to use the mean speed here — sound right, or is that a trap?"),
-      makeRoadmapStep("Tap the high-level moves into the order that reaches the RMS speed."),
+      makeMcqStep("principle", "Which governing principle pins down the RMS speed in this gas sample?"),
       setup,
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the RMS speed."),
       form,
     ];
     expect(() =>
@@ -1578,9 +1586,9 @@ describe("validateAndNormalize", () => {
       feedbackWrong: neutralFormFeedback("a reshaped radius skeleton; the recap values it"),
     };
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to reach for qE here — sound right, or is that a trap?"),
-      makeRoadmapStep("Tap the high-level moves into the order that reaches the radius."),
+      makeMcqStep("principle", "Which governing principle pins down the orbit radius for this charge?"),
       setup,
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the radius."),
       form,
     ];
     expect(() =>
@@ -1592,8 +1600,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to ignore the walls here — sound right, or is that a trap?"),
-      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeMcqStep("principle", "Which governing principle quantizes the energy levels in this well?"),
+      makeBuildStep("Build the central equation that relates the given quantities here."),
       feedsWith(["The mass m"], ["A red herring A"], "Tap the inputs the first move consumes."),
       feedsWith(["The width L"], ["A red herring B"], "Tap the inputs the second move consumes."),
       feedsWith(["The charge q"], ["A red herring C"], "Tap the inputs the third move consumes."),
@@ -1608,8 +1616,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to merge the two moves here — sound right, or is that a trap?"),
-      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeMcqStep("principle", "Which governing principle quantizes the energy levels in this well?"),
+      makeBuildStep("Build the central equation that relates the given quantities here."),
       // First feeds requires {mass, width}; second requires {mass} — a SUBSET,
       // so the second beat adds no new required input.
       feedsWith(["The mass m", "The width L"], ["A red herring A"], "Tap the inputs the first move consumes."),
@@ -1625,8 +1633,8 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to skip the boundary conditions — sound right, or is that a trap?"),
-      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeMcqStep("principle", "Which governing principle quantizes the energy levels in this well?"),
+      makeBuildStep("Build the central equation that relates the given quantities here."),
       feedsWith(
         ["The potential V(x)=0 inside", "The mass m", "The constant hbar"],
         ["A measured energy value"],
@@ -1650,8 +1658,8 @@ describe("validateAndNormalize", () => {
     // Each beat shares the common mass m but ALSO requires its own distinct input,
     // so neither set is a subset of the other — legitimately distinct feeds.
     problem.solution_flow.steps = [
-      makeClaimStep("Your instinct is to fold the two moves together — sound right, or is that a trap?"),
-      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeMcqStep("principle", "Which governing principle pins down the orbit radius for this charge?"),
+      makeBuildStep("Build the central equation that relates the given quantities here."),
       feedsWith(["The mass m", "The speed v"], ["A red herring A"], "Tap the inputs the first move consumes."),
       feedsWith(["The mass m", "The field B"], ["A red herring B"], "Tap the inputs the second move consumes."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
