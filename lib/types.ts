@@ -1,6 +1,6 @@
 export type Subject = "mechanics" | "electrodynamics" | "thermodynamics" | "quantum_mechanics";
 export type Difficulty = "class_11" | "class_12" | "college";
-export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach" | "depends" | "scale" | "limit" | "form";
+export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach" | "depends" | "scale" | "limit" | "roadmap" | "produces" | "feeds" | "form";
 export type ProblemStatus = "draft" | "approved" | "published" | "rejected";
 
 /**
@@ -80,6 +80,9 @@ export const VALID_STEP_TYPES: StepType[] = [
   "depends",
   "scale",
   "limit",
+  "roadmap",
+  "produces",
+  "feeds",
   "form",
 ];
 
@@ -89,8 +92,19 @@ export const VALID_STEP_TYPES: StepType[] = [
  * the regeneration auditor both reject a flow containing any of these.
  * `solve` (PREDICT THE FORM) was retired alongside `connect`/`sanity` when the
  * terminal beat became the `form` (ASSEMBLE THE FORM) build step.
+ * `depends`/`scale`/`limit` (the WHAT IT INVOLVES → HOW IT SCALES → CHECK THE
+ * EXTREME reasoning chain) were retired in turn when the derivation-roadmap
+ * pedagogy (`roadmap`/`feeds`/`produces`) replaced them; they keep their
+ * `formatForType` mappings so stored rows still render but are never generated.
  */
-export const LEGACY_ONLY_STEP_TYPES: StepType[] = ["connect", "sanity", "solve"];
+export const LEGACY_ONLY_STEP_TYPES: StepType[] = [
+  "connect",
+  "sanity",
+  "solve",
+  "depends",
+  "scale",
+  "limit",
+];
 
 /**
  * Canonical step-type → format map. Used by the generator and by validation,
@@ -110,6 +124,12 @@ export function formatForType(type: StepType): StepFormat {
       return "mcq";
     case "limit":
       return "claim";
+    case "roadmap":
+      return "build";
+    case "produces":
+      return "claim";
+    case "feeds":
+      return "multiselect";
     case "form":
       return "build";
     case "principle":

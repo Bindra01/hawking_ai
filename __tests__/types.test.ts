@@ -17,6 +17,9 @@ describe("formatForType", () => {
     ["depends", "multiselect"],
     ["scale", "mcq"],
     ["limit", "claim"],
+    ["roadmap", "build"],
+    ["produces", "claim"],
+    ["feeds", "multiselect"],
     ["form", "build"],
   ];
 
@@ -66,6 +69,26 @@ describe("new reasoning-chain step types (depends/scale/limit/form)", () => {
     expect(STEP_BG.scale).toBe("#08291f");
     expect(STEP_BG.limit).toBe("#2a2008");
     expect(STEP_BG.form).toBe("#06251f");
+  });
+});
+
+describe("derivation-roadmap step types (roadmap/feeds/produces)", () => {
+  it("stepIcon resolves the three derivation-roadmap types", () => {
+    expect(stepIcon("roadmap")).toBe("🗺️");
+    expect(stepIcon("produces")).toBe("🔎");
+    expect(stepIcon("feeds")).toBe("🔌");
+  });
+
+  it("STEP_COLORS carries the three derivation-roadmap accent tokens", () => {
+    expect(STEP_COLORS.roadmap).toBe("#fb923c");
+    expect(STEP_COLORS.feeds).toBe("#e879f9");
+    expect(STEP_COLORS.produces).toBe("#2dd4bf");
+  });
+
+  it("STEP_BG carries the three derivation-roadmap badge-background tokens", () => {
+    expect(STEP_BG.roadmap).toBe("#2a1505");
+    expect(STEP_BG.feeds).toBe("#260a2c");
+    expect(STEP_BG.produces).toBe("#06231f");
   });
 });
 

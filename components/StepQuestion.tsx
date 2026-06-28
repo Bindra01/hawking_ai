@@ -25,6 +25,9 @@ export const STEP_COLORS: Record<string, string> = {
   depends: "#38bdf8",
   scale: "#34d399",
   limit: "#fbbf24",
+  roadmap: "#fb923c",
+  feeds: "#e879f9",
+  produces: "#2dd4bf",
   form: "#5eead4",
 };
 
@@ -47,6 +50,9 @@ export const STEP_BG: Record<string, string> = {
   depends: "#0b2438",
   scale: "#08291f",
   limit: "#2a2008",
+  roadmap: "#2a1505",
+  feeds: "#260a2c",
+  produces: "#06231f",
   form: "#06251f",
 };
 

@@ -24,6 +24,8 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Identify the correct physics law, theorem, or formula to apply.
    Use when the problem requires choosing between multiple possible approaches.
    For hard problems, this step should distinguish between superficially similar principles.
+   This is the ONE allowed multiple-choice strategy beat — rely on it sparingly
+   (at most one MCQ per problem; everything else is build/claim/multiselect).
 
 3. "identify" (🎯 IDENTIFY THE KEY)
    Purpose: Identify the key variable, quantity, constraint, or boundary condition.
@@ -44,27 +46,35 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Purpose: Explain the deeper physical intuition. Why does this result make sense?
    Use for hard problems where the physics insight is as important as the math.
 
-7. THE TERMINAL REASONING CHAIN — after "setup", reason about the STRUCTURE of
-   the answer (never compute it). These four types replace the retired "solve"
-   step. They run in order and ALWAYS operate on the SYMBOLIC answer, even when
-   the final_answer is a single number — the number is revealed only in the recap.
+7. THE DERIVATION ROADMAP — after the hook, gamify the DERIVATION ITSELF as an
+   ordered roadmap of high-level mathematical MOVES (what goes in, what comes out),
+   never the algebra. These types lean on tile-building / claim / multiselect, NOT
+   multiple choice. They ALWAYS operate on the SYMBOLIC answer, even when the
+   final_answer is a single number — the number is revealed only in the recap.
 
-   A. "depends" (🎛️ WHAT IT INVOLVES) — multiselect.
-      Purpose: which quantities does the answer actually involve? Tap the real
-      ones; leave the same-family red herrings (e.g. a quantity from a neighboring
-      law that does NOT enter here). 4-6 items, >=1 matters:true AND >=1
-      matters:false, feedbackCorrect/feedbackWrong 40+ chars.
+   A. "roadmap" (🗺️ MAP THE DERIVATION) — build (THE SPINE).
+      Purpose: the student taps prose MOVE-tiles into the correct ORDER to build
+      the whole derivation map in ONE step. Tiles are relation-free PROSE move-
+      labels (e.g. "Solve the governing equation", "Impose the boundary
+      conditions", "Read off the energy levels") PLUS plausible WRONG moves as
+      distractor tiles (e.g. "Normalize before applying BCs", "Apply BCs before
+      solving"). Because the tiles are prose they never embed an equation. The
+      "accepted" arrangement must list ALL correct moves in their right order;
+      every non-accepted tile is a registered distractor with 30+ char feedback.
+      Keep total tiles <= 10 (N correct moves + M distractor moves).
 
-   B. "scale" (📈 HOW IT SCALES) — mcq.
-      Purpose: how does the answer scale with ONE variable (the exponent /
-      proportionality)? NO arithmetic — pure exponent reasoning (e.g. "r ∝ L^{1/2}").
-      Exactly 4 options, exactly 1 correct. May appear 1-2× (one per variable).
+   B. "feeds" (🔌 WHAT GOES IN) — multiselect.
+      Purpose: DATA-FLOW. Tap the inputs a move actually consumes; leave the
+      same-family red herrings (e.g. a measured value or a time-dependence that
+      this move does not use). 4-6 items, >=1 matters:true AND >=1 matters:false,
+      feedbackCorrect/feedbackWrong 40+ chars.
 
-   C. "limit" (🔭 CHECK THE EXTREME) — claim.
-      Purpose: stress-test a limiting/extreme case as a sounds-right vs it's-a-trap
-      claim (e.g. "stiffen the well and the orbit grows without bound" — a trap if
-      it actually shrinks). statement 15+, isTrap boolean, feedbackTrap/feedbackSound
-      40+ chars.
+   C. "produces" (🔎 WHAT IT PRODUCES) — claim.
+      Purpose: RECOGNITION / metacognition. A sounds-right vs it's-a-trap claim
+      about what a move just PRODUCED (e.g. "You've solved the equation — that Ψ
+      is the final answer" → IT'S A TRAP, because it is only the GENERAL
+      wavefunction; boundary conditions still pin it down). statement 15+, isTrap
+      boolean, feedbackTrap/feedbackSound 40+ chars.
 
    D. "form" (🏗️ ASSEMBLE THE FORM) — build (the TERMINAL step).
       Purpose: assemble the SYMBOLIC answer SKELETON from atomic structural tiles
@@ -74,8 +84,13 @@ STEP TYPES — choose the right ones based on the problem's structure:
       no "correct"/"wrong"/"exactly right"/"perfect"; calmly note the form is
       assembled and the recap carries it through to the value.
 
-   (The retired "solve" / PREDICT THE FORM mcq is NO LONGER generated — it stays
-   in the type system only so legacy DB problems keep rendering.)
+   LEAN MECHANIC MIX (HARD REQUIREMENT): a generated flow has AT MOST ONE multiple-
+   choice step ("principle"). The roadmap (build) is the spine; feeds (multiselect)
+   carries data-flow; produces (claim) carries recognition; the terminal form
+   (build) assembles the skeleton. Do NOT pad the flow with extra MCQ beats.
+
+   (The retired "solve"/"depends"/"scale"/"limit" types are NO LONGER generated —
+   they stay in the type system only so legacy DB problems keep rendering.)
 
 FIRST STEP VARIETY:
 Problems should NOT always start with a "trap" step. Vary the opening step type based on what best hooks the student into the problem. Good openers include:
@@ -122,17 +137,18 @@ ever consider. A distractor that is obviously irrelevant teaches nothing.
 
 PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always options):
 
-* type "trap" OR "limit"  => emit a "claim" object (NO "options"):
+* type "trap" OR "produces"  => emit a "claim" object (NO "options"):
     {
       "statement": "<the bold claim, stated as if true>",
       "isTrap": true | false,            // true = the claim is false / a trap
       "feedbackTrap": "<shown when student taps IT'S A TRAP, 40+ chars>",
       "feedbackSound": "<shown when student taps SOUNDS RIGHT, 40+ chars>"
     }
-    // "limit" (CHECK THE EXTREME) stress-tests a limiting/extreme case as a
-    // sounds-right vs it's-a-trap claim about how the answer behaves.
+    // "produces" (WHAT IT PRODUCES) is a recognition beat: a sounds-right vs
+    // it's-a-trap claim about what a move just produced (e.g. "that Ψ is the
+    // final answer" → IT'S A TRAP, it is only the general wavefunction).
 
-* type "identify" OR "depends"  => emit a "multiselect" object (NO "options"):
+* type "identify" OR "feeds"  => emit a "multiselect" object (NO "options"):
     {
       "items": [ { "text": "<quantity/fact>", "matters": true|false }, ... ],
       // 4-6 items; AT LEAST ONE matters:true AND AT LEAST ONE matters:false.
@@ -140,195 +156,81 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
       "feedbackCorrect": "<40+ chars>",
       "feedbackWrong": "<40+ chars>"
     }
-    // "depends" (WHAT IT INVOLVES) asks which quantities the ANSWER involves —
-    // the real symbols vs same-family red herrings — before assembling the form.
+    // "feeds" (WHAT GOES IN) is the data-flow beat: tap the inputs a move
+    // actually consumes; leave the same-family red herrings.
 
-* type "setup" OR "form"  => emit a "build" object (NO "options"):
+* type "setup" OR "form"  => emit an EQUATION CONTRACT (Contract C, NO "tiles"/
+  "accepted"/"distractors" — CODE assembles those deterministically from your
+  constrained term arrays):
     {
-      "tiles": [ "<unique token>", ... ],   // 3-10 UNIQUE tokens, incl. 1-3 distractor tiles
-      "accepted": [ [ "<token>", "<token>", ... ] ],
-      // >=1 ordered arrangement; each length >=2; every token must appear in "tiles";
-      // an arrangement must NOT repeat a tile.
-      "distractors": [ { "tile": "<a token from tiles>", "feedback": "<30+ chars>" } ],
-      // 1-3 entries; each "tile" MUST be one of "tiles" and MUST NOT appear in
-      // any accepted arrangement (it is a wrong tile that doesn't belong).
+      "equation": {
+        "lhs_terms": [ "<atomic LaTeX fragment>", ... ],   // left side, split into terms/factors
+        "relation": "=",                                    // ONE bare operator ("=", "\\leq", ...)
+        "rhs_terms": [ "<atomic LaTeX fragment>", ... ],    // right side, split into terms/factors
+        "distractor_terms": [ { "term": "<atomic fragment>", "feedback": "<30+ chars>" }, ... ]
+        // 1-3 wrong-but-plausible fragments, each NOT belonging in the equation.
+      },
       "feedbackCorrect": "<40+ chars>",
       "feedbackWrong": "<40+ chars>"
     }
-    // CRITICAL — TILE GRANULARITY: each tile MUST be an ATOMIC FRAGMENT of the
-    // equation — a single term, a single factor, or a bare operator — that only
-    // becomes a meaningful relation once arranged WITH the other tiles. The "="
-    // sign is ALWAYS its own separate tile. NO tile may be a complete, already-
-    // assembled equation, because then the student has nothing to set up and the
-    // step degrades into a disguised multiple-choice.
-    //   GOOD (fragments): "$2kr$", "=", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"
-    //                     → student arranges them into  2kr = mv²/r
-    //   BAD  (whole equations, NEVER do this):
-    //                     "$F = ma$", "$v = 4\\sqrt{x}$", "$a = \\frac{dv}{dx}\\frac{dx}{dt}$"
-    //                     → each tile is the entire answer; nothing to build.
-    // RULE OF THUMB: a relation operator ("=", "<", ">", "\\leq", "\\geq",
-    // "\\neq", "\\approx", ...) must ALWAYS be its own tile, with NOTHING else
-    // attached. Tiles like "$F = ma$" (whole), "$F =$" or "$= ma$" (partial), or
-    // "$v \\leq c$" are INVALID. Split them: left-hand side, the bare operator,
-    // right-hand side (further split each side into its terms/factors) all become
-    // separate tiles. (A relation INSIDE a subscript/argument, e.g. "$E_{x=0}$"
-    // or "$v(t=0)$", is part of a single term and is fine.)
-    // FORM STEP (ASSEMBLE THE FORM, TERMINAL): the tiles are the STRUCTURAL atomic
+    // CRITICAL — EVERY term in lhs_terms/rhs_terms/distractor_terms MUST be an
+    // ATOMIC, RELATION-FREE fragment: a single term, a single factor — NEVER a
+    // whole or partial equation. The "relation" is a SINGLE bare operator on its
+    // own. CODE builds the tray as [...lhs_terms, relation, ...rhs_terms,
+    // ...distractor_terms] (shuffled) and the accepted arrangement as
+    // [...lhs_terms, relation, ...rhs_terms], so the operator is ALWAYS its own
+    // tile and no tile can embed a relation.
+    //   GOOD: lhs_terms ["$2kr$"], relation "=", rhs_terms ["$\\frac{mv^2}{r}$"],
+    //         distractor_terms [{term:"$\\frac{GMm}{r^2}$", feedback:"no gravity here"}]
+    //         → assembles to  2kr = mv²/r
+    //   BAD  (whole/partial equations in a term, NEVER do this):
+    //         "$F = ma$", "$F =$", "$= ma$", "$v \\leq c$"
+    // FORM STEP (ASSEMBLE THE FORM, TERMINAL): the terms are the STRUCTURAL atomic
     // fragments of the SYMBOLIC answer skeleton — the root, the ratio, the symbols
     // — with NO substituted numbers (even when the final_answer is numeric, the
-    // form stays symbolic; the number appears only in the recap). "=" is its own
-    // tile. ALL of its feedback (feedbackCorrect, feedbackWrong, and every
-    // distractor feedback) must be NON-COMMITTAL — no 'correct'/'wrong'/'incorrect'/
-    // 'mistake'/'exactly right'/'perfect'; calmly note the form is assembled and
-    // the recap carries it through to the value.
+    // form stays symbolic; the number appears only in the recap). ALL of its
+    // feedback (feedbackCorrect, feedbackWrong, and every distractor feedback)
+    // must be NON-COMMITTAL — no 'correct'/'wrong'/'incorrect'/'mistake'/'exactly
+    // right'/'perfect'; calmly note the form is assembled and the recap carries it
+    // through to the value.
 
-* all OTHER types ("principle", "why", "approach", "scale")  => emit "options":
+* type "roadmap"  => emit a MOVES CONTRACT (NO "options"/"tiles" — CODE assembles
+  the build tiles + accepted ordering from your prose move arrays):
+    {
+      "moves": [ "<prose move-label>", "<prose move-label>", ... ],
+      // The correct high-level moves IN ORDER (relation-free PROSE, e.g.
+      // "Solve the governing equation"). The student must place ALL of them.
+      "distractor_moves": [ { "move": "<wrong prose move>", "feedback": "<30+ chars>" }, ... ],
+      // 1-3 plausible WRONG moves (e.g. "Apply BCs before solving").
+      "feedbackCorrect": "<40+ chars>",
+      "feedbackWrong": "<40+ chars>"
+    }
+    // CODE builds tiles = [...moves, ...distractor_moves] (shuffled), accepted =
+    // [[...moves]] (every correct move, in order). Keep moves.length +
+    // distractor_moves.length <= 10. Each move is plain PROSE — NO equations.
+
+* type "principle"  => emit "options":
     exactly 4 options, exactly 1 correct (the existing MCQ rules below apply).
-    The "scale" (HOW IT SCALES) step asks how the answer scales with ONE variable
-    using EXPONENT/PROPORTIONALITY reasoning only (e.g. "r ∝ L^{1/2}") — NO
-    arithmetic, and its options are scaling forms, not numbers.
+    This is the ONE allowed multiple-choice strategy beat per problem.
 
-Do NOT add an "options" array to trap/identify/setup/depends/limit/form steps,
-and do NOT add claim/multiselect/build objects to the MCQ types.
+Do NOT add an "options" array to trap/identify/setup/feeds/produces/roadmap/form
+steps, and do NOT add claim/multiselect/build objects to the "principle" MCQ type.
 `;
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
+// Class 11 — LEAN 2-move projectile roadmap (4 steps): trap -> roadmap (2 moves)
+// -> feeds -> form. setup/form use the Contract-C `equation` shape; roadmap uses
+// the `moves` contract. CODE assembles every build step's tiles/accepted from
+// these constrained arrays (see assembleBuildFromContract).
 const EXAMPLE_CLASS_11 = {
-  title: "RMS speed of O₂ at 47°C equals that of H₂ at ___°C",
-  subject: "thermodynamics",
-  topic: "Kinetic Theory",
-  difficulty: "class_11",
-  scenario: "The RMS speed of O₂ at 47°C equals the RMS speed of H₂ at what temperature (in °C)?",
-  goal: "Find: -253°C",
-  final_answer: "-253°C",
-  diagram_type: null,
-  solution_flow: {
-    steps: [
-      {
-        type: "identify",
-        label: "IDENTIFY THE KEY",
-        icon: "🎯",
-        prompt: "Your instinct is to plug 47 straight into a speed formula — but first, tap every quantity that actually controls the RMS speed here.",
-        multiselect: {
-          items: [
-            { text: "The temperature, converted to Kelvin (47°C = 320 K)", matters: true },
-            { text: "The molar masses of O₂ (32 g/mol) and H₂ (2 g/mol)", matters: true },
-            { text: "The pressure of each gas sample", matters: false },
-            { text: "The number of moles of gas present", matters: false },
-            { text: "The volume of the container", matters: false }
-          ],
-          feedbackCorrect: "Exactly — only the absolute temperature (in Kelvin) and the molar masses set the RMS speed, since v_rms = √(3RT/M).",
-          feedbackWrong: "RMS speed depends only on absolute temperature (Kelvin) and molar mass: v_rms = √(3RT/M). Pressure, volume, and moles never enter."
-        },
-        tip: "ALL gas law temperatures must be in Kelvin. RMS speed depends only on T and M."
-      },
-      {
-        type: "principle",
-        label: "RECALL THE PRINCIPLE",
-        icon: "⚡",
-        prompt: "You need to equate RMS speeds of two different gases. Which formula relates RMS speed to temperature and molar mass?",
-        options: [
-          { text: "$v_{rms} = \\sqrt{3RT/M}$ where M is molar mass", correct: true, feedback: "Correct. R is universal gas constant, T in Kelvin, M is molar mass in kg/mol." },
-          { text: "$v_{rms} = \\sqrt{3kT/m}$ where m is total mass of gas", correct: false, feedback: "Close — m here should be the mass of ONE molecule, not total mass. The Boltzmann constant k pairs with single-molecule mass, while the gas constant R pairs with molar mass. Mixing these up gives an answer off by Avogadro's number. Use: $v_{rms} = \\sqrt{3RT/M}$.", distractor_type: "half_right" as const },
-          { text: "$v_{rms} = \\sqrt{2RT/M}$ (most probable speed formula)", correct: false, feedback: "That's the most probable speed, not RMS. The Maxwell-Boltzmann distribution gives three characteristic speeds: most probable (√(2RT/M)), mean (√(8RT/πM)), and RMS (√(3RT/M)). The factors 2, 8/π, and 3 come from different moments of the distribution. RMS speed has factor 3: $v_{rms} = \\sqrt{3RT/M}$.", distractor_type: "misconception" as const },
-          { text: "$v_{rms} = \\sqrt{RT/M}$ (simplified kinetic energy relation)", correct: false, feedback: "You're missing the factor of 3. This comes from the equipartition theorem: each translational degree of freedom contributes ½kT of energy, and there are 3 degrees of freedom. So KE = (3/2)kT, which gives v_rms = √(3RT/M), not √(RT/M).", distractor_type: "procedural_slip" as const }
-        ],
-        tip: "RMS speed: √(3RT/M). Most probable: √(2RT/M). Mean: √(8RT/πM)."
-      },
-      {
-        type: "setup",
-        label: "SET UP THE MATH",
-        icon: "🔧",
-        prompt: "Build the equation that equates the two RMS speeds. Drag the tiles into the correct order.",
-        build: {
-          tiles: ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$", "$\\times$", "$+ 273$"],
-          accepted: [
-            ["$\\frac{3R(320)}{32}$", "=", "$\\frac{3RT}{2}$"]
-          ],
-          distractors: [
-            { tile: "$\\times$", feedback: "You don't multiply the two sides — RMS speeds are set EQUAL, so the relation uses '=', not '×'." },
-            { tile: "$+ 273$", feedback: "The 273 conversion belongs at the END (converting the final K to °C), not inside the speed-balance equation." }
-          ],
-          feedbackCorrect: "Clean. Setting v_rms equal gives 3R(320)/32 = 3RT/2; the 3R cancels, leaving 320/32 = T/2.",
-          feedbackWrong: "Equate the two RMS-speed expressions directly: 3R(320)/32 = 3RT/2. Don't multiply the sides or fold in the 273 yet."
-        },
-        tip: "When equating speeds, square both sides first to eliminate the square root."
-      },
-      {
-        type: "depends",
-        label: "WHAT IT INVOLVES",
-        icon: "🎛️",
-        prompt: "Before assembling the matched temperature, tap every quantity that actually sets the H₂ temperature in this RMS-speed balance.",
-        multiselect: {
-          items: [
-            { text: "The O₂ temperature, in Kelvin", matters: true },
-            { text: "The molar-mass ratio of H₂ to O₂", matters: true },
-            { text: "The pressure of either gas sample", matters: false },
-            { text: "The number of moles of gas present", matters: false },
-            { text: "The volume of the container", matters: false }
-          ],
-          feedbackCorrect: "Right — only the O₂ temperature (in Kelvin) and the molar-mass ratio enter the matched H₂ temperature, since v_rms = √(3RT/M).",
-          feedbackWrong: "The matched temperature follows from v_rms = √(3RT/M): it depends only on the O₂ temperature and the molar-mass ratio. Pressure, moles, and volume never enter."
-        },
-        tip: "Strip the answer down to the quantities that truly drive it before building the relation."
-      },
-      {
-        type: "scale",
-        label: "HOW IT SCALES",
-        icon: "📈",
-        prompt: "Holding the O₂ temperature fixed, how does the matched H₂ temperature scale with the molar-mass ratio M(H₂)/M(O₂)?",
-        options: [
-          { text: "Linearly: T ∝ (M(H₂)/M(O₂))", correct: true, feedback: "Right — since v_rms² ∝ T/M, equal speeds force T ∝ M, so the matched temperature is linear in the molar-mass ratio." },
-          { text: "As the square root: T ∝ √(M(H₂)/M(O₂))", correct: false, feedback: "The square root belongs to the SPEED, not the temperature. v_rms ∝ √(T/M), so the speeds match when T/M is equal, which makes T linear in M — not a square root of the ratio.", distractor_type: "half_right" as const },
-          { text: "Quadratically: T ∝ (M(H₂)/M(O₂))²", correct: false, feedback: "Squaring the ratio double-counts the mass dependence. v_rms² ∝ T/M is linear in both T and M, so matching speeds makes T scale with the first power of the ratio, not the square.", distractor_type: "procedural_slip" as const },
-          { text: "Inversely: T ∝ (M(O₂)/M(H₂))", correct: false, feedback: "Inverting the ratio points the dependence the wrong way. Because T ∝ M at fixed speed, the lighter gas needs the SMALLER temperature, so T grows with M(H₂)/M(O₂), not its reciprocal.", distractor_type: "misconception" as const }
-        ],
-        tip: "Read the exponent off the governing relation: v_rms² ∝ T/M makes T linear in M."
-      },
-      {
-        type: "limit",
-        label: "CHECK THE EXTREME",
-        icon: "🔭",
-        prompt: "Stress-test the result at an extreme. Sound right, or is it a trap?",
-        claim: {
-          statement: "Because H₂ is so much lighter than O₂, it must match O₂'s RMS speed at a HIGHER temperature.",
-          isTrap: true,
-          feedbackTrap: "Right — it's a trap. Since v_rms² ∝ T/M, a lighter gas reaches the same RMS speed at a LOWER temperature, not a higher one. H₂ matches O₂'s speed far below zero.",
-          feedbackSound: "Not quite — this is a trap. v_rms² ∝ T/M, so the lighter gas needs LESS temperature to hit the same speed. H₂ matches O₂'s RMS speed at a much lower temperature."
-        },
-        tip: "Push a variable to its extreme and check the trend matches the proportionality you found."
-      },
-      {
-        type: "form",
-        label: "ASSEMBLE THE FORM",
-        icon: "🏗️",
-        prompt: "Assemble the SYMBOLIC relation for the matched H₂ temperature from the structural tiles. Build the formula — numbers come later.",
-        build: {
-          tiles: ["$T_{H_2}$", "=", "$T_{O_2}$", "$\\frac{M_{H_2}}{M_{O_2}}$", "$\\frac{M_{O_2}}{M_{H_2}}$"],
-          accepted: [
-            ["$T_{H_2}$", "=", "$T_{O_2}$", "$\\frac{M_{H_2}}{M_{O_2}}$"]
-          ],
-          distractors: [
-            { tile: "$\\frac{M_{O_2}}{M_{H_2}}$", feedback: "That's the inverted mass ratio; the lighter gas needs the SMALLER temperature, so the hydrogen-to-oxygen molar-mass ratio sits on top, not its reciprocal." }
-          ],
-          feedbackCorrect: "You've assembled the symbolic temperature relation; the recap substitutes the masses and lands the value.",
-          feedbackWrong: "Reassemble the skeleton: the matched temperature is the oxygen temperature scaled by the molar-mass ratio — the recap carries it through to the value."
-        },
-        tip: "Build the FORMULA first; numbers go in only at the recap."
-      }
-    ]
-  }
-};
-
-const EXAMPLE_COLLEGE = {
-  title: "A particle of mass m and angular momentum L in potential U(r) = kr²",
+  title: "Range of a projectile launched at 30 m/s and 30° on level ground",
   subject: "mechanics",
-  topic: "Central Forces",
-  difficulty: "college",
-  scenario: "A particle of mass m moves in a central force field with potential energy U(r) = kr². If the particle has angular momentum L, find the radius of its circular orbit.",
-  goal: "Find: $r = (L^2/2mk)^{1/4}$",
-  final_answer: "$r = \\left(\\frac{L^2}{2mk}\\right)^{1/4}$",
+  topic: "Projectile Motion",
+  difficulty: "class_11",
+  scenario: "A projectile is launched at 30 m/s at 30° above the horizontal on level ground (g = 9.8 m/s²). How far away does it land?",
+  goal: "Find: ≈ 79.5 m",
+  final_answer: "≈ 79.5 m",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -336,110 +238,333 @@ const EXAMPLE_COLLEGE = {
         type: "trap",
         label: "SPOT THE TRAP",
         icon: "⚠️",
-        prompt: "You see a central force and immediately reach for the gravitational orbit formula r = L²/(GMm²) — but U = kr² is a harmonic well, not a 1/r field. Sound right, or is it a trap?",
+        prompt: "Your instinct is to multiply the launch speed by the time of flight — but only the HORIZONTAL velocity carries the projectile downrange. Sound right, or is that a trap?",
         claim: {
-          statement: "Because it's a central-force orbit, you can plug into the standard gravitational result r = L²/(GMm²).",
+          statement: "The range is just the full launch speed multiplied by the total time in the air.",
           isTrap: true,
-          feedbackTrap: "Correct — it's a trap. U = kr² gives F = -2kr (a linear restoring force), not the -GMm/r² of gravity, so the gravitational orbit formula simply does not apply here.",
-          feedbackSound: "Not quite — this is a trap. The gravitational formula assumes a 1/r² force. Here U = kr² gives F = -2kr, so you must derive the orbit from force balance + angular momentum directly."
+          feedbackTrap: "Right — it's a trap. Only the horizontal component v·cosθ moves the projectile downrange; the full speed overcounts the horizontal distance.",
+          feedbackSound: "Not quite — this is a trap. The vertical component does no horizontal work, so the range uses v·cosθ times the flight time, not the full speed."
         },
-        tip: "Always read the potential before reusing an orbit formula — 1/r gravity ≠ harmonic kr²."
+        tip: "Resolve velocity into components first — only the horizontal one sets the range."
       },
       {
-        type: "principle",
-        label: "RECALL THE PRINCIPLE",
-        icon: "⚡",
-        prompt: "How do you extract the force from the potential U(r) = kr²?",
-        options: [
-          { text: "F = -dU/dr = -2kr (negative gradient of potential)", correct: true, feedback: "Right. F = -dU/dr is the fundamental relation. For U = kr²: F = -2kr (restoring force, directed inward)." },
-          { text: "F = U/r = kr (divide potential by distance)", correct: false, feedback: "F = U/r is dimensionally coincidental but physically wrong. Force is always the negative gradient of potential energy: F = -dU/dr. Dividing potential by distance has no physical basis — it confuses the relationship between force and potential. The correct derivative gives F = -2kr.", distractor_type: "procedural_slip" as const },
-          { text: "F = -dU/dt (differentiate with respect to time)", correct: false, feedback: "dU/dt gives power (rate of energy change), not force. Force comes from the spatial derivative: F = -dU/dr. Differentiating with respect to time would require knowledge of the trajectory r(t), which is what we're trying to find. Always differentiate w.r.t. position for force.", distractor_type: "misconception" as const },
-          { text: "F = -kr (apply Hooke's law directly)", correct: false, feedback: "Hooke's law F = -kx applies to a spring with potential U = ½kx². Here the potential is U = kr² (no ½ factor), so the derivative gives F = -2kr, not -kr. The missing factor of 2 comes from differentiating r² without the ½ that would normally accompany a Hooke's law potential.", distractor_type: "half_right" as const }
-        ],
-        tip: "Force from potential: F = -dU/dr. Always differentiate w.r.t. position, not time."
-      },
-      {
-        type: "setup",
-        label: "SET UP THE MATH",
-        icon: "🔧",
-        prompt: "Build the force-balance equation for the circular orbit. Drag the tiles into the correct order.",
+        type: "roadmap",
+        label: "MAP THE DERIVATION",
+        icon: "🗺️",
+        prompt: "Tap the high-level moves into the ORDER an expert would chain them to reach the range. Two of the tiles are wrong moves — leave them out.",
         build: {
-          tiles: ["$2kr$", "=", "$\\frac{mv^2}{r}$", "$\\frac{GMm}{r^2}$", "$kr$"],
-          accepted: [
-            ["$2kr$", "=", "$\\frac{mv^2}{r}$"]
+          moves: [
+            "Split the launch velocity into horizontal and vertical components",
+            "Impose the return-to-ground condition to find the time of flight"
           ],
-          distractors: [
-            { tile: "$\\frac{GMm}{r^2}$", feedback: "There is no gravitational 1/r² force here — the force comes from U = kr², giving F = 2kr, not GMm/r²." },
-            { tile: "$kr$", feedback: "You dropped the factor of 2. Differentiating U = kr² gives F = -dU/dr = -2kr, so the magnitude is 2kr, not kr." }
+          distractor_moves: [
+            { move: "Find the range before solving for the time of flight", feedback: "The range needs the flight time first; you cannot land the horizontal distance without knowing how long the projectile is airborne." },
+            { move: "Assume the vertical velocity stays constant in flight", feedback: "Gravity changes the vertical velocity every instant; treating it as constant breaks the return-to-ground condition entirely." }
           ],
-          feedbackCorrect: "Perfect. The inward force 2kr (from F = -dU/dr) supplies the centripetal requirement mv²/r.",
-          feedbackWrong: "Balance the actual force from this potential: 2kr = mv²/r. There is no GMm/r² term, and don't drop the factor of 2."
+          feedbackCorrect: "Exactly the right plan: resolve the velocity, then use the vertical motion to time the flight before reading off the horizontal range.",
+          feedbackWrong: "Rebuild the plan: first split the velocity into components, then impose the return-to-ground condition to get the time of flight."
         },
-        tip: "Force from potential: F = -dU/dr. For U = kr² that is 2kr — keep the factor of 2."
+        tip: "Sequence the moves before touching algebra — components first, timing second."
       },
       {
-        type: "depends",
-        label: "WHAT IT INVOLVES",
-        icon: "🎛️",
-        prompt: "Before assembling anything, tap every quantity that the orbit radius actually involves for this harmonic well.",
+        type: "feeds",
+        label: "WHAT GOES IN",
+        icon: "🔌",
+        prompt: "For the move that finds the range, tap every quantity that actually feeds into it — and leave the same-family red herrings.",
         multiselect: {
           items: [
-            { text: "L (the angular momentum)", matters: true },
-            { text: "m (the particle mass)", matters: true },
-            { text: "k (the well stiffness)", matters: true },
-            { text: "G (the gravitational constant)", matters: false },
-            { text: "the orbital speed v", matters: false },
-            { text: "the elapsed time t", matters: false }
+            { text: "The launch speed v", matters: true },
+            { text: "The launch angle θ", matters: true },
+            { text: "The gravitational acceleration g", matters: true },
+            { text: "The mass of the projectile", matters: false },
+            { text: "The horizontal distance already covered", matters: false }
           ],
-          feedbackCorrect: "Right — only L, m, and k set the orbit radius here. There is no gravity (no G), and v is eliminated through L = mvr.",
-          feedbackWrong: "The radius depends only on L, m, and k. G belongs to a 1/r² field that isn't present, v is eliminated via L = mvr, and time never enters a circular orbit's radius."
+          feedbackCorrect: "Right — only the launch speed, the launch angle, and gravity set the range; mass cancels and no prior distance enters.",
+          feedbackWrong: "The range depends only on the launch speed, the launch angle, and gravity. Mass never enters projectile range, and no prior distance feeds in."
         },
-        tip: "List the symbols the answer truly involves, and drop the same-family red herrings, before building it."
-      },
-      {
-        type: "scale",
-        label: "HOW IT SCALES",
-        icon: "📈",
-        prompt: "Holding m and k fixed, how does the orbit radius r scale with the angular momentum L?",
-        options: [
-          { text: "r ∝ L^{1/2}", correct: true, feedback: "Right — from r⁴ ∝ L², taking the fourth root gives r ∝ L^{1/2}, so the radius grows as the square root of L." },
-          { text: "r ∝ L²", correct: false, feedback: "That's the dependence of r⁴, not r. The force balance gives r⁴ ∝ L², so the fourth root pulls the exponent down to 1/2 — the radius itself scales as L^{1/2}, not L².", distractor_type: "procedural_slip" as const },
-          { text: "r ∝ L", correct: false, feedback: "Linear scaling skips the fourth root. Because r⁴ ∝ L², the radius scales as the fourth root of L², which is L^{1/2}, so r grows more slowly than linearly in L.", distractor_type: "half_right" as const },
-          { text: "r ∝ 1/L", correct: false, feedback: "An inverse dependence points the wrong way. More angular momentum pushes the orbit OUT, so r increases with L; the relation r⁴ ∝ L² gives r ∝ L^{1/2}, a growing function.", distractor_type: "misconception" as const }
-        ],
-        tip: "Read the exponent off the power relation: r⁴ ∝ L² means r ∝ L^{1/2}."
-      },
-      {
-        type: "limit",
-        label: "CHECK THE EXTREME",
-        icon: "🔭",
-        prompt: "Stress-test the radius at an extreme. Sound right, or is it a trap?",
-        claim: {
-          statement: "Stiffen the well without bound (k → ∞) and the circular orbit grows without bound too.",
-          isTrap: true,
-          feedbackTrap: "Right — it's a trap. Since r ∝ k^{-1/4}, a stiffer well pulls the orbit IN: as k → ∞ the radius shrinks toward zero, it does not grow.",
-          feedbackSound: "Not quite — this is a trap. r ∝ k^{-1/4}, so a larger k gives a SMALLER radius. Stiffening the well tightens the orbit rather than expanding it."
-        },
-        tip: "Send one parameter to an extreme and check the trend matches the exponent's sign."
+        tip: "List only the quantities the range truly consumes before assembling it."
       },
       {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
-        prompt: "Assemble the SHAPE of the orbit radius from the structural tiles — the root and the ratio. Build the form; the value comes later.",
+        prompt: "Assemble the SYMBOLIC range relation from the structural tiles — the speed factor, the angle factor, the gravity in the denominator. Build the form; numbers come later.",
         build: {
-          tiles: ["r", "=", "$\\left(\\frac{L^2}{2mk}\\right)^{1/4}$", "$\\frac{L^2}{2mk}$", "$\\left(\\frac{2mk}{L^2}\\right)^{1/4}$"],
-          accepted: [
-            ["r", "=", "$\\left(\\frac{L^2}{2mk}\\right)^{1/4}$"]
-          ],
-          distractors: [
-            { tile: "$\\frac{L^2}{2mk}$", feedback: "That's the ratio before the fourth root; r is the fourth root of it, not the ratio itself." },
-            { tile: "$\\left(\\frac{2mk}{L^2}\\right)^{1/4}$", feedback: "That's the inverted ratio; keep L² on top so r grows with L, not shrinks." }
-          ],
-          feedbackCorrect: "You've assembled the symbolic form r = (L²/2mk)^{1/4}; the recap below shows the worked derivation.",
-          feedbackWrong: "Reassemble the skeleton: r equals the fourth root of L²/(2mk) — the recap carries it through."
+          equation: {
+            lhs_terms: ["R"],
+            relation: "=",
+            rhs_terms: ["$\\frac{v^2 \\sin 2\\theta}{g}$"],
+            distractor_terms: [
+              { term: "$\\frac{v \\sin 2\\theta}{g}$", feedback: "That shape carries only a single power of the speed; the recap restores the full speed factor in the form." },
+              { term: "$\\frac{v^2 \\sin\\theta}{g}$", feedback: "That arrangement narrows the angle factor; the recap settles where the doubled-angle structure belongs." }
+            ]
+          },
+          feedbackCorrect: "You've assembled the symbolic range; the recap below carries the structure through to its value.",
+          feedbackWrong: "Reassemble the skeleton: the range is the speed factor times the angle factor over gravity, which the recap then values."
         },
-        tip: "Assemble the SHAPE of the answer — the root and the ratio — and let the recap fill in the value."
+        tip: "Build the FORMULA first; numbers go in only at the recap."
+      }
+    ]
+  }
+};
+
+// Class 12 — LEAN 3-move roadmap (6 steps): trap -> roadmap (3 moves) -> feeds
+// -> produces -> setup -> form. Tuned between the class-11 and college examples.
+const EXAMPLE_CLASS_12 = {
+  title: "Radius of an electron's circular orbit in a uniform magnetic field",
+  subject: "electrodynamics",
+  topic: "Magnetic Force",
+  difficulty: "class_12",
+  scenario: "An electron of charge q and mass m enters a uniform magnetic field B at speed v, perpendicular to the field. Find the radius of its circular orbit.",
+  goal: "Find: $r = \\frac{mv}{qB}$",
+  final_answer: "$r = \\frac{mv}{qB}$",
+  diagram_type: null,
+  solution_flow: {
+    steps: [
+      {
+        type: "trap",
+        label: "SPOT THE TRAP",
+        icon: "⚠️",
+        prompt: "You see a charge in a field and reach for the electric force qE — but here the field is MAGNETIC, and the force depends on the velocity. Sound right, or is that a trap?",
+        claim: {
+          statement: "The force bending the electron is just qE, the same electric force a charge feels in any field.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. A magnetic field exerts qvB, which depends on the speed and is always perpendicular to the velocity, not the speed-independent qE.",
+          feedbackSound: "Not quite — this is a trap. The magnetic force is qvB, perpendicular to v, so it supplies the centripetal force; qE is the wrong law here."
+        },
+        tip: "Read whether the field is electric or magnetic before choosing the force law."
+      },
+      {
+        type: "roadmap",
+        label: "MAP THE DERIVATION",
+        icon: "🗺️",
+        prompt: "Tap the high-level moves into the ORDER that reaches the orbit radius. Two tiles are wrong moves — leave them out.",
+        build: {
+          moves: [
+            "Set the magnetic force equal to the centripetal force",
+            "Balance the two forces to isolate the orbit radius",
+            "Express the radius through the electron's speed and the field"
+          ],
+          distractor_moves: [
+            { move: "Add gravity into the force balance for the electron", feedback: "Gravity on an electron is utterly negligible next to the magnetic force, so including it corrupts the centripetal balance." },
+            { move: "Solve for the orbital period before the radius", feedback: "The period follows from the radius, not the other way round; reaching for it first skips the force balance you actually need." }
+          ],
+          feedbackCorrect: "Exactly: equate the magnetic and centripetal forces, isolate the radius, then express it through the speed and field.",
+          feedbackWrong: "Rebuild the plan: equate the magnetic force to the centripetal force, then isolate the radius before expressing it."
+        },
+        tip: "Order the moves before algebra — force balance first, isolate the unknown second."
+      },
+      {
+        type: "feeds",
+        label: "WHAT GOES IN",
+        icon: "🔌",
+        prompt: "For the force-balance move, tap every quantity that actually feeds into it — and leave the same-family red herrings.",
+        multiselect: {
+          items: [
+            { text: "The electron charge q", matters: true },
+            { text: "The electron speed v", matters: true },
+            { text: "The magnetic field strength B", matters: true },
+            { text: "The electron mass m", matters: true },
+            { text: "An applied electric field E", matters: false },
+            { text: "The elapsed time t", matters: false }
+          ],
+          feedbackCorrect: "Right — the charge, the speed, the field, and the mass set the balance; there is no electric field here and time never enters the radius.",
+          feedbackWrong: "The force balance uses the charge, speed, field, and mass only. There is no electric field in this setup, and time does not enter a circular radius."
+        },
+        tip: "Tap only the quantities the force balance consumes before assembling it."
+      },
+      {
+        type: "produces",
+        label: "WHAT IT PRODUCES",
+        icon: "🔎",
+        prompt: "You set the magnetic force equal to the centripetal force. Sound right, or is that a trap?",
+        claim: {
+          statement: "Balancing the forces hands you the electron's speed directly as the final answer.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. The balance is a relation between the radius and the speed; it produces the radius once you isolate it, not the speed.",
+          feedbackSound: "Not quite — this is a trap. The force balance produces a relation you must rearrange for the radius; the speed is an input, not the output."
+        },
+        tip: "Name what a move actually produces — an intermediate relation is not the final answer."
+      },
+      {
+        type: "setup",
+        label: "SET UP THE MATH",
+        icon: "🔧",
+        prompt: "Build the force-balance equation: the magnetic force supplies the centripetal force. Assemble the tiles into the correct relation.",
+        build: {
+          equation: {
+            lhs_terms: ["$qvB$"],
+            relation: "=",
+            rhs_terms: ["$\\frac{mv^2}{r}$"],
+            distractor_terms: [
+              { term: "$qE$", feedback: "There is no electric field here; the bending force is magnetic, qvB, not the electric force qE." },
+              { term: "$mg$", feedback: "Gravity on an electron is negligible against the magnetic force and has no place in this centripetal balance." }
+            ]
+          },
+          feedbackCorrect: "Clean. The magnetic force qvB supplies exactly the centripetal force mv²/r needed for the circular orbit.",
+          feedbackWrong: "Balance the magnetic force against the centripetal requirement: qvB = mv²/r, with no electric or gravitational term."
+        },
+        tip: "Set the real force equal to the centripetal requirement, then cancel a power of v."
+      },
+      {
+        type: "form",
+        label: "ASSEMBLE THE FORM",
+        icon: "🏗️",
+        prompt: "Assemble the SYMBOLIC form of the orbit radius from the structural tiles — the momentum on top, the charge-field product underneath. Build the form; the value comes later.",
+        build: {
+          equation: {
+            lhs_terms: ["r"],
+            relation: "=",
+            rhs_terms: ["$\\frac{mv}{qB}$"],
+            distractor_terms: [
+              { term: "$\\frac{qB}{mv}$", feedback: "That tile inverts the ratio; the recap keeps the momentum on top so the radius grows with the speed." },
+              { term: "$\\frac{mv^2}{qB}$", feedback: "That tile keeps an extra power of the speed; the recap settles the radius with a single power of v." }
+            ]
+          },
+          feedbackCorrect: "You've assembled the symbolic radius; the recap below carries the structure through to its value.",
+          feedbackWrong: "Reassemble the skeleton: the radius is the momentum over the charge-field product, which the recap then values."
+        },
+        tip: "Assemble the SHAPE — momentum over the charge-field product — and let the recap fill the value."
+      }
+    ]
+  }
+};
+
+// College — LEAN Schrödinger / infinite square well (7 steps): trap -> roadmap
+// -> feeds -> produces -> setup -> feeds (BCs) -> form. The richest example;
+// demonstrates the full derivation-roadmap spine plus both Contract-C builds.
+const EXAMPLE_COLLEGE = {
+  title: "Energy levels of a particle in a 1-D infinite square well of width L",
+  subject: "quantum_mechanics",
+  topic: "Infinite Square Well",
+  difficulty: "college",
+  scenario: "A particle of mass m is confined to a one-dimensional infinite square well of width L, where the potential is zero inside (0 < x < L) and infinite outside. Find the allowed energy levels.",
+  goal: "Find: $E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$",
+  final_answer: "$E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$",
+  diagram_type: null,
+  solution_flow: {
+    steps: [
+      {
+        type: "trap",
+        label: "SPOT THE TRAP",
+        icon: "⚠️",
+        prompt: "You reach for a free-particle plane wave e^{ikx} — but the infinite walls change everything. Sound right, or is that a trap?",
+        claim: {
+          statement: "Inside the well the particle is free, so its state is just a single travelling plane wave.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. A single travelling wave never vanishes at both walls; the confinement forces a standing-wave combination that the boundary conditions then quantize.",
+          feedbackSound: "Not quite — this is a trap. The walls demand the wavefunction vanish at both edges, which a lone travelling plane wave cannot do; you need a standing wave."
+        },
+        tip: "Before reusing a free-particle solution, check whether boundaries pin the state down."
+      },
+      {
+        type: "roadmap",
+        label: "MAP THE DERIVATION",
+        icon: "🗺️",
+        prompt: "Tap the high-level moves into the ORDER an expert would chain to reach the energy levels. Two tiles are wrong moves — leave them out.",
+        build: {
+          moves: [
+            "Solve the governing equation inside the well",
+            "Impose the boundary conditions at the walls",
+            "Read off the quantized energy levels"
+          ],
+          distractor_moves: [
+            { move: "Normalize the wavefunction before applying the boundary conditions", feedback: "Normalization fixes the amplitude but never quantizes the energy; doing it first skips the boundary conditions that actually pin the allowed states." },
+            { move: "Apply the boundary conditions before solving the equation", feedback: "There is no general solution to constrain yet; imposing boundary conditions before solving leaves nothing for them to act on." }
+          ],
+          feedbackCorrect: "Exactly the right plan: solve inside the well, impose the walls' boundary conditions, then read off the quantized energies.",
+          feedbackWrong: "Rebuild the plan: solve the governing equation first, then impose the boundary conditions, then read off the energy levels."
+        },
+        tip: "Sequence the moves before algebra — solve, constrain, then read off."
+      },
+      {
+        type: "feeds",
+        label: "WHAT GOES IN",
+        icon: "🔌",
+        prompt: "For the move that solves the governing equation inside the well, tap every quantity that actually feeds into it — and leave the red herrings.",
+        multiselect: {
+          items: [
+            { text: "The potential V(x) = 0 inside the well", matters: true },
+            { text: "The particle mass m", matters: true },
+            { text: "The reduced Planck constant ℏ", matters: true },
+            { text: "A measured energy value from experiment", matters: false },
+            { text: "The explicit time-dependence of the state", matters: false }
+          ],
+          feedbackCorrect: "Right — the zero interior potential, the mass, and ℏ set the equation; no measured energy is assumed and the time-independent equation drops the time-dependence.",
+          feedbackWrong: "Solving inside the well uses the zero interior potential, the mass, and ℏ. You do not assume a measured energy, and the time-independent equation has no explicit time."
+        },
+        tip: "Feed the move only what it consumes — potential, mass, and ℏ here."
+      },
+      {
+        type: "produces",
+        label: "WHAT IT PRODUCES",
+        icon: "🔎",
+        prompt: "You solved the governing equation and obtained a wavefunction Ψ. Sound right, or is that a trap?",
+        claim: {
+          statement: "You've solved the equation — that Ψ is the final answer for the particle's state.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. That Ψ is only the GENERAL solution inside the well; the boundary conditions still have to pin down which combinations survive.",
+          feedbackSound: "Not quite — this is a trap. Solving the equation yields the general wavefunction, not the answer; the boundary conditions must still quantize it."
+        },
+        tip: "A general solution is not the answer — recognise what a move actually produces."
+      },
+      {
+        type: "setup",
+        label: "SET UP THE MATH",
+        icon: "🔧",
+        prompt: "Build the time-independent Schrödinger equation for the particle inside the well. Assemble the tiles into the correct relation.",
+        build: {
+          equation: {
+            lhs_terms: ["$-\\frac{\\hbar^2}{2m}\\frac{d^2\\psi}{dx^2}$"],
+            relation: "=",
+            rhs_terms: ["$E\\psi$"],
+            distractor_terms: [
+              { term: "$i\\hbar\\frac{\\partial\\psi}{\\partial t}$", feedback: "That is the time-dependent right-hand side; the stationary states obey the time-INDEPENDENT equation, so the energy term belongs here instead." },
+              { term: "$V(x)\\psi$", feedback: "Inside the well the potential is zero, so a V(x)Ψ term contributes nothing and does not belong in the interior equation." }
+            ]
+          },
+          feedbackCorrect: "Clean. With V = 0 inside, the kinetic term alone equals EΨ — the time-independent Schrödinger equation for the well.",
+          feedbackWrong: "Set the interior kinetic term equal to EΨ: there is no potential term and no time-derivative inside the well."
+        },
+        tip: "Inside the well V = 0, so the time-independent equation is purely the kinetic term equal to EΨ."
+      },
+      {
+        type: "feeds",
+        label: "WHAT GOES IN",
+        icon: "🔌",
+        prompt: "For the move that imposes the boundary conditions, tap every quantity that actually feeds into it — and leave the red herrings.",
+        multiselect: {
+          items: [
+            { text: "The condition Ψ(0) = 0 at the left wall", matters: true },
+            { text: "The condition Ψ(L) = 0 at the right wall", matters: true },
+            { text: "The well width L", matters: true },
+            { text: "The particle's measured momentum", matters: false },
+            { text: "The elapsed time t", matters: false }
+          ],
+          feedbackCorrect: "Right — the vanishing of Ψ at both walls and the width L are what quantize the wavenumber; momentum and time never enter the boundary conditions.",
+          feedbackWrong: "Imposing the walls uses Ψ = 0 at both edges and the width L. A measured momentum and the elapsed time play no part in the boundary conditions."
+        },
+        tip: "The boundary conditions consume only the wall constraints and the width."
+      },
+      {
+        type: "form",
+        label: "ASSEMBLE THE FORM",
+        icon: "🏗️",
+        prompt: "Assemble the SYMBOLIC energy-level skeleton from the structural tiles — the level index on top, the well width squared underneath. Build the form; numbers come later.",
+        build: {
+          equation: {
+            lhs_terms: ["$E_n$"],
+            relation: "=",
+            rhs_terms: ["$\\frac{n^2\\pi^2\\hbar^2}{2mL^2}$"],
+            distractor_terms: [
+              { term: "$\\frac{n\\pi\\hbar}{2mL}$", feedback: "That tile is the quantized wavenumber scale, not the energy; the recap keeps the squared structure that the energy carries." },
+              { term: "$\\frac{2mL^2}{n^2\\pi^2\\hbar^2}$", feedback: "That tile inverts the ratio; the recap keeps the level index and ℏ on top so the energy rises with the level number." }
+            ]
+          },
+          feedbackCorrect: "You've assembled the symbolic energy levels; the recap below carries the structure through to its value.",
+          feedbackWrong: "Reassemble the skeleton: the energy is the squared level index times ℏ over twice the mass and width squared, which the recap then values."
+        },
+        tip: "Assemble the SHAPE of the levels — index squared on top, width squared below — and let the recap fill the value."
       }
     ]
   }
@@ -447,7 +572,7 @@ const EXAMPLE_COLLEGE = {
 
 // Exposed for the test suite's guard that each example's terminal `form` step
 // assembles the SYMBOLIC answer skeleton (accepted[0]) and ends the flow.
-export const __TEST_EXAMPLES = { EXAMPLE_CLASS_11, EXAMPLE_COLLEGE };
+export const __TEST_EXAMPLES = { EXAMPLE_CLASS_11, EXAMPLE_CLASS_12, EXAMPLE_COLLEGE };
 
 // ─── MISCONCEPTION CATALOG ──────────────────────────────────────────────────
 
@@ -529,12 +654,13 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
-- Use 5-6 steps (max 8). Focus on building correct problem-solving habits.
+- Use 4-6 steps (max 8). Focus on building correct problem-solving habits.
 - Start with the step type that best hooks the student into the problem.
 - The trap step should target the most common beginner mistake (wrong units, wrong formula, sign errors).
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Recommended step pattern: identify/trap/principle → setup → depends → scale (×1-2) → limit → form`,
+- Keep the derivation roadmap SHORT (2 moves). The roadmap may gracefully collapse
+  to: trap/identify → roadmap (2 moves) → feeds → form.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
 - Use 5-7 steps (max 8). Problems should require multi-step reasoning.
@@ -542,15 +668,15 @@ const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
 - The trap step should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: identify/trap/principle → setup → depends → scale (×1-2) → limit → form`,
+- Recommended step pattern: trap/identify → roadmap (2-3 moves) → feeds → produces → setup → form.`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
 - Use 6-8 steps. Problems should require deep physical insight.
-- Optionally include a "why" step to explain the deeper physics behind a key result.
 - The trap should target a sophisticated error (applying a theorem outside its domain, confusing similar-looking results).
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
-- Recommended step pattern: trap/identify → principle → setup → depends → scale (×1-2) → limit → form`,
+- Recommended step pattern: trap/identify → roadmap → feeds → produces → setup → feeds (constraints) → form.
+- At most ONE multiple-choice (principle) beat, and often zero — lean on roadmap/feeds/produces instead.`,
 };
 
 // ─── GENERATION PIPELINE ─────────────────────────────────────────────────────
@@ -580,10 +706,26 @@ interface GeneratedMultiSelect {
   feedbackWrong: string;
 }
 
+// Contract C — for build-format `setup`/`form` steps the MODEL emits constrained
+// term arrays instead of pre-assembled tiles; CODE assembles the tray + accepted
+// arrangement so the relation is ALWAYS its own tile and no tile embeds a relation.
+interface EquationContract {
+  lhs_terms: string[];
+  relation: string;
+  rhs_terms: string[];
+  distractor_terms: { term: string; feedback: string }[];
+}
+
 interface GeneratedBuild {
-  tiles: string[];
-  accepted: string[][];
-  distractors: { tile: string; feedback: string }[];
+  // Code-assembled fields (also accepted directly for legacy/stored build steps).
+  tiles?: string[];
+  accepted?: string[][];
+  distractors?: { tile: string; feedback: string }[];
+  // Contract C: setup/form emit an equation contract; CODE assembles tiles/accepted.
+  equation?: EquationContract;
+  // Roadmap contract: prose move-labels the student orders; CODE assembles tiles/accepted.
+  moves?: string[];
+  distractor_moves?: { move: string; feedback: string }[];
   feedbackCorrect: string;
   feedbackWrong: string;
 }
@@ -704,10 +846,10 @@ Rules:
 - NEVER ask "What is the value of X?" with options like "42", "84", "21". That requires computation.
 - INSTEAD ask "Which approach gives you X?" or "What happens to X when Y changes?" or "Which equation correctly sets up this relationship?"
 - The "setup" step is a BUILD step: the student assembles atomic equation tiles into the correct setup (drag-and-drop), NOT picking from 4 equation options and NOT deriving the equation by hand.
-- The "approach" step should ask "How will you derive it?" / "Which simplification gets you there?" — conceptual choices between strategies, NOT asking for arithmetic.
 - Think of each step as a DECISION POINT, not a CALCULATION POINT.
 - The student should feel like they're making strategic choices, like a game — not doing homework.
-- TERMINAL REASONING CHAIN — instead of asking for the worked value, the problem ends by reasoning about the answer's STRUCTURE: "depends" (which quantities the answer involves), "scale" (how it scales with one variable, exponent reasoning, NO arithmetic), "limit" (a sounds-right vs it's-a-trap claim about an extreme), then "form" (ASSEMBLE THE FORM, TERMINAL): a build step where the student assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers. The exact value is revealed only in the recap, never picked here. The "form" step's feedback is NON-COMMITTAL (no "correct"/"wrong"/celebration — calmly note the form is assembled and the recap carries it through).
+- THE DERIVATION ROADMAP — instead of asking for the worked value, gamify the derivation itself: "roadmap" (MAP THE DERIVATION, a build step where the student taps prose MOVE-tiles into the correct order — the spine), "feeds" (WHAT GOES IN, multiselect — tap the inputs a move consumes), "produces" (WHAT IT PRODUCES, a sounds-right vs it's-a-trap claim about what a move just produced), and "setup" (an equation built from the Contract-C term arrays). The problem ALWAYS ends in "form" (ASSEMBLE THE FORM, TERMINAL): a build step where the student assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers. The exact value is revealed only in the recap, never picked here. The "form" step's feedback is NON-COMMITTAL (no "correct"/"wrong"/celebration — calmly note the form is assembled and the recap carries it through).
+- LEAN, NOT QUIZZY: at most ONE multiple-choice ("principle") beat per problem, often zero. The roadmap (build), feeds (multiselect), and produces (claim) carry the flow.
 
 CRITICAL QUALITY RULES:
 
@@ -742,8 +884,8 @@ CRITICAL QUALITY RULES:
      structure settles"). BANNED words/phrases on this step: "correct", "wrong",
      "incorrect", "mistake", "exactly right", "perfect", "nailed", "you got it",
      "instead of", "you should have", "you used", "you added", "you subtracted".
-     Do NOT celebrate. Every OTHER step type (principle/why/approach/scale) keeps
-     rules a)/b)/c) and names the error normally.
+     Do NOT celebrate. The "principle" MCQ step keeps rules a)/b)/c) and names the
+     error normally.
 
 4. CORRECT ANSWER FEEDBACK:
    - 1-2 sentences, concise and encouraging.
@@ -764,9 +906,9 @@ CRITICAL QUALITY RULES:
    - "final_answer": The numerical/symbolic answer
    - Last step MUST be type "form" (ASSEMBLE THE FORM): a build step that assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers, with non-committal feedback (no celebration). The exact value is revealed only in the recap.
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
-     trap/limit → "claim" object; identify/depends → "multiselect" object;
-     setup/form → "build" object; principle/why/approach/scale → "options"
-     (exactly 4: 1 correct, 3 wrong).
+     trap/produces → "claim" object; identify/feeds → "multiselect" object;
+     setup/form → "equation" contract (Contract C term arrays); roadmap → "moves"
+     contract; principle → "options" (exactly 4: 1 correct, 3 wrong).
    - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
    - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
 }
@@ -785,7 +927,12 @@ export async function generateProblem(
   const systemPrompt = buildSystemPrompt(difficulty, subject, topic);
 
   // Pick the right example based on difficulty
-  const example = difficulty === "college" ? EXAMPLE_COLLEGE : EXAMPLE_CLASS_11;
+  const example =
+    difficulty === "college"
+      ? EXAMPLE_COLLEGE
+      : difficulty === "class_12"
+        ? EXAMPLE_CLASS_12
+        : EXAMPLE_CLASS_11;
 
   const userPrompt = `Generate ONE physics problem:
 - Subject: ${subject}
@@ -871,6 +1018,9 @@ const STEP_LABELS: Record<string, string> = {
   depends: "WHAT IT INVOLVES",
   scale: "HOW IT SCALES",
   limit: "CHECK THE EXTREME",
+  roadmap: "MAP THE DERIVATION",
+  produces: "WHAT IT PRODUCES",
+  feeds: "WHAT GOES IN",
   form: "ASSEMBLE THE FORM",
 };
 
@@ -928,17 +1078,11 @@ export function validateAndNormalize(
     throw new Error(`Expected at most 3 "approach" steps, got ${approachCount}`);
   }
 
-  // Bound the number of "scale" (HOW IT SCALES) steps. The scaling beat may
-  // appear 1-2× (e.g. one per independent variable); more than 2 is rejected.
-  const scaleCount = steps.filter((s) => s.type === "scale").length;
-  if (scaleCount > 2) {
-    throw new Error(`Expected at most 2 "scale" steps, got ${scaleCount}`);
-  }
-
   // HARD BLOCK: newly generated problems must not use retired legacy-only step
-  // types (see LEGACY_ONLY_STEP_TYPES). They remain valid for rendering already-
-  // stored legacy/seeded problems, but generation (this path) must never emit
-  // them. A leaked legacy type throws, which the retry loop turns into a
+  // types (see LEGACY_ONLY_STEP_TYPES — now includes depends/scale/limit, which
+  // the derivation-roadmap pedagogy replaced). They remain valid for rendering
+  // already-stored legacy/seeded problems, but generation (this path) must never
+  // emit them. A leaked legacy type throws, which the retry loop turns into a
   // regeneration.
   const legacyOnly = steps.filter((s) =>
     LEGACY_ONLY_STEP_TYPES.includes(s.type as StepType)
@@ -1025,6 +1169,14 @@ export function validateAndNormalize(
         validateMultiSelectStep(step, i);
         break;
       case "build":
+        // Contract C: if the model supplied a constrained `equation` (setup/form)
+        // or `moves` (roadmap) contract instead of pre-assembled tiles, CODE
+        // assembles tiles/accepted/distractors deterministically here — BEFORE any
+        // feedback sanitization or validation runs. This guarantees the relation
+        // operator is always its own tile and no tile can embed a relation.
+        if (step.build) {
+          assembleBuildFromContract(step.build, i);
+        }
         // For the terminal `form` build step, neutralize committal/celebratory
         // feedback IN PLACE before validating — the length checks must hold AFTER
         // substitution, so this must run before validateBuildStep. Legacy `setup`
@@ -1100,6 +1252,84 @@ function sanitizeFormFeedback(build: GeneratedBuild): void {
       );
       d.feedback = NEUTRAL_FORM_DISTRACTOR_FALLBACK;
     }
+  }
+}
+
+// Synthesized feedback fallbacks for code-assembled build steps when the model
+// omitted feedbackCorrect/feedbackWrong (both clear the 40-char build minimum).
+const SYNTH_BUILD_FEEDBACK_CORRECT =
+  "Exactly — the tiles are arranged into the correct relation, with the operator standing on its own.";
+const SYNTH_BUILD_FEEDBACK_WRONG =
+  "Not the right arrangement — rebuild the relation so each side's terms sit on the correct side of the operator.";
+
+/**
+ * CONTRACT C ASSEMBLER. For build-format steps the model emits constrained,
+ * relation-free arrays instead of pre-assembled tiles, and CODE deterministically
+ * builds `tiles` / `accepted` / `distractors` from them. This guarantees the
+ * relation operator is ALWAYS its own tile and no tile can embed a relation
+ * (tileHasEmbeddedRelation can never fire on a code-assembled tile).
+ *
+ * Two contract shapes are handled:
+ *  - `equation` (setup/form): tiles = [...lhs_terms, relation, ...rhs_terms,
+ *    ...distractor_terms], accepted = [[...lhs_terms, relation, ...rhs_terms]],
+ *    distractors = distractor_terms mapped to { tile, feedback }.
+ *  - `moves` (roadmap): tiles = [...moves, ...distractor_moves], accepted =
+ *    [[...moves]] (every correct move, in order), distractors = distractor_moves.
+ *
+ * Legacy/stored build steps that already carry `tiles`/`accepted` (no contract)
+ * pass through untouched. Synthesizes feedbackCorrect/feedbackWrong if absent.
+ */
+function assembleBuildFromContract(build: GeneratedBuild, i: number): void {
+  // Equation contract (setup / form).
+  if (build.equation) {
+    const eq = build.equation;
+    if (
+      !Array.isArray(eq.lhs_terms) ||
+      !Array.isArray(eq.rhs_terms) ||
+      typeof eq.relation !== "string"
+    ) {
+      throw new Error(
+        `Step ${i} build.equation must have lhs_terms[], relation, rhs_terms[]`
+      );
+    }
+    const distractorTerms = Array.isArray(eq.distractor_terms)
+      ? eq.distractor_terms
+      : [];
+    const acceptedOrder = [...eq.lhs_terms, eq.relation, ...eq.rhs_terms];
+    build.accepted = [acceptedOrder];
+    build.distractors = distractorTerms.map((d) => ({
+      tile: d.term,
+      feedback: d.feedback,
+    }));
+    build.tiles = [...acceptedOrder, ...distractorTerms.map((d) => d.term)];
+    delete build.equation;
+  } else if (build.moves) {
+    // Roadmap contract: prose move-labels the student orders.
+    if (!Array.isArray(build.moves)) {
+      throw new Error(`Step ${i} build.moves must be an array of prose moves`);
+    }
+    const distractorMoves = Array.isArray(build.distractor_moves)
+      ? build.distractor_moves
+      : [];
+    build.accepted = [[...build.moves]];
+    build.distractors = distractorMoves.map((d) => ({
+      tile: d.move,
+      feedback: d.feedback,
+    }));
+    build.tiles = [...build.moves, ...distractorMoves.map((d) => d.move)];
+    delete build.moves;
+    delete build.distractor_moves;
+  } else {
+    // Legacy/stored build step already carrying tiles/accepted — pass through.
+    return;
+  }
+
+  // Synthesize missing feedback (model may omit it on code-assembled steps).
+  if (!build.feedbackCorrect || build.feedbackCorrect.trim().length === 0) {
+    build.feedbackCorrect = SYNTH_BUILD_FEEDBACK_CORRECT;
+  }
+  if (!build.feedbackWrong || build.feedbackWrong.trim().length === 0) {
+    build.feedbackWrong = SYNTH_BUILD_FEEDBACK_WRONG;
   }
 }
 
@@ -1488,7 +1718,12 @@ export async function regenerateSteps(
   input: RegenerateStepsInput
 ): Promise<GeneratedProblem["solution_flow"]> {
   const systemPrompt = buildSystemPrompt(input.difficulty, input.subject, input.topic);
-  const exampleProblem = input.difficulty === "college" ? EXAMPLE_COLLEGE : EXAMPLE_CLASS_11;
+  const exampleProblem =
+    input.difficulty === "college"
+      ? EXAMPLE_COLLEGE
+      : input.difficulty === "class_12"
+        ? EXAMPLE_CLASS_12
+        : EXAMPLE_CLASS_11;
 
   const userPrompt = `Here is an existing physics problem. Regenerate ONLY the step-by-step solution breakdown. Keep the same problem statement and answer.
 
