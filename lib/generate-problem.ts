@@ -1109,15 +1109,40 @@ const STEP_LABELS: Record<string, string> = {
  * left DISTINCT on purpose, because the goal is only to block a verbatim
  * duplicate, and treating LaTeX variants as equal risks false rejections of
  * genuinely-different relations.
+ *
+ * ONE algebraic concession: equality is symmetric, so a single-`=` equation is
+ * canonicalized by sorting its two sides. This catches a setup that merely
+ * side-swaps the terminal form (`A = B` vs `B = A`) — textually different but the
+ * same relation. Directed relations (<, >, ∝, …) are left order-sensitive.
  */
 function normalizeEquationOrdering(ordering: string[]): string {
-  return ordering
-    .join("")
-    // Remove LaTeX spacing macros (\, \! \: \; \> and an escaped space "\ ").
-    .replace(/\\[,!:;> ]/g, "")
-    // Drop all `$` math delimiters (surrounding or inline) and whitespace.
-    .replace(/\$/g, "")
-    .replace(/\s+/g, "");
+  const norm = (s: string) =>
+    s
+      // Remove LaTeX spacing macros (\, \! \: \; \> and an escaped space "\ ").
+      .replace(/\\[,!:;> ]/g, "")
+      // Drop all `$` math delimiters (surrounding or inline) and whitespace.
+      .replace(/\$/g, "")
+      .replace(/\s+/g, "");
+
+  // Equality is SYMMETRIC: "A = B" and "B = A" are the same relation, so a setup
+  // that side-swaps the terminal form's equation is still a duplicate. When the
+  // ordering has exactly one bare "=" relation tile, split into the two sides and
+  // sort them so the comparison is order-invariant. Inequalities (<, >, ∝, …) are
+  // direction-sensitive and are NOT canonicalized this way, so genuinely distinct
+  // directed relations stay distinct.
+  const eqIdx = ordering.reduce<number[]>((acc, t, idx) => {
+    if (norm(t) === "=") acc.push(idx);
+    return acc;
+  }, []);
+  if (eqIdx.length === 1) {
+    const i = eqIdx[0];
+    const lhs = norm(ordering.slice(0, i).join(""));
+    const rhs = norm(ordering.slice(i + 1).join(""));
+    const [a, b] = [lhs, rhs].sort();
+    return `${a}=${b}`;
+  }
+
+  return norm(ordering.join(""));
 }
 
 /**
@@ -1832,7 +1857,14 @@ function validateBuildStep(step: GeneratedStep, i: number): void {
       `Step ${i} build.tiles must have 3-10 tiles, got ${Array.isArray(build.tiles) ? build.tiles.length : "none"}`
     );
   }
-  // All tiles must be unique
+  // All tiles must be unique. The embedded-relation atomicity rule (the relation
+  // operator must be its own tile) only applies to EQUATION-contract steps
+  // (setup/form), where tiles are algebra fragments the student arranges around a
+  // lone operator. A `roadmap` step's tiles are prose MOVE LABELS — an action like
+  // "Solve for $s$ using $v^2 = u^2 + 2as$" legitimately references an equation, so
+  // applying the atomicity rule there is a false positive that burns the retry
+  // budget on valid output. Skip the check for roadmap moves.
+  const enforceTileAtomicity = step.type !== "roadmap";
   const seen = new Set<string>();
   for (const tile of build.tiles) {
     if (typeof tile !== "string" || tile.trim().length === 0) {
@@ -1841,7 +1873,7 @@ function validateBuildStep(step: GeneratedStep, i: number): void {
     if (seen.has(tile)) {
       throw new Error(`Step ${i} build.tiles has a duplicate tile: "${tile}"`);
     }
-    if (tileHasEmbeddedRelation(tile)) {
+    if (enforceTileAtomicity && tileHasEmbeddedRelation(tile)) {
       throw new Error(
         `Step ${i} build tile "${tile}" embeds a relation operator; tiles must be atomic fragments and the relation operator (e.g. "=") must be its own separate tile`
       );

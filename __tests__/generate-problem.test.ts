@@ -1467,6 +1467,29 @@ describe("validateAndNormalize", () => {
     expect(build.distractor_moves).toBeUndefined();
   });
 
+  it("allows a roadmap move tile that references an equation (atomicity rule is equation-only)", () => {
+    // A roadmap MOVE is a prose action label; referencing an equation inline
+    // (e.g. "Solve for $s$ using $v^2 = u^2 + 2as$") is legitimate and must NOT
+    // trip the embedded-relation atomicity guard, which applies only to
+    // equation-contract (setup/form) tiles.
+    const problem = makeValidProblem();
+    const roadmap = makeRoadmapStep(
+      "Tap the high-level moves into the order that reaches the answer."
+    );
+    roadmap.build!.moves = [
+      "Write the kinematic relation $v^2 = u^2 + 2as$",
+      "Solve for the displacement $s$",
+    ];
+    problem.solution_flow.steps = [
+      ...makeValidOpening(),
+      roadmap,
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+  });
+
   it("a code-assembled equation tile never trips tileHasEmbeddedRelation", () => {
     // The whole point of Contract C: even though the model 'meant' an equation,
     // the assembled tiles are atomic, so the embedded-relation guard never fires.
@@ -1613,6 +1636,44 @@ describe("validateAndNormalize", () => {
     ];
     expect(() =>
       validateAndNormalize(problem, "thermodynamics", "Kinetic Theory", "college")
+    ).toThrow(/setup step \d+ assembles the same equation as the terminal form/i);
+  });
+
+  it("rejects a setup that side-swaps the terminal form (A = B vs B = A is the same relation)", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "class_11";
+    // setup: ⟨KE⟩ = (3/2) k_B T ; form: (3/2) k_B T = ⟨KE⟩ — same equation, sides
+    // swapped. Equality is symmetric, so this is a duplicate and must be rejected.
+    const setup = makeEquationSetupStep("Set up the average-kinetic-energy relation.");
+    setup.build!.equation = {
+      lhs_terms: ["$\\langle KE \\rangle$"],
+      relation: "=",
+      rhs_terms: ["$\\frac{3}{2}", "k_B T$"],
+      distractor_terms: [
+        { term: "$2 k_B T$", feedback: "that drops the three-halves factor from the equipartition result" },
+      ],
+    };
+    const form = makeFormStep("Assemble the SYMBOLIC energy form from the structural tiles.");
+    form.build = {
+      equation: {
+        lhs_terms: ["$\\frac{3}{2}", "k_B T$"],
+        relation: "=",
+        rhs_terms: ["$\\langle KE \\rangle$"],
+        distractor_terms: [
+          { term: "$2 k_B T$", feedback: "that drops the three-halves factor from the equipartition result" },
+        ],
+      },
+      feedbackCorrect: neutralFormFeedback("the symbolic energy skeleton"),
+      feedbackWrong: neutralFormFeedback("a reshaped energy skeleton; the recap values it"),
+    };
+    problem.solution_flow.steps = [
+      makeMcqStep("principle", "Which governing principle pins down the average molecular kinetic energy?"),
+      setup,
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the energy."),
+      form,
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "thermodynamics", "Kinetic Theory", "class_11")
     ).toThrow(/setup step \d+ assembles the same equation as the terminal form/i);
   });
 
