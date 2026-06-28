@@ -1061,8 +1061,7 @@ function normalizeEquationOrdering(ordering: string[]): string {
   return ordering
     .join("")
     // Remove LaTeX spacing macros (\, \! \: \; \> and an escaped space "\ ").
-    .replace(/\\[,!:;>]/g, "")
-    .replace(/\\ /g, "")
+    .replace(/\\[,!:;> ]/g, "")
     // Drop all `$` math delimiters (surrounding or inline) and whitespace.
     .replace(/\$/g, "")
     .replace(/\s+/g, "");
