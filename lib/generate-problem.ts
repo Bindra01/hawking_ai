@@ -723,7 +723,7 @@ const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   principle → setup → roadmap (2 moves) → feeds → form (it may gracefully
   collapse to principle → setup → roadmap (2 moves) → form).
 - The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. Class 11 is where the governing relation most often equals the answer, so pick a distinct governing law (a definition/balance/conservation relation), not the rearranged answer.
-- When the final formula is ITSELF the central relation (e.g. RMS speed v_rms = √(3RT/M), simple kinematic results like v = u + at), the "setup" MUST be the UPSTREAM governing law it derives from — an energy balance / equipartition (e.g. ½M⟨v²⟩ = 3/2·RT) / definition — and NEVER the rearranged answer.`,
+- When the final formula is ITSELF the central relation (e.g. RMS speed v_rms = √(3RT/M), simple kinematic results like v = u + at), the "setup" MUST be the UPSTREAM, DOMAIN-APPROPRIATE governing law it derives from — force balance, a kinematic definition (e.g. a = dv/dt), a conservation law, a constitutive relation, or an energy balance / equipartition (e.g. ½M⟨v²⟩ = 3/2·RT) ONLY when the topic is thermal — and NEVER the rearranged answer. Match the upstream law to the actual topic; do not force a thermodynamic framing onto mechanics or electrostatics problems.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
 - Use 5-7 steps (max 8). Problems should require multi-step reasoning.
