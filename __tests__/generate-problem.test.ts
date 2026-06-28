@@ -1410,6 +1410,49 @@ describe("validateAndNormalize", () => {
     ).not.toThrow();
   });
 
+  it("rejects a roadmap step that carries the equation contract instead of moves", () => {
+    const problem = makeValidProblem();
+    // A roadmap step (build format) mis-carrying an `equation` contract must be
+    // a hard error, not assembled as if it were a setup/form step.
+    const bad = makeEquationSetupStep(
+      "A roadmap step that wrongly emits the equation contract."
+    );
+    bad.type = "roadmap";
+    bad.label = "MAP THE DERIVATION";
+    bad.icon = "🗺️";
+    problem.solution_flow.steps[1] = bad;
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow(/roadmap.*moves.*not.*equation/i);
+  });
+
+  it("rejects a setup step that carries the moves contract instead of equation", () => {
+    const problem = makeValidProblem();
+    const bad = makeRoadmapStep(
+      "A setup step that wrongly emits the moves contract."
+    );
+    bad.type = "setup";
+    bad.label = "SET UP THE MATH";
+    bad.icon = "🔧";
+    problem.solution_flow.steps[3] = bad;
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow(/setup.*equation.*not.*moves/i);
+  });
+
+  it("rejects a build step that carries BOTH equation and moves contracts", () => {
+    const problem = makeValidProblem();
+    const bad = makeEquationSetupStep(
+      "A setup step that wrongly carries both contracts."
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (bad.build as any).moves = ["one move", "another move"];
+    problem.solution_flow.steps[3] = bad;
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow(/BOTH equation and moves/i);
+  });
+
   // ─── Legacy render path: stored legacy steps still resolve a format ─────────
 
   it("stored legacy depends/scale/limit/solve/sanity/connect steps still resolve via getStepFormat", async () => {

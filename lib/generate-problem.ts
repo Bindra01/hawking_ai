@@ -499,14 +499,14 @@ const EXAMPLE_COLLEGE = {
         type: "produces",
         label: "WHAT IT PRODUCES",
         icon: "🔎",
-        prompt: "You solved the governing equation and obtained a wavefunction Ψ. Sound right, or is that a trap?",
+        prompt: "Before you build it: the solve-inside move will hand you the energy levels directly. Sound right, or is that a trap?",
         claim: {
-          statement: "You've solved the equation — that Ψ is the final answer for the particle's state.",
+          statement: "Solving the governing equation inside the well will produce the final quantized energy levels in one step.",
           isTrap: true,
-          feedbackTrap: "Right — it's a trap. That Ψ is only the GENERAL solution inside the well; the boundary conditions still have to pin down which combinations survive.",
-          feedbackSound: "Not quite — this is a trap. Solving the equation yields the general wavefunction, not the answer; the boundary conditions must still quantize it."
+          feedbackTrap: "Right — it's a trap. Solving inside the well only produces the GENERAL wavefunction Ψ; the boundary conditions still have to pin down which combinations survive before any energy is quantized.",
+          feedbackSound: "Not quite — this is a trap. The solve-inside move yields the general wavefunction, not the energies; the boundary conditions must still quantize it afterward."
         },
-        tip: "A general solution is not the answer — recognise what a move actually produces."
+        tip: "Predict what a move actually produces — a general solution, not the final answer."
       },
       {
         type: "setup",
@@ -573,6 +573,13 @@ const EXAMPLE_COLLEGE = {
 // Exposed for the test suite's guard that each example's terminal `form` step
 // assembles the SYMBOLIC answer skeleton (accepted[0]) and ends the flow.
 export const __TEST_EXAMPLES = { EXAMPLE_CLASS_11, EXAMPLE_CLASS_12, EXAMPLE_COLLEGE };
+
+// Picks the difficulty-matched few-shot example for the prompt.
+function exampleForDifficulty(difficulty: string) {
+  if (difficulty === "college") return EXAMPLE_COLLEGE;
+  if (difficulty === "class_12") return EXAMPLE_CLASS_12;
+  return EXAMPLE_CLASS_11;
+}
 
 // ─── MISCONCEPTION CATALOG ──────────────────────────────────────────────────
 
@@ -927,12 +934,7 @@ export async function generateProblem(
   const systemPrompt = buildSystemPrompt(difficulty, subject, topic);
 
   // Pick the right example based on difficulty
-  const example =
-    difficulty === "college"
-      ? EXAMPLE_COLLEGE
-      : difficulty === "class_12"
-        ? EXAMPLE_CLASS_12
-        : EXAMPLE_CLASS_11;
+  const example = exampleForDifficulty(difficulty);
 
   const userPrompt = `Generate ONE physics problem:
 - Subject: ${subject}
@@ -1175,7 +1177,7 @@ export function validateAndNormalize(
         // feedback sanitization or validation runs. This guarantees the relation
         // operator is always its own tile and no tile can embed a relation.
         if (step.build) {
-          assembleBuildFromContract(step.build, i);
+          assembleBuildFromContract(step.build, step.type, i);
         }
         // For the terminal `form` build step, neutralize committal/celebratory
         // feedback IN PLACE before validating — the length checks must hold AFTER
@@ -1278,11 +1280,49 @@ const SYNTH_BUILD_FEEDBACK_WRONG =
  *
  * Legacy/stored build steps that already carry `tiles`/`accepted` (no contract)
  * pass through untouched. Synthesizes feedbackCorrect/feedbackWrong if absent.
+ *
+ * The contract is type-specific and enforced: `roadmap` MUST use the `moves`
+ * contract; `setup`/`form` MUST use the `equation` contract. A step carrying the
+ * wrong contract for its type is a hard error, not a silent pass-through.
  */
-function assembleBuildFromContract(build: GeneratedBuild, i: number): void {
-  // Equation contract (setup / form).
-  if (build.equation) {
-    const eq = build.equation;
+function assembleBuildFromContract(
+  build: GeneratedBuild,
+  type: string,
+  i: number
+): void {
+  const wantsMoves = type === "roadmap";
+  const hasEquation = build.equation != null;
+  const hasMoves = build.moves != null;
+
+  // Legacy/stored build step already carrying tiles/accepted (no contract).
+  if (!hasEquation && !hasMoves) {
+    return;
+  }
+
+  // Enforce the type→contract mapping so a malformed LLM response can't persist
+  // a mis-rendered step.
+  if (hasEquation && hasMoves) {
+    throw new Error(
+      `Step ${i} (${type}) build carries BOTH equation and moves contracts; use exactly one`
+    );
+  }
+  if (wantsMoves && hasEquation) {
+    throw new Error(
+      `Step ${i} (roadmap) build must use the "moves" contract, not "equation"`
+    );
+  }
+  if (!wantsMoves && hasMoves) {
+    throw new Error(
+      `Step ${i} (${type}) build must use the "equation" contract, not "moves"`
+    );
+  }
+
+  let acceptedOrder: string[];
+  let distractors: { tile: string; feedback: string }[];
+
+  if (hasEquation) {
+    // Equation contract (setup / form).
+    const eq = build.equation!;
     if (
       !Array.isArray(eq.lhs_terms) ||
       !Array.isArray(eq.rhs_terms) ||
@@ -1295,15 +1335,14 @@ function assembleBuildFromContract(build: GeneratedBuild, i: number): void {
     const distractorTerms = Array.isArray(eq.distractor_terms)
       ? eq.distractor_terms
       : [];
-    const acceptedOrder = [...eq.lhs_terms, eq.relation, ...eq.rhs_terms];
-    build.accepted = [acceptedOrder];
-    build.distractors = distractorTerms.map((d) => ({
+    // Relation is ALWAYS its own tile.
+    acceptedOrder = [...eq.lhs_terms, eq.relation, ...eq.rhs_terms];
+    distractors = distractorTerms.map((d) => ({
       tile: d.term,
       feedback: d.feedback,
     }));
-    build.tiles = [...acceptedOrder, ...distractorTerms.map((d) => d.term)];
     delete build.equation;
-  } else if (build.moves) {
+  } else {
     // Roadmap contract: prose move-labels the student orders.
     if (!Array.isArray(build.moves)) {
       throw new Error(`Step ${i} build.moves must be an array of prose moves`);
@@ -1311,18 +1350,19 @@ function assembleBuildFromContract(build: GeneratedBuild, i: number): void {
     const distractorMoves = Array.isArray(build.distractor_moves)
       ? build.distractor_moves
       : [];
-    build.accepted = [[...build.moves]];
-    build.distractors = distractorMoves.map((d) => ({
+    acceptedOrder = [...build.moves];
+    distractors = distractorMoves.map((d) => ({
       tile: d.move,
       feedback: d.feedback,
     }));
-    build.tiles = [...build.moves, ...distractorMoves.map((d) => d.move)];
     delete build.moves;
     delete build.distractor_moves;
-  } else {
-    // Legacy/stored build step already carrying tiles/accepted — pass through.
-    return;
   }
+
+  // Shared assignment for both contract shapes.
+  build.accepted = [acceptedOrder];
+  build.distractors = distractors;
+  build.tiles = [...acceptedOrder, ...distractors.map((d) => d.tile)];
 
   // Synthesize missing feedback (model may omit it on code-assembled steps).
   if (!build.feedbackCorrect || build.feedbackCorrect.trim().length === 0) {
@@ -1718,12 +1758,7 @@ export async function regenerateSteps(
   input: RegenerateStepsInput
 ): Promise<GeneratedProblem["solution_flow"]> {
   const systemPrompt = buildSystemPrompt(input.difficulty, input.subject, input.topic);
-  const exampleProblem =
-    input.difficulty === "college"
-      ? EXAMPLE_COLLEGE
-      : input.difficulty === "class_12"
-        ? EXAMPLE_CLASS_12
-        : EXAMPLE_CLASS_11;
+  const exampleProblem = exampleForDifficulty(input.difficulty);
 
   const userPrompt = `Here is an existing physics problem. Regenerate ONLY the step-by-step solution breakdown. Keep the same problem statement and answer.
 

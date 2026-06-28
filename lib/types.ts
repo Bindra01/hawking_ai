@@ -113,25 +113,18 @@ export const LEGACY_ONLY_STEP_TYPES: StepType[] = [
 export function formatForType(type: StepType): StepFormat {
   switch (type) {
     case "trap":
-      return "claim";
-    case "identify":
-      return "multiselect";
-    case "setup":
-      return "build";
-    case "depends":
-      return "multiselect";
-    case "scale":
-      return "mcq";
     case "limit":
-      return "claim";
-    case "roadmap":
-      return "build";
     case "produces":
       return "claim";
+    case "identify":
+    case "depends":
     case "feeds":
       return "multiselect";
+    case "setup":
+    case "roadmap":
     case "form":
       return "build";
+    case "scale":
     case "principle":
     case "connect":
     case "why":
