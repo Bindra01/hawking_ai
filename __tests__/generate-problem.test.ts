@@ -363,6 +363,18 @@ function makeBuildStep(prompt: string): Step {
   };
 }
 
+// The mandatory fixed opening pair every generated flow must lead with:
+// principle (MCQ) at index 0 and a generic setup (build) at index 1. Use this
+// to prefix custom flows that only need a valid opener to satisfy the
+// fixed-opening guards (spread it: `...makeValidOpening()`). Tests that need a
+// SPECIFIC setup/equation (e.g. the setup-vs-form comparison) build their own.
+function makeValidOpening(): [Step, Step] {
+  return [
+    makeMcqStep("principle", "Which framework should you reach for on this problem?"),
+    makeBuildStep("Build the central governing equation that relates the given quantities"),
+  ];
+}
+
 // Helper to create a valid problem for mutation in tests.
 // Step layout (6 steps): 0 principle (mcq, RECALL THE PRINCIPLE — mandatory
 // opener), 1 setup (build — the central governing equation, mandatory second
@@ -567,8 +579,7 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     // Minimal LEAN form-last flow: principle → setup → roadmap → form.
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which physics framework should you reach for on this specific problem?"),
-      makeBuildStep("Build the central governing equation that relates the given quantities here."),
+      ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
@@ -1155,8 +1166,7 @@ describe("validateAndNormalize", () => {
     // The contract explicitly allows ZERO approach steps (lower bound 0).
     // principle → setup → roadmap → form has no approach steps and ends in form.
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which framework should you reach for on this specific problem?"),
-      makeBuildStep("Build the central governing equation that relates the given quantities."),
+      ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
@@ -1197,8 +1207,7 @@ describe("validateAndNormalize", () => {
       // Principle@0 + setup@1 satisfy the fixed-opening guards so execution
       // reaches the legacy-only hard block, which the smuggled legacy step trips.
       problem.solution_flow.steps = [
-        makeMcqStep("principle", "Which governing principle should you reach for on this specific problem?"),
-        makeBuildStep("Build the central equation that relates the given quantities here."),
+        ...makeValidOpening(),
         legacy,
         makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
       ];
@@ -1398,8 +1407,7 @@ describe("validateAndNormalize", () => {
   it("assembles a roadmap moves contract: every correct move is the accepted order", () => {
     const problem = makeValidProblem();
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which governing principle should you reach for on this specific problem?"),
-      makeBuildStep("Build the central equation that relates the given quantities here."),
+      ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFeedsStep("Tap every input the first move actually consumes here."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
@@ -1600,8 +1608,7 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which governing principle quantizes the energy levels in this well?"),
-      makeBuildStep("Build the central equation that relates the given quantities here."),
+      ...makeValidOpening(),
       feedsWith(["The mass m"], ["A red herring A"], "Tap the inputs the first move consumes."),
       feedsWith(["The width L"], ["A red herring B"], "Tap the inputs the second move consumes."),
       feedsWith(["The charge q"], ["A red herring C"], "Tap the inputs the third move consumes."),
@@ -1616,8 +1623,7 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which governing principle quantizes the energy levels in this well?"),
-      makeBuildStep("Build the central equation that relates the given quantities here."),
+      ...makeValidOpening(),
       // First feeds requires {mass, width}; second requires {mass} — a SUBSET,
       // so the second beat adds no new required input.
       feedsWith(["The mass m", "The width L"], ["A red herring A"], "Tap the inputs the first move consumes."),
@@ -1633,8 +1639,7 @@ describe("validateAndNormalize", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which governing principle quantizes the energy levels in this well?"),
-      makeBuildStep("Build the central equation that relates the given quantities here."),
+      ...makeValidOpening(),
       feedsWith(
         ["The potential V(x)=0 inside", "The mass m", "The constant hbar"],
         ["A measured energy value"],
@@ -1658,8 +1663,7 @@ describe("validateAndNormalize", () => {
     // Each beat shares the common mass m but ALSO requires its own distinct input,
     // so neither set is a subset of the other — legitimately distinct feeds.
     problem.solution_flow.steps = [
-      makeMcqStep("principle", "Which governing principle pins down the orbit radius for this charge?"),
-      makeBuildStep("Build the central equation that relates the given quantities here."),
+      ...makeValidOpening(),
       feedsWith(["The mass m", "The speed v"], ["A red herring A"], "Tap the inputs the first move consumes."),
       feedsWith(["The mass m", "The field B"], ["A red herring B"], "Tap the inputs the second move consumes."),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
