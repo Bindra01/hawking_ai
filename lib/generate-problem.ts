@@ -32,8 +32,11 @@ STEP TYPES — choose the right ones based on the problem's structure:
    Use when the problem has a non-obvious "key insight" that unlocks the solution.
 
 4. "setup" (🔧 SET UP THE MATH)
-   Purpose: Write down the mathematical equation or expression.
-   Show the actual algebra/calculus step. Use LaTeX for all math.
+   Purpose: Write down the governing/intermediate relation — the law or balance
+   you start from. Show the actual algebra/calculus step. Use LaTeX for all math.
+   This MUST be a DIFFERENT equation than the terminal "form" skeleton: never the
+   same equation. If no genuine intermediate relation exists, capture the earlier
+   governing law (a balance/conservation/definition) rather than the answer itself.
 
 5. "approach" (🧭 PLAN THE DERIVATION)
    Purpose: after the equation is set up, ask HOW the student will get to the
@@ -67,7 +70,9 @@ STEP TYPES — choose the right ones based on the problem's structure:
       Purpose: DATA-FLOW. Tap the inputs a move actually consumes; leave the
       same-family red herrings (e.g. a measured value or a time-dependence that
       this move does not use). 4-6 items, >=1 matters:true AND >=1 matters:false,
-      feedbackCorrect/feedbackWrong 40+ chars.
+      feedbackCorrect/feedbackWrong 40+ chars. At most TWO feeds steps, and if you
+      use two they must target DIFFERENT moves with DISJOINT matters:true inputs —
+      never two feeds reading as the same question about the same quantities.
 
    C. "produces" (🔎 WHAT IT PRODUCES) — claim.
       Purpose: RECOGNITION / metacognition. A sounds-right vs it's-a-trap claim
@@ -79,7 +84,8 @@ STEP TYPES — choose the right ones based on the problem's structure:
    D. "form" (🏗️ ASSEMBLE THE FORM) — build (the TERMINAL step).
       Purpose: assemble the SYMBOLIC answer SKELETON from atomic structural tiles
       the student already reasoned out — the root, the ratio, which symbol sits on
-      top. NO substituted numbers; "=" is always its own tile. The exact value is
+      top. This is the FINAL form, NOT identical to any earlier "setup" relation.
+      NO substituted numbers; "=" is always its own tile. The exact value is
       revealed only in the recap, never picked here. Feedback is NON-COMMITTAL —
       no "correct"/"wrong"/"exactly right"/"perfect"; calmly note the form is
       assembled and the recap carries it through to the value.
@@ -675,7 +681,9 @@ const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
 - The trap step should target a subtle conceptual error (not just arithmetic).
 - Math can include integration, differential equations, vector calculus basics.
 - Wrong answer feedback should be precise — reference the exact formula or concept that was misapplied.
-- Recommended step pattern: trap/identify → roadmap (2-3 moves) → feeds → produces → setup → form.`,
+- Recommended step pattern: trap/identify → roadmap (2-3 moves) → feeds → produces → setup → form.
+- The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. If there is no genuine intermediate relation distinct from the final form, make "setup" capture an EARLIER governing law (the balance/conservation/definition relation) rather than restating the answer.
+- If you emit two "feeds" steps, each must target a DIFFERENT move and consume DISJOINT inputs — never two feeds about the same quantities.`,
 
   college: `COLLEGE / JEE ADVANCED (undergraduate level, age 18+):
 - Use 6-8 steps. Problems should require deep physical insight.
@@ -683,6 +691,8 @@ const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
 - Math can include multivariable calculus, linear algebra, complex analysis, Fourier methods.
 - Wrong answer feedback should be rigorous — explain why the wrong approach fails fundamentally, not just numerically.
 - Recommended step pattern: trap/identify → roadmap → feeds → produces → setup → feeds (constraints) → form.
+- The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. If there is no genuine intermediate relation distinct from the final form, make "setup" capture an EARLIER governing law (the balance/conservation/definition relation) rather than restating the answer.
+- The two "feeds" steps (the data-flow feed and the constraints feed) must each target a DIFFERENT move and consume DISJOINT inputs — never two feeds about the same quantities.
 - At most ONE multiple-choice (principle) beat, and often zero — lean on roadmap/feeds/produces instead.`,
 };
 
@@ -1028,6 +1038,37 @@ const STEP_LABELS: Record<string, string> = {
 
 
 /**
+ * Normalize an assembled equation ordering (an array of LaTeX tile strings, as
+ * stored in build.accepted[0]) into a canonical string for equality comparison.
+ * Used by the setup-vs-form duplicate guard. Kept CONSERVATIVE — it only equates
+ * orderings that are truly the same equation: it joins the tiles, removes
+ * whitespace, strips surrounding `$...$` math delimiters, and drops the
+ * LaTeX-irrelevant spacing macros (\, \! \: \; and an escaped space). It does
+ * NOT attempt algebraic equivalence, so genuinely distinct relations stay
+ * distinct and false rejections are avoided.
+ *
+ * DELIBERATE CHOICE — this normalization is purely TEXTUAL, not algebraic. It
+ * equates only orderings whose tile strings are character-identical after
+ * whitespace/delimiter/spacing-macro stripping. So it WILL catch the reported
+ * RMS case where setup and form both assemble the identical tiles
+ * `$v_{rms}$` `=` `$\sqrt{\frac{3RT}{M}}$`. It will NOT equate textual variants
+ * that render the same value, e.g. `$\frac{mv}{qB}$` vs `$mv/qB$` — those are
+ * left DISTINCT on purpose, because the goal is only to block a verbatim
+ * duplicate, and treating LaTeX variants as equal risks false rejections of
+ * genuinely-different relations.
+ */
+function normalizeEquationOrdering(ordering: string[]): string {
+  return ordering
+    .join("")
+    // Remove LaTeX spacing macros (\, \! \: \; \> and an escaped space "\ ").
+    .replace(/\\[,!:;>]/g, "")
+    .replace(/\\ /g, "")
+    // Drop all `$` math delimiters (surrounding or inline) and whitespace.
+    .replace(/\$/g, "")
+    .replace(/\s+/g, "");
+}
+
+/**
  * Validates the LLM-generated problem matches the expected schema,
  * normalizes fields, shuffles options, and ensures quality.
  * Named validateAndNormalize (not validateProblem) because it mutates the input.
@@ -1188,6 +1229,64 @@ export function validateAndNormalize(
         }
         validateBuildStep(step, i);
         break;
+    }
+  }
+
+  // ─── FLOW-LEVEL REDUNDANCY GUARDS ──────────────────────────────────────────
+  // These run AFTER the per-step loop so every build contract is already
+  // assembled (assembleBuildFromContract has populated build.accepted) and the
+  // matters:true items are present. They feed the existing retry loop on throw.
+
+  // (1) SETUP-vs-FORM DUPLICATE EQUATION GUARD (decision #825). The terminal step
+  // is the single `form` (last step, exactly 1 — already guaranteed above). If any
+  // `setup` step assembles the SAME equation as the terminal form, force a
+  // regeneration so the setup becomes a genuinely distinct governing/intermediate
+  // relation rather than restating the answer skeleton.
+  const formStep = steps[steps.length - 1];
+  const formOrdering = formStep.build?.accepted?.[0];
+  if (Array.isArray(formOrdering)) {
+    const formNorm = normalizeEquationOrdering(formOrdering);
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      if (s.type !== "setup") continue;
+      const setupOrdering = s.build?.accepted?.[0];
+      if (!Array.isArray(setupOrdering)) continue;
+      if (normalizeEquationOrdering(setupOrdering) === formNorm) {
+        throw new Error(
+          `setup step ${i} assembles the same equation as the terminal form; setup must be a distinct governing/intermediate relation`
+        );
+      }
+    }
+  }
+
+  // (2) FEEDS COUNT + DISJOINTNESS GUARD (decision #826). Allow up to TWO `feeds`
+  // steps. Two feeds reading as the same question is the bug. We reject ONLY when
+  // one feeds beat adds NO new required input over the other — i.e. their
+  // matters:true sets are EQUAL, or one is a SUBSET of the other. Sharing
+  // some-but-not-all inputs (e.g. both legitimately consume a common mass or
+  // constant while each also requires its own distinct inputs) is allowed, so two
+  // genuinely-distinct feeds about different moves are not falsely rejected.
+  const feedsSteps = steps.filter((s) => s.type === "feeds");
+  if (feedsSteps.length > 2) {
+    throw new Error(`at most 2 feeds steps allowed, got ${feedsSteps.length}`);
+  }
+  if (feedsSteps.length === 2) {
+    const mattersOf = (s: GeneratedStep) =>
+      new Set(
+        (s.multiselect?.items ?? [])
+          .filter((it) => it.matters === true)
+          .map((it) => it.text.trim().toLowerCase().replace(/\s+/g, " "))
+      );
+    const firstSet = mattersOf(feedsSteps[0]);
+    const secondSet = mattersOf(feedsSteps[1]);
+    const isSubset = (a: Set<string>, b: Set<string>) =>
+      a.size > 0 && [...a].every((t) => b.has(t));
+    // Reject when one set is contained in the other (equal sets satisfy both
+    // directions): the smaller beat contributes no new required input.
+    if (isSubset(firstSet, secondSet) || isSubset(secondSet, firstSet)) {
+      throw new Error(
+        "the two feeds steps overlap; each WHAT GOES IN step must consume a disjoint set of inputs"
+      );
     }
   }
 

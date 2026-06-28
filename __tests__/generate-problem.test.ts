@@ -578,13 +578,26 @@ describe("validateAndNormalize", () => {
     // 8-step LEAN form-last flow: trap → roadmap → feeds → produces → setup →
     // feeds → approach → form. One mcq (approach) max; everything else is
     // build/claim/multiselect.
+    // The two feeds beats target DIFFERENT moves with DISJOINT matters:true
+    // inputs (the disjointness guard requires this for two feeds steps).
+    const secondFeeds = makeFeedsStep("Tap every input the constraint move actually consumes here.");
+    secondFeeds.multiselect = {
+      items: [
+        { text: "The boundary condition at the wall", matters: true },
+        { text: "The container width L", matters: true },
+        { text: "The launch speed v", matters: false },
+        { text: "The elapsed time t", matters: false },
+      ],
+      feedbackCorrect: longFeedback("only the constraint move's own inputs belong here"),
+      feedbackWrong: longFeedback("the constraint move consumes the boundary condition and width, not the kinematic inputs"),
+    };
     problem.solution_flow.steps = [
       makeClaimStep("Your instinct is to reach for the wrong force law here — sound right, or a trap?"),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFeedsStep("Tap every input the first move actually consumes here."),
       makeProducesStep("You solved the equation — is that the final answer, or is it a trap?"),
       makeEquationSetupStep("Build the force-balance equation from the structural tiles here."),
-      makeFeedsStep("Tap every input the constraint move actually consumes here."),
+      secondFeeds,
       makeApproachStep("With the setup done, what's the cleanest next move to reach the answer?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
@@ -1479,6 +1492,173 @@ describe("validateAndNormalize", () => {
       const steps = example.solution_flow.steps;
       expect(steps[steps.length - 1].type).toBe("form");
     }
+  });
+
+  // ─── Flow-level redundancy guards (setup-vs-form, feeds count/disjointness) ──
+
+  // A feeds step whose matters:true items are a CUSTOM set, used to construct
+  // overlap / subset / disjoint scenarios for the disjointness guard.
+  function feedsWith(matters: string[], extra: string[], prompt: string): Step {
+    const items = [
+      ...matters.map((t) => ({ text: t, matters: true })),
+      ...extra.map((t) => ({ text: t, matters: false })),
+    ];
+    // The multiselect schema requires 4-6 items with >=1 matters:false. Pad with
+    // unique generic red herrings (matters:false, so they don't affect overlap).
+    let pad = 0;
+    while (items.length < 4) {
+      items.push({ text: `Padding red herring ${++pad} for ${prompt.slice(0, 8)}`, matters: false });
+    }
+    return {
+      type: "feeds",
+      label: "WHAT GOES IN",
+      icon: "🔌",
+      prompt,
+      multiselect: {
+        items,
+        feedbackCorrect: longFeedback("only the inputs this move consumes belong here"),
+        feedbackWrong: longFeedback("the red herrings come from a different move entirely"),
+      },
+      tip: "Tap only the inputs the move actually consumes",
+    };
+  }
+
+  // A setup step whose assembled equation EQUALS the terminal form's equation
+  // (the reported RMS bug): both assemble v_rms = sqrt(3RT/M).
+  function makeRmsEquation(): EquationContract {
+    return {
+      lhs_terms: ["$v_{rms}$"],
+      relation: "=",
+      rhs_terms: ["$\\sqrt{\\frac{3RT}{M}}$"],
+      distractor_terms: [
+        { term: "$\\sqrt{\\frac{8RT}{\\pi M}}$", feedback: "that is the mean speed, a different same-family relation" },
+      ],
+    };
+  }
+
+  it("rejects a setup whose equation equals the terminal form (RMS duplicate bug)", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    const setup = makeEquationSetupStep("Set up the RMS-speed relation from the term tiles.");
+    setup.build!.equation = makeRmsEquation();
+    const form = makeFormStep("Assemble the SYMBOLIC RMS-speed form from the structural tiles.");
+    // Terminal form assembles the IDENTICAL equation as the setup.
+    form.build = {
+      equation: makeRmsEquation(),
+      feedbackCorrect: neutralFormFeedback("the symbolic RMS-speed skeleton"),
+      feedbackWrong: neutralFormFeedback("a reshaped RMS skeleton; the recap values it"),
+    };
+    problem.solution_flow.steps = [
+      makeClaimStep("Your instinct is to use the mean speed here — sound right, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the RMS speed."),
+      setup,
+      form,
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "thermodynamics", "Kinetic Theory", "college")
+    ).toThrow(/setup step \d+ assembles the same equation as the terminal form/i);
+  });
+
+  it("accepts a flow whose setup is a DISTINCT relation from the terminal form", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    // setup: governing balance qvB = mv^2/r ; form: r = mv/qB (distinct tiles).
+    const setup = makeEquationSetupStep("Set up the force-balance relation.");
+    const form = makeFormStep("Assemble the SYMBOLIC radius form from the structural tiles.");
+    form.build = {
+      equation: {
+        lhs_terms: ["r"],
+        relation: "=",
+        rhs_terms: ["$\\frac{mv}{qB}$"],
+        distractor_terms: [
+          { term: "$\\frac{qB}{mv}$", feedback: "that tile inverts the ratio; the recap keeps momentum on top" },
+        ],
+      },
+      feedbackCorrect: neutralFormFeedback("the symbolic radius skeleton"),
+      feedbackWrong: neutralFormFeedback("a reshaped radius skeleton; the recap values it"),
+    };
+    problem.solution_flow.steps = [
+      makeClaimStep("Your instinct is to reach for qE here — sound right, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the radius."),
+      setup,
+      form,
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "college")
+    ).not.toThrow();
+  });
+
+  it("rejects a flow with three feeds steps", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    problem.solution_flow.steps = [
+      makeClaimStep("Your instinct is to ignore the walls here — sound right, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      feedsWith(["The mass m"], ["A red herring A"], "Tap the inputs the first move consumes."),
+      feedsWith(["The width L"], ["A red herring B"], "Tap the inputs the second move consumes."),
+      feedsWith(["The charge q"], ["A red herring C"], "Tap the inputs the third move consumes."),
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "quantum_mechanics", "Infinite Square Well", "college")
+    ).toThrow(/at most 2 feeds steps allowed, got 3/i);
+  });
+
+  it("rejects two feeds steps whose matters:true sets are equal/subset (overlap)", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    problem.solution_flow.steps = [
+      makeClaimStep("Your instinct is to merge the two moves here — sound right, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      // First feeds requires {mass, width}; second requires {mass} — a SUBSET,
+      // so the second beat adds no new required input.
+      feedsWith(["The mass m", "The width L"], ["A red herring A"], "Tap the inputs the first move consumes."),
+      feedsWith(["The mass m"], ["A red herring B"], "Tap the inputs the second move consumes."),
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "quantum_mechanics", "Infinite Square Well", "college")
+    ).toThrow(/the two feeds steps overlap/i);
+  });
+
+  it("accepts two feeds steps with disjoint matters:true inputs", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    problem.solution_flow.steps = [
+      makeClaimStep("Your instinct is to skip the boundary conditions — sound right, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      feedsWith(
+        ["The potential V(x)=0 inside", "The mass m", "The constant hbar"],
+        ["A measured energy value"],
+        "Tap the inputs the solve-inside move consumes."
+      ),
+      feedsWith(
+        ["The condition Psi(0)=0", "The condition Psi(L)=0", "The width L"],
+        ["The elapsed time t"],
+        "Tap the inputs the boundary-condition move consumes."
+      ),
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "quantum_mechanics", "Infinite Square Well", "college")
+    ).not.toThrow();
+  });
+
+  it("accepts two feeds steps that share SOME but not all matters:true inputs", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    // Each beat shares the common mass m but ALSO requires its own distinct input,
+    // so neither set is a subset of the other — legitimately distinct feeds.
+    problem.solution_flow.steps = [
+      makeClaimStep("Your instinct is to fold the two moves together — sound right, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      feedsWith(["The mass m", "The speed v"], ["A red herring A"], "Tap the inputs the first move consumes."),
+      feedsWith(["The mass m", "The field B"], ["A red herring B"], "Tap the inputs the second move consumes."),
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "college")
+    ).not.toThrow();
   });
 
   it("terminal form step feedback avoids correctness-revealing wording", () => {
