@@ -38,6 +38,9 @@ STEP TYPES — choose the right ones based on the problem's structure:
    This MUST be a DIFFERENT equation than the terminal "form" skeleton: never the
    same equation. If no genuine intermediate relation exists, capture the earlier
    governing law (a balance/conservation/definition) rather than the answer itself.
+   When the final formula IS the obvious central relation (e.g. RMS speed
+   v_rms = √(3RT/M)), the setup must be the UPSTREAM law it derives from (e.g.
+   the equipartition energy balance ½M⟨v²⟩ = 3/2·RT), NEVER the rearranged answer.
 
 5. "approach" (🧭 PLAN THE DERIVATION)
    Purpose: after the equation is set up, ask HOW the student will get to the
@@ -236,20 +239,25 @@ steps, and do NOT add claim/multiselect/build objects to the "principle" MCQ typ
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
-// Class 11 — LEAN projectile flow (5 steps): principle -> setup -> roadmap
+// Class 11 — LEAN kinetic-theory flow (5 steps): principle -> setup -> roadmap
 // (2 moves) -> feeds -> form. The fixed opening is principle (RECALL THE
 // PRINCIPLE MCQ) then setup (the central governing equation, distinct from the
-// terminal form). setup/form use the Contract-C `equation` shape; roadmap uses
-// the `moves` contract. CODE assembles every build step's tiles/accepted from
-// these constrained arrays (see assembleBuildFromContract).
+// terminal form). This example deliberately models the HARD case where the
+// final formula (v_rms = √(3RT/M)) IS the obvious central relation: the setup
+// must be the UPSTREAM governing law (the equipartition energy balance
+// ½M⟨v²⟩ = 3/2·RT) it derives from, NOT the rearranged answer — so setup and
+// form stay genuinely distinct and clear the setup≠form guard (decision #825).
+// setup/form use the Contract-C `equation` shape; roadmap uses the `moves`
+// contract. CODE assembles every build step's tiles/accepted from these
+// constrained arrays (see assembleBuildFromContract).
 const EXAMPLE_CLASS_11 = {
-  title: "Range of a projectile launched at 30 m/s and 30° on level ground",
-  subject: "mechanics",
-  topic: "Projectile Motion",
+  title: "RMS speed of nitrogen molecules at 300 K",
+  subject: "thermodynamics",
+  topic: "Kinetic Theory",
+  scenario: "A sample of nitrogen gas (molar mass M = 0.028 kg/mol) is held at T = 300 K (R = 8.314 J/mol·K). What is the root-mean-square speed of its molecules?",
   difficulty: "class_11",
-  scenario: "A projectile is launched at 30 m/s at 30° above the horizontal on level ground (g = 9.8 m/s²). How far away does it land?",
-  goal: "Find: ≈ 79.5 m",
-  final_answer: "≈ 79.5 m",
+  goal: "Find: ≈ 517 m/s",
+  final_answer: "≈ 517 m/s",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -257,89 +265,90 @@ const EXAMPLE_CLASS_11 = {
         type: "principle",
         label: "RECALL THE PRINCIPLE",
         icon: "⚡",
-        prompt: "A projectile is launched at an angle on level ground. Which principle lets you find how far downrange it lands?",
+        prompt: "You need the typical molecular speed of a gas at a known temperature. Which principle connects that microscopic speed to the temperature?",
         options: [
-          { text: "Treat the horizontal and vertical motions as independent — uniform horizontal velocity, uniformly accelerated vertical fall.", correct: true, feedback: "Exactly — projectile motion separates into independent horizontal and vertical motions that share only the time." },
-          { text: "Apply conservation of mechanical energy between launch and landing to get the range.", correct: false, feedback: "Energy conservation only ties speed to height; launch and landing sit at the same height, so it tells you nothing about the horizontal range.", distractor_type: "misconception" as const },
-          { text: "Use the full launch speed with the total time, treating the motion as one-dimensional.", correct: false, feedback: "The motion is two-dimensional; collapsing it to one dimension ignores that only the horizontal velocity component carries the projectile downrange.", distractor_type: "procedural_slip" as const },
-          { text: "Assume the projectile travels in a straight line at the launch angle until it lands.", correct: false, feedback: "Gravity curves the path into a parabola; a straight-line assumption drops the vertical acceleration that sets the time of flight entirely.", distractor_type: "half_right" as const }
+          { text: "Equipartition: the average translational kinetic energy of the molecules is fixed by the temperature, ⟨KE⟩ = 3/2·kT.", correct: true, feedback: "Exactly — kinetic theory ties the average translational kinetic energy directly to temperature, and that is what sets the molecular speed." },
+          { text: "The ideal gas law PV = nRT alone fixes the molecular speed.", correct: false, feedback: "PV = nRT relates the bulk state variables; on its own it never exposes the microscopic molecular speed, which comes from the kinetic-energy–temperature link.", distractor_type: "misconception" as const },
+          { text: "Conservation of momentum in wall collisions sets the speed directly.", correct: false, feedback: "Wall collisions explain the pressure, but you still need the equipartition energy relation to pin the speed to the temperature.", distractor_type: "half_right" as const },
+          { text: "The Maxwell-Boltzmann distribution's peak (most probable speed) is the root-mean-square speed.", correct: false, feedback: "The most probable speed is a different moment of the distribution; the RMS speed comes from the mean-square energy, which equipartition fixes.", distractor_type: "procedural_slip" as const }
         ],
-        tip: "Projectile motion always splits into independent horizontal and vertical parts."
+        tip: "Temperature is a direct measure of average molecular kinetic energy."
       },
       {
         type: "setup",
         label: "SET UP THE MATH",
         icon: "🔧",
-        prompt: "The range is the horizontal velocity carried over the whole flight — but the time of flight isn't given. Assemble the central relation for the range; you'll find that missing time from the vertical motion next.",
+        prompt: "The RMS speed formula is the answer you're heading for — so DON'T start there. Assemble the upstream governing law it derives from: the equipartition energy balance that ties the mean-square speed to the temperature. You'll solve it for the speed next.",
         build: {
           equation: {
-            lhs_terms: ["R"],
+            lhs_terms: ["$\\frac{1}{2} M \\langle v^2 \\rangle$"],
             relation: "=",
-            rhs_terms: ["$v\\cos\\theta$", "$t$"],
+            rhs_terms: ["$\\frac{3}{2} R T$"],
             distractor_terms: [
-              { term: "$v\\sin\\theta$", feedback: "That is the vertical component; it sets the time of flight, not the horizontal distance the projectile covers." },
-              { term: "$v$", feedback: "The full speed overcounts the horizontal motion; only the horizontal component v·cosθ carries the projectile downrange." }
+              { term: "$\\frac{1}{2} R T$", feedback: "That keeps only one translational degree of freedom; a monatomic-style ½RT drops the factor of three for the three independent directions." },
+              { term: "$\\frac{3}{2} k_B T$", feedback: "That is the per-molecule form; with molar mass M on the left you must pair it with the molar 3/2·RT, not the per-molecule Boltzmann version." }
             ]
           },
-          feedbackCorrect: "Right — the range is the horizontal velocity v·cosθ carried over the flight time t, which you still need to find.",
-          feedbackWrong: "The range is the horizontal velocity times the flight time: v·cosθ multiplied by t, not the full speed or the vertical component."
+          feedbackCorrect: "Right — equipartition sets ½M⟨v²⟩ equal to 3/2·RT; rearranging this upstream law is what delivers the RMS speed.",
+          feedbackWrong: "Start from the governing balance: half the molar mass times the mean-square speed equals three-halves R T. That is the law the answer is rearranged from."
         },
-        tip: "Range = horizontal velocity × time of flight; find the time from the vertical motion."
+        tip: "Write the energy balance the answer is derived FROM, not the rearranged answer itself."
       },
       {
         type: "roadmap",
         label: "MAP THE DERIVATION",
         icon: "🗺️",
-        prompt: "Tap the high-level moves into the ORDER an expert would chain them to reach the range. Two of the tiles are wrong moves — leave them out.",
+        prompt: "Tap the high-level moves into the ORDER an expert would chain them to reach the RMS speed. Two of the tiles are wrong moves — leave them out.",
         build: {
           moves: [
-            "Split the launch velocity into horizontal and vertical components",
-            "Impose the return-to-ground condition to find the time of flight"
+            "Solve the equipartition balance for the mean-square speed ⟨v²⟩",
+            "Take the square root of ⟨v²⟩ to get the root-mean-square speed"
           ],
           distractor_moves: [
-            { move: "Find the range before solving for the time of flight", feedback: "The range needs the flight time first; you cannot land the horizontal distance without knowing how long the projectile is airborne." },
-            { move: "Assume the vertical velocity stays constant in flight", feedback: "Gravity changes the vertical velocity every instant; treating it as constant breaks the return-to-ground condition entirely." }
+            { move: "Take the square root before isolating the mean-square speed", feedback: "You must isolate ⟨v²⟩ from the energy balance first; rooting the unsolved equation mixes the temperature factor under the radical incorrectly." },
+            { move: "Convert the temperature to Celsius before substituting", feedback: "The kinetic relation is built on absolute temperature; switching to Celsius breaks the proportionality between energy and temperature entirely." }
           ],
-          feedbackCorrect: "Exactly the right plan: resolve the velocity, then use the vertical motion to time the flight before reading off the horizontal range.",
-          feedbackWrong: "Rebuild the plan: first split the velocity into components, then impose the return-to-ground condition to get the time of flight."
+          feedbackCorrect: "Exactly the right plan: rearrange the energy balance for the mean-square speed, then take the root to land the RMS speed.",
+          feedbackWrong: "Rebuild the plan: first solve the balance for ⟨v²⟩, then take the square root to reach the RMS speed."
         },
-        tip: "Sequence the moves before touching algebra — components first, timing second."
+        tip: "Sequence the moves before touching algebra — isolate the square first, root it second."
       },
       {
         type: "feeds",
         label: "WHAT GOES IN",
         icon: "🔌",
-        prompt: "For the move that finds the range, tap every quantity that actually feeds into it — and leave the same-family red herrings.",
+        prompt: "For the move that produces the RMS speed, tap every quantity that actually feeds into it — and leave the same-family red herrings.",
         multiselect: {
           items: [
-            { text: "The launch speed v", matters: true },
-            { text: "The launch angle θ", matters: true },
-            { text: "The gravitational acceleration g", matters: true },
-            { text: "The mass of the projectile", matters: false },
-            { text: "The horizontal distance already covered", matters: false }
+            { text: "The molar mass M", matters: true },
+            { text: "The gas constant R", matters: true },
+            { text: "The absolute temperature T", matters: true },
+            { text: "The pressure of the sample", matters: false },
+            { text: "The volume of the container", matters: false },
+            { text: "The number of moles n", matters: false }
           ],
-          feedbackCorrect: "Right — only the launch speed, the launch angle, and gravity set the range; mass cancels and no prior distance enters.",
-          feedbackWrong: "The range depends only on the launch speed, the launch angle, and gravity. Mass never enters projectile range, and no prior distance feeds in."
+          feedbackCorrect: "Right — only the molar mass, the gas constant, and the absolute temperature set the RMS speed; pressure, volume, and amount all cancel out.",
+          feedbackWrong: "The RMS speed depends only on the molar mass, the gas constant, and the absolute temperature. Pressure, volume, and the number of moles never enter."
         },
-        tip: "List only the quantities the range truly consumes before assembling it."
+        tip: "List only the quantities the RMS speed truly consumes before assembling it."
       },
       {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
-        prompt: "Assemble the SYMBOLIC range relation from the structural tiles — the speed factor, the angle factor, the gravity in the denominator. Build the form; numbers come later.",
+        prompt: "Assemble the SYMBOLIC RMS-speed relation from the structural tiles — the temperature factor, the gas constant, the molar mass under a root. Build the form; numbers come later.",
         build: {
           equation: {
-            lhs_terms: ["R"],
+            lhs_terms: ["$v_{rms}$"],
             relation: "=",
-            rhs_terms: ["$\\frac{v^2 \\sin 2\\theta}{g}$"],
+            rhs_terms: ["$\\sqrt{\\frac{3RT}{M}}$"],
             distractor_terms: [
-              { term: "$\\frac{v \\sin 2\\theta}{g}$", feedback: "That shape carries only a single power of the speed; the recap restores the full speed factor in the form." },
-              { term: "$\\frac{v^2 \\sin\\theta}{g}$", feedback: "That arrangement narrows the angle factor; the recap settles where the doubled-angle structure belongs." }
+              { term: "$\\frac{3RT}{M}$", feedback: "That is the mean-square speed before the root is applied; the recap restores the radical that the RMS form carries." },
+              { term: "$\\sqrt{\\frac{RT}{M}}$", feedback: "That arrangement drops the factor of three from the three translational directions; the recap settles where it belongs under the root." }
             ]
           },
-          feedbackCorrect: "You've assembled the symbolic range; the recap below carries the structure through to its value.",
-          feedbackWrong: "Reassemble the skeleton: the range is the speed factor times the angle factor over gravity, which the recap then values."
+          feedbackCorrect: "You've assembled the symbolic RMS speed; the recap below carries the structure through to its value.",
+          feedbackWrong: "Reassemble the skeleton: the RMS speed is the root of three R T over the molar mass, which the recap then values."
         },
         tip: "Build the FORMULA first; numbers go in only at the recap."
       }
@@ -713,7 +722,8 @@ const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
 - Keep the derivation roadmap SHORT (2 moves). Recommended step pattern:
   principle → setup → roadmap (2 moves) → feeds → form (it may gracefully
   collapse to principle → setup → roadmap (2 moves) → form).
-- The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. Class 11 is where the governing relation most often equals the answer, so pick a distinct governing law (a definition/balance/conservation relation), not the rearranged answer.`,
+- The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. Class 11 is where the governing relation most often equals the answer, so pick a distinct governing law (a definition/balance/conservation relation), not the rearranged answer.
+- When the final formula is ITSELF the central relation (e.g. RMS speed v_rms = √(3RT/M), simple kinematic results like v = u + at), the "setup" MUST be the UPSTREAM governing law it derives from — an energy balance / equipartition (e.g. ½M⟨v²⟩ = 3/2·RT) / definition — and NEVER the rearranged answer.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
 - Use 5-7 steps (max 8). Problems should require multi-step reasoning.

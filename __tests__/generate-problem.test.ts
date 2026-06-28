@@ -1384,15 +1384,15 @@ describe("validateAndNormalize", () => {
 
   it("Class-11 example's terminal form is symbolic, not the numeric final_answer", () => {
     const example = __TEST_EXAMPLES.EXAMPLE_CLASS_11;
-    expect(example.final_answer).toBe("≈ 79.5 m");
+    expect(example.final_answer).toBe("≈ 517 m/s");
     const ex = structuredClone(example) as unknown as TestProblem;
     validateAndNormalize(ex, example.subject, example.topic, example.difficulty);
     const steps = ex.solution_flow.steps;
     const formStep = steps[steps.length - 1];
     expect(formStep.type).toBe("form");
-    // The assembled skeleton must NOT contain the numeric value 79.5.
+    // The assembled skeleton must NOT contain the numeric value 517.
     const assembled = formStep.build!.accepted![0].join(" ");
-    expect(assembled).not.toContain("79.5");
+    expect(assembled).not.toContain("517");
   });
 
   it("examples contain no legacy-only (solve/sanity/connect/depends/scale/limit) steps", () => {
