@@ -1130,16 +1130,15 @@ function normalizeEquationOrdering(ordering: string[]): string {
   // sort them so the comparison is order-invariant. Inequalities (<, >, ∝, …) are
   // direction-sensitive and are NOT canonicalized this way, so genuinely distinct
   // directed relations stay distinct.
-  const eqIdx = ordering.reduce<number[]>((acc, t, idx) => {
-    if (norm(t) === "=") acc.push(idx);
-    return acc;
-  }, []);
-  if (eqIdx.length === 1) {
-    const i = eqIdx[0];
-    const lhs = norm(ordering.slice(0, i).join(""));
-    const rhs = norm(ordering.slice(i + 1).join(""));
-    const [a, b] = [lhs, rhs].sort();
-    return `${a}=${b}`;
+  const eqIndices = ordering.flatMap((t, idx) => (norm(t) === "=" ? [idx] : []));
+  if (eqIndices.length === 1) {
+    const i = eqIndices[0];
+    return [
+      norm(ordering.slice(0, i).join("")),
+      norm(ordering.slice(i + 1).join("")),
+    ]
+      .sort()
+      .join("=");
   }
 
   return norm(ordering.join(""));

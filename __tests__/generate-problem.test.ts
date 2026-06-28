@@ -1677,6 +1677,45 @@ describe("validateAndNormalize", () => {
     ).toThrow(/setup step \d+ assembles the same equation as the terminal form/i);
   });
 
+  it("does NOT collapse a side-swapped DIRECTED relation (∝ is direction-sensitive)", () => {
+    const problem = makeValidProblem();
+    problem.difficulty = "college";
+    // setup uses a proportionality "P ∝ T" and form a distinct equality. The
+    // side-swap canonicalization applies ONLY to a single "=" tile, so a directed
+    // relation is never collapsed and these stay distinct (no false rejection).
+    const setup = makeEquationSetupStep("Set up the proportionality between pressure and temperature.");
+    setup.build!.equation = {
+      lhs_terms: ["P"],
+      relation: "\\propto",
+      rhs_terms: ["T"],
+      distractor_terms: [
+        { term: "$T^2$", feedback: "pressure scales linearly with temperature here, not with its square" },
+      ],
+    };
+    const form = makeFormStep("Assemble the SYMBOLIC pressure form from the structural tiles.");
+    form.build = {
+      equation: {
+        lhs_terms: ["P"],
+        relation: "=",
+        rhs_terms: ["$n k_B T / V$"],
+        distractor_terms: [
+          { term: "$n k_B T V$", feedback: "volume divides here, it does not multiply, so this fragment is misplaced" },
+        ],
+      },
+      feedbackCorrect: neutralFormFeedback("the symbolic pressure skeleton"),
+      feedbackWrong: neutralFormFeedback("a reshaped pressure skeleton; the recap values it"),
+    };
+    problem.solution_flow.steps = [
+      makeMcqStep("principle", "Which governing principle pins down the pressure of this ideal gas sample?"),
+      setup,
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the pressure."),
+      form,
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "thermodynamics", "Ideal Gas", "college")
+    ).not.toThrow();
+  });
+
   it("accepts a flow whose setup is a DISTINCT relation from the terminal form", () => {
     const problem = makeValidProblem();
     problem.difficulty = "college";
