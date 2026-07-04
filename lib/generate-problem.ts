@@ -256,7 +256,7 @@ const EXAMPLE_CLASS_11 = {
   topic: "Kinetic Theory",
   scenario: "A sample of nitrogen gas (molar mass M = 0.028 kg/mol) is held at T = 300 K (R = 8.314 J/mol·K). What is the root-mean-square speed of its molecules?",
   difficulty: "class_11",
-  goal: "Find: ≈ 517 m/s",
+  goal: "Find the RMS speed of the gas molecules at the given temperature.",
   final_answer: "≈ 517 m/s",
   diagram_type: null,
   solution_flow: {
@@ -366,7 +366,7 @@ const EXAMPLE_CLASS_12 = {
   topic: "Magnetic Force",
   difficulty: "class_12",
   scenario: "An electron of charge q and mass m enters a uniform magnetic field B at speed v, perpendicular to the field. Find the radius of its circular orbit.",
-  goal: "Find: $r = \\frac{mv}{qB}$",
+  goal: "Derive the expression for the radius of the charged particle's circular path.",
   final_answer: "$r = \\frac{mv}{qB}$",
   diagram_type: null,
   solution_flow: {
@@ -491,7 +491,7 @@ const EXAMPLE_COLLEGE = {
   topic: "Infinite Square Well",
   difficulty: "college",
   scenario: "A particle of mass m is confined to a one-dimensional infinite square well of width L, where the potential is zero inside (0 < x < L) and infinite outside. Find the allowed energy levels.",
-  goal: "Find: $E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$",
+  goal: "Derive the allowed energy levels for the particle confined in the infinite square well.",
   final_answer: "$E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$",
   diagram_type: null,
   solution_flow: {
@@ -972,8 +972,8 @@ CRITICAL QUALITY RULES:
 
 7. STRUCTURE:
    - "title": Short descriptive title (~80 chars max)
-   - "goal": "Find: [answer]" format
-   - "final_answer": The numerical/symbolic answer
+   - "goal": A SHORT qualitative statement of WHAT to find — e.g. "Find the RMS speed of the gas molecules", "Determine the orbital radius". NEVER include the numerical value, symbolic formula, or units of the answer in the goal — the answer is revealed only in the recap. The goal must read like a question prompt, not a spoiler.
+   - "final_answer": The numerical/symbolic answer (shown only in the recap)
    - Last step MUST be type "form" (ASSEMBLE THE FORM): a build step that assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers, with non-committal feedback (no celebration). The exact value is revealed only in the recap.
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap/produces → "claim" object; identify/feeds → "multiselect" object;
@@ -1168,6 +1168,27 @@ export function validateAndNormalize(
   problem.topic = topic;
   problem.difficulty = difficulty;
   problem.diagram_type = null;
+
+  // SANITIZE: the goal must never reveal the final answer. Strip the answer
+  // value from the goal if the model embedded it (common when the few-shot
+  // pattern was "Find: [answer]"). Also strip the bare "Find: " prefix that
+  // becomes redundant once the answer is removed, and any trailing LaTeX
+  // delimiters / whitespace left behind.
+  if (problem.goal && problem.final_answer) {
+    const answer = problem.final_answer.trim();
+    // Strip the answer (with or without surrounding $ delimiters)
+    let cleaned = problem.goal;
+    // Try stripping with $ wrappers first, then bare
+    cleaned = cleaned.replace(new RegExp(`\\$?${answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\$?`, "g"), "");
+    // Also strip common "Find: " / "Find " prefix patterns that become empty
+    cleaned = cleaned.replace(/^Find:\s*/i, "").trim();
+    // If the goal was entirely the answer (e.g. "Find: 517 m/s"), replace with
+    // a generic goal derived from the scenario.
+    if (cleaned.length < 10) {
+      cleaned = `Find the answer to the problem described above.`;
+    }
+    problem.goal = cleaned;
+  }
 
   const steps = problem.solution_flow?.steps;
   if (!steps || !Array.isArray(steps)) {

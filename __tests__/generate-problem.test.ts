@@ -1395,6 +1395,24 @@ describe("validateAndNormalize", () => {
     expect(assembled).not.toContain("517");
   });
 
+  it("sanitizes the goal so it never reveals the final_answer", () => {
+    const problem = makeValidProblem();
+    problem.goal = "Find: 42 m/s";
+    problem.final_answer = "42 m/s";
+    validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
+    // The sanitized goal must not contain the numeric answer
+    expect(problem.goal).not.toContain("42 m/s");
+    expect(problem.goal.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("preserves a goal that does not contain the final_answer", () => {
+    const problem = makeValidProblem();
+    problem.goal = "Find the RMS speed of the gas molecules at the given temperature.";
+    problem.final_answer = "≈ 517 m/s";
+    validateAndNormalize(problem, "thermodynamics", "Kinetic Theory", "class_11");
+    expect(problem.goal).toBe("Find the RMS speed of the gas molecules at the given temperature.");
+  });
+
   it("examples contain no legacy-only (solve/sanity/connect/depends/scale/limit) steps", () => {
     for (const example of Object.values(__TEST_EXAMPLES)) {
       const types = example.solution_flow.steps.map((s) => s.type);
