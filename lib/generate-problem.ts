@@ -7,6 +7,7 @@ import {
 } from "@/lib/types";
 import { getOpenAIClient } from "@/lib/openai";
 import { STEP_ICONS } from "@/lib/step-icons";
+import { sanitizeGoal } from "@/lib/sanitize-goal";
 
 // ─── STEP TYPE DEFINITIONS ───────────────────────────────────────────────────
 
@@ -1169,39 +1170,8 @@ export function validateAndNormalize(
   problem.difficulty = difficulty;
   problem.diagram_type = null;
 
-  // SANITIZE: the goal must never reveal the final answer. The model often
-  // produces "Find: <answer>" goals. Use plain substring matching (not regex)
-  // because LaTeX answers contain characters that break regex escaping.
-  if (problem.goal && problem.final_answer) {
-    const answer = problem.final_answer.trim();
-    let cleaned = problem.goal;
-
-    // Strip the answer as a plain substring (handles LaTeX reliably).
-    // Try with $ wrappers, without wrappers, and the bare answer.
-    for (const needle of [`$${answer}$`, `$${answer}`, `${answer}$`, answer]) {
-      while (cleaned.includes(needle)) {
-        cleaned = cleaned.split(needle).join("");
-      }
-    }
-    // Also strip the "≈" prefix that sometimes precedes numeric answers
-    const approxAnswer = answer.startsWith("≈") ? answer.slice(1).trim() : null;
-    if (approxAnswer) {
-      for (const needle of [`$${approxAnswer}$`, approxAnswer]) {
-        while (cleaned.includes(needle)) {
-          cleaned = cleaned.split(needle).join("");
-        }
-      }
-    }
-    // Strip bare "Find: " prefix that becomes empty/redundant after removal
-    cleaned = cleaned.replace(/^Find:\s*/i, "").trim();
-    // Clean up leftover lone $ delimiters and whitespace
-    cleaned = cleaned.replace(/^\$\s*$/, "").replace(/\s+/g, " ").trim();
-    // If the goal was entirely the answer, replace with a generic goal
-    if (cleaned.length < 10) {
-      cleaned = "Find the answer to the problem described above.";
-    }
-    problem.goal = cleaned;
-  }
+  // SANITIZE: the goal must never reveal the final answer.
+  problem.goal = sanitizeGoal(problem.goal, problem.final_answer);
 
   const steps = problem.solution_flow?.steps;
   if (!steps || !Array.isArray(steps)) {
