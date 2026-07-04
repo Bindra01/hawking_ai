@@ -62,6 +62,11 @@ interface StepQuestionProps {
   totalSteps: number;
   isLast: boolean;
   onNext: (correct: boolean, answer: Answer | null) => void;
+  /** When true the step is shown in review mode: the student's previous answer
+   *  is displayed but all interaction is disabled (no selecting, no buttons). */
+  readOnly?: boolean;
+  /** The answer the student gave on this step (used to restore state in review mode). */
+  previousAnswer?: Answer | null;
 }
 
 export default function StepQuestion({
@@ -70,13 +75,17 @@ export default function StepQuestion({
   totalSteps,
   isLast,
   onNext,
+  readOnly = false,
+  previousAnswer = null,
 }: StepQuestionProps) {
-  const [answer, setAnswer] = useState<Answer | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [answer, setAnswer] = useState<Answer | null>(previousAnswer);
+  const [submitted, setSubmitted] = useState(readOnly);
   const [showTip, setShowTip] = useState(false);
   const [shake, setShake] = useState(false);
   const [result, setResult] = useState<{ correct: boolean; feedback: string } | null>(
-    null
+    // In read-only review mode, compute the result immediately so the child
+    // renderers show the correct visual state (green/red styling on options).
+    readOnly && previousAnswer ? evaluateStep(step, previousAnswer) : null
   );
 
   const color = STEP_COLORS[step.type] ?? "#afafbf";
@@ -178,15 +187,18 @@ export default function StepQuestion({
       {/* Format-specific interaction */}
       {renderStep()}
 
-      {/* Feedback + tip */}
-      <AnimatePresence>
-        {submitted && result && (
-          <FeedbackCard correct={isCorrect} feedback={result.feedback} neutral={isPredict} />
-        )}
-        {showTip && <TipCard tip={step.tip} />}
-      </AnimatePresence>
+      {/* Feedback + tip (hidden in read-only review mode) */}
+      {!readOnly && (
+        <AnimatePresence>
+          {submitted && result && (
+            <FeedbackCard correct={isCorrect} feedback={result.feedback} neutral={isPredict} />
+          )}
+          {showTip && <TipCard tip={step.tip} />}
+        </AnimatePresence>
+      )}
 
-      {/* Bottom button — fixed positioning handled by parent */}
+      {/* Bottom button — hidden in read-only review mode */}
+      {!readOnly && (
       <div className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3" style={{ background: "linear-gradient(to top, #131327 80%, transparent)", maxWidth: 480, margin: "0 auto" }}>
         {!submitted ? (
           <button
@@ -228,6 +240,7 @@ export default function StepQuestion({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }

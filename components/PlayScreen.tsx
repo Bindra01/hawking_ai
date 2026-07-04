@@ -41,6 +41,10 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   const [answers, setAnswers] = useState<(Answer | null)[]>([]);
   const [stepSummaries, setStepSummaries] = useState<StepSummary[]>([]);
   const [showScenario, setShowScenario] = useState(false);
+  // When non-null, the student is reviewing a completed step (read-only).
+  // Tapping a completed step icon sets this; tapping the current step icon or
+  // the "BACK TO CURRENT" button clears it.
+  const [reviewStepIndex, setReviewStepIndex] = useState<number | null>(null);
 
   // Index of the dedicated "solve" (PREDICT THE FORM) step. -1 for legacy /
   // un-regenerated problems that predate the solve step — those flow unchanged
@@ -101,6 +105,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
       setPhase("reveal");
     } else {
       setStepIndex(stepIndex + 1);
+      setReviewStepIndex(null);
     }
   }
 
@@ -224,7 +229,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
 
           {phase === "playing" && (
             <motion.div
-              key={`step-${stepIndex}`}
+              key={`step-${reviewStepIndex ?? stepIndex}`}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -303,28 +308,52 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                   {steps.map((s, i) => {
                     const done = i < stepIndex;
                     const current = i === stepIndex;
+                    const reviewing = reviewStepIndex === i;
                     const status = done ? "completed" : current ? "current" : "upcoming";
+                    const canTap = done || current;
                     return (
                       <div key={i} role="listitem" className="flex items-center gap-1.5 flex-1">
-                        <div
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!canTap) return;
+                            if (current) {
+                              setReviewStepIndex(null); // back to current step
+                            } else if (done) {
+                              setReviewStepIndex(i); // review a completed step
+                            }
+                          }}
                           className="flex items-center justify-center rounded-full"
                           style={{
                             width: 26,
                             height: 26,
                             fontSize: "13px",
-                            background: current ? "#7c3aed" : done ? "#1e1a0e" : "#1a1a2e",
-                            border: current
+                            background: reviewing
+                              ? "#2e1065"
+                              : current && reviewStepIndex === null
+                              ? "#7c3aed"
+                              : done
+                              ? "#1e1a0e"
+                              : "#1a1a2e",
+                            border: reviewing
+                              ? "2px solid #a78bfa"
+                              : current && reviewStepIndex === null
                               ? "2px solid #a78bfa"
                               : done
                               ? "2px solid #ffc800"
                               : "2px solid #2a2a40",
                             filter: !done && !current ? "grayscale(1) opacity(0.5)" : "none",
+                            cursor: canTap ? "pointer" : "default",
+                            padding: 0,
+                            lineHeight: 1,
+                            appearance: "none" as const,
+                            outline: "none",
                           }}
-                          aria-label={`Step ${i + 1}: ${s.label}, ${status}`}
-                          aria-current={current ? "step" : undefined}
+                          aria-label={`Step ${i + 1}: ${s.label}, ${status}${canTap ? " (tap to review)" : ""}`}
+                          aria-current={current && reviewStepIndex === null ? "step" : undefined}
                         >
                           {done ? "✓" : stepIcon(s.type)}
-                        </div>
+                        </button>
                         {i < steps.length - 1 && (
                           <div
                             className="flex-1 h-0.5 rounded-full"
@@ -337,13 +366,54 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
                 </div>
               </div>
 
-              <StepQuestion
-                step={steps[stepIndex]}
-                stepIndex={stepIndex}
-                totalSteps={steps.length}
-                isLast={stepIndex === steps.length - 1}
-                onNext={handleNext}
-              />
+              {reviewStepIndex !== null ? (
+                <>
+                  <StepQuestion
+                    key={`review-${reviewStepIndex}`}
+                    step={steps[reviewStepIndex]}
+                    stepIndex={reviewStepIndex}
+                    totalSteps={steps.length}
+                    isLast={false}
+                    onNext={() => {}}
+                    readOnly
+                    previousAnswer={answers[reviewStepIndex]}
+                  />
+                  {/* Fixed "back to current step" button */}
+                  <div
+                    className="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3"
+                    style={{
+                      background: "linear-gradient(to top, #131327 80%, transparent)",
+                      maxWidth: 480,
+                      margin: "0 auto",
+                    }}
+                  >
+                    <button
+                      onClick={() => setReviewStepIndex(null)}
+                      className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
+                      style={{
+                        background: "#7c3aed",
+                        color: "#fff",
+                        boxShadow: "0 5px 0 #5b21b6",
+                        letterSpacing: "1.5px",
+                        fontSize: "13px",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      BACK TO CURRENT STEP
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <StepQuestion
+                  key={`active-${stepIndex}`}
+                  step={steps[stepIndex]}
+                  stepIndex={stepIndex}
+                  totalSteps={steps.length}
+                  isLast={stepIndex === steps.length - 1}
+                  onNext={handleNext}
+                />
+              )}
             </motion.div>
           )}
 
