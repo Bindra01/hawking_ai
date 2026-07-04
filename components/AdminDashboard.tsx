@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import MathText from "@/components/MathText";
 import { TOPIC_SUGGESTIONS } from "@/lib/constants";
 import { Step, getStepFormat } from "@/lib/types";
@@ -69,6 +69,7 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const problemsListRef = useRef<HTMLDivElement>(null);
 
   // Students list state
   const [students, setStudents] = useState<Student[]>([]);
@@ -82,7 +83,15 @@ export default function AdminPage() {
     try {
       const res = await fetch(url);
       const data = await res.json();
-      setProblems(Array.isArray(data) ? data : []);
+      // Ensure newest problems always appear first (sort client-side as a
+      // safety net on top of the API's own created_at DESC ordering).
+      const sorted = Array.isArray(data)
+        ? [...data].sort(
+            (a: Problem, b: Problem) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
+        : [];
+      setProblems(sorted);
     } catch {
       setProblems([]);
     }
@@ -129,7 +138,10 @@ export default function AdminPage() {
         setGenMessage(`Error: ${data.error}`);
       } else {
         setGenMessage(data.message);
-        fetchProblems();
+        await fetchProblems();
+        // Scroll to the problems list so the newly generated problem (at the
+        // top, sorted by created_at DESC) is immediately visible.
+        problemsListRef.current?.scrollIntoView({ behavior: "smooth" });
       }
     } catch (err) {
       setGenMessage(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
@@ -357,7 +369,7 @@ export default function AdminPage() {
         </div>
 
         {/* Problems List */}
-        <div className="flex flex-col gap-4">
+        <div ref={problemsListRef} className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-black uppercase" style={{ color: "#7c3aed", letterSpacing: "1.5px" }}>
               All Problems ({problems.length})
