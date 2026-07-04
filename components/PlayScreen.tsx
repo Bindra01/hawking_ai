@@ -40,6 +40,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
   const [results, setResults] = useState<boolean[]>([]);
   const [answers, setAnswers] = useState<(Answer | null)[]>([]);
   const [stepSummaries, setStepSummaries] = useState<StepSummary[]>([]);
+  const [showScenario, setShowScenario] = useState(false);
 
   // Index of the dedicated "solve" (PREDICT THE FORM) step. -1 for legacy /
   // un-regenerated problems that predate the solve step — those flow unchanged
@@ -232,27 +233,72 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
             >
               {/* Persistent goal + step breadcrumb: keeps the student anchored
                   to the ONE problem they're solving, with conquered steps lit
-                  up so each step reads as part of a connected method. */}
+                  up so each step reads as part of a connected method.
+                  Tapping the goal card toggles the full problem statement so
+                  the student can re-read the scenario at any step. */}
               <div className="flex flex-col gap-2.5 mb-4">
-                <div
-                  className="rounded-xl px-3 py-2 flex items-start gap-2"
-                  style={{ background: "#1a1a2e", border: "1.5px solid #2a2a40" }}
+                <button
+                  type="button"
+                  onClick={() => setShowScenario((v) => !v)}
+                  className="rounded-xl px-3 py-2 flex items-start gap-2 w-full text-left"
+                  style={{
+                    background: "#1a1a2e",
+                    border: showScenario ? "1.5px solid #7c3aed" : "1.5px solid #2a2a40",
+                    cursor: "pointer",
+                    transition: "border-color 0.2s",
+                  }}
                 >
                   <span className="text-sm mt-0.5">🎯</span>
-                  <div className="flex flex-col">
-                    <span
-                      className="text-xs font-black uppercase"
-                      style={{ color: "#6b6b80", letterSpacing: "1.2px", fontSize: "9px" }}
-                    >
-                      Goal
-                    </span>
+                  <div className="flex flex-col flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-xs font-black uppercase"
+                        style={{ color: "#6b6b80", letterSpacing: "1.2px", fontSize: "9px" }}
+                      >
+                        Goal
+                      </span>
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: "#7c3aed", fontSize: "9px", letterSpacing: "0.5px" }}
+                      >
+                        {showScenario ? "HIDE PROBLEM" : "VIEW PROBLEM"}
+                      </span>
+                    </div>
                     <MathText
                       text={problem.goal}
                       className="text-sm font-semibold leading-snug"
                       style={{ color: "#e5e5e5" }}
                     />
                   </div>
-                </div>
+                </button>
+                <AnimatePresence>
+                  {showScenario && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <div
+                        className="rounded-xl px-3 py-2.5"
+                        style={{ background: "#1a1a2e", border: "1.5px solid #2a2a40" }}
+                      >
+                        <span
+                          className="text-xs font-black uppercase block mb-1"
+                          style={{ color: "#6b6b80", letterSpacing: "1.2px", fontSize: "9px" }}
+                        >
+                          Problem Statement
+                        </span>
+                        <MathText
+                          text={problem.scenario}
+                          className="text-sm font-semibold leading-relaxed"
+                          style={{ color: "#e5e5e5" }}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 <div className="flex items-center gap-1.5" role="list" aria-label="Problem steps">
                   {steps.map((s, i) => {
                     const done = i < stepIndex;
