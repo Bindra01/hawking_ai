@@ -1169,23 +1169,36 @@ export function validateAndNormalize(
   problem.difficulty = difficulty;
   problem.diagram_type = null;
 
-  // SANITIZE: the goal must never reveal the final answer. Strip the answer
-  // value from the goal if the model embedded it (common when the few-shot
-  // pattern was "Find: [answer]"). Also strip the bare "Find: " prefix that
-  // becomes redundant once the answer is removed, and any trailing LaTeX
-  // delimiters / whitespace left behind.
+  // SANITIZE: the goal must never reveal the final answer. The model often
+  // produces "Find: <answer>" goals. Use plain substring matching (not regex)
+  // because LaTeX answers contain characters that break regex escaping.
   if (problem.goal && problem.final_answer) {
     const answer = problem.final_answer.trim();
-    // Strip the answer (with or without surrounding $ delimiters)
     let cleaned = problem.goal;
-    // Try stripping with $ wrappers first, then bare
-    cleaned = cleaned.replace(new RegExp(`\\$?${answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\$?`, "g"), "");
-    // Also strip common "Find: " / "Find " prefix patterns that become empty
+
+    // Strip the answer as a plain substring (handles LaTeX reliably).
+    // Try with $ wrappers, without wrappers, and the bare answer.
+    for (const needle of [`$${answer}$`, `$${answer}`, `${answer}$`, answer]) {
+      while (cleaned.includes(needle)) {
+        cleaned = cleaned.split(needle).join("");
+      }
+    }
+    // Also strip the "≈" prefix that sometimes precedes numeric answers
+    const approxAnswer = answer.startsWith("≈") ? answer.slice(1).trim() : null;
+    if (approxAnswer) {
+      for (const needle of [`$${approxAnswer}$`, approxAnswer]) {
+        while (cleaned.includes(needle)) {
+          cleaned = cleaned.split(needle).join("");
+        }
+      }
+    }
+    // Strip bare "Find: " prefix that becomes empty/redundant after removal
     cleaned = cleaned.replace(/^Find:\s*/i, "").trim();
-    // If the goal was entirely the answer (e.g. "Find: 517 m/s"), replace with
-    // a generic goal derived from the scenario.
+    // Clean up leftover lone $ delimiters and whitespace
+    cleaned = cleaned.replace(/^\$\s*$/, "").replace(/\s+/g, " ").trim();
+    // If the goal was entirely the answer, replace with a generic goal
     if (cleaned.length < 10) {
-      cleaned = `Find the answer to the problem described above.`;
+      cleaned = "Find the answer to the problem described above.";
     }
     problem.goal = cleaned;
   }

@@ -1395,13 +1395,22 @@ describe("validateAndNormalize", () => {
     expect(assembled).not.toContain("517");
   });
 
-  it("sanitizes the goal so it never reveals the final_answer", () => {
+  it("sanitizes the goal so it never reveals the final_answer (numeric)", () => {
     const problem = makeValidProblem();
     problem.goal = "Find: 42 m/s";
     problem.final_answer = "42 m/s";
     validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
-    // The sanitized goal must not contain the numeric answer
     expect(problem.goal).not.toContain("42 m/s");
+    expect(problem.goal.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it("sanitizes the goal so it never reveals the final_answer (LaTeX)", () => {
+    const problem = makeValidProblem();
+    problem.goal = "Find: $W = \\frac{kL^3}{3}$";
+    problem.final_answer = "$W = \\frac{kL^3}{3}$";
+    validateAndNormalize(problem, "mechanics", "Work-Energy", "class_11");
+    expect(problem.goal).not.toContain("\\frac{kL^3}{3}");
+    expect(problem.goal).not.toContain("W =");
     expect(problem.goal.length).toBeGreaterThanOrEqual(10);
   });
 

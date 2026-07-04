@@ -16,14 +16,26 @@ export async function GET(
 
   // Never reveal the final answer inside the goal card — strip it at read-time
   // so even older stored problems that had "Find: [answer]" goals are safe.
+  // Uses plain substring matching (not regex) because LaTeX answers contain
+  // characters that break regex escaping.
   if (problem.goal && problem.final_answer) {
     const answer = problem.final_answer.trim();
     let goal = problem.goal;
-    // Strip the answer value (with or without $ delimiters)
-    const escaped = answer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    goal = goal.replace(new RegExp(`\\$?${escaped}\\$?`, "g"), "");
-    // Strip bare "Find: " prefix that becomes empty after answer removal
+    for (const needle of [`$${answer}$`, `$${answer}`, `${answer}$`, answer]) {
+      while (goal.includes(needle)) {
+        goal = goal.split(needle).join("");
+      }
+    }
+    const approxAnswer = answer.startsWith("≈") ? answer.slice(1).trim() : null;
+    if (approxAnswer) {
+      for (const needle of [`$${approxAnswer}$`, approxAnswer]) {
+        while (goal.includes(needle)) {
+          goal = goal.split(needle).join("");
+        }
+      }
+    }
     goal = goal.replace(/^Find:\s*/i, "").trim();
+    goal = goal.replace(/^\$\s*$/, "").replace(/\s+/g, " ").trim();
     if (goal.length < 10) {
       goal = "Find the answer to the problem described above.";
     }
