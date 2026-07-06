@@ -1,6 +1,7 @@
 import {
   formatForType,
   LEGACY_ONLY_STEP_TYPES,
+  PredictRole,
   StepFormat,
   StepType,
   VALID_STEP_TYPES,
@@ -8,6 +9,11 @@ import {
 import { getOpenAIClient } from "@/lib/openai";
 import { STEP_ICONS } from "@/lib/step-icons";
 import { sanitizeGoal } from "@/lib/sanitize-goal";
+import {
+  assemblePredictFormula,
+  canonicalFormulaEquals,
+  canonicalPredictFormula,
+} from "@/lib/predict-form";
 
 // ─── STEP TYPE DEFINITIONS ───────────────────────────────────────────────────
 
@@ -214,6 +220,42 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     // must be NON-COMMITTAL — no 'correct'/'wrong'/'incorrect'/'mistake'/'exactly
     // right'/'perfect'; calmly note the form is assembled and the recap carries it
     // through to the value.
+
+  FORM STEP — PREDICT-THE-DEPENDENCE (STRONGLY PREFERRED when the answer is a
+  single MONOMIAL RATIO, i.e. a product/quotient of powers with NO added terms,
+  such as $r = \\frac{mv}{qB}$ or $E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$):
+  instead of the "equation" contract, emit a "predict" object on the terminal
+  "form" step (and NO "equation"/"tiles"). The student predicts, for each physical
+  quantity, whether the target Increases (numerator), Decreases (denominator), or
+  has No effect — and CODE assembles their formula and compares it to yours.
+    {
+      "predict": {
+        "target": "<bare target symbol, e.g. r or E_n — NO \\$>",
+        "correctFormula": "$<the full correct monomial ratio>$",  // \\$…\\$-wrapped; MUST equal final_answer
+        "numeratorConstants": [ "<bare fixed constant>", ... ],   // OPTIONAL fixed factors that ALWAYS sit in the numerator (e.g. "\\pi^2", "\\hbar^2"); never graded
+        "denominatorConstants": [ "<bare fixed constant>", ... ], // OPTIONAL fixed factors that ALWAYS sit in the denominator (e.g. "2"); never graded
+        "variables": [
+          {
+            "symbol": "<bare quantity symbol, e.g. m — NO \\$>",
+            "label": "<short human name, e.g. 'the mass'>",
+            "factor": "<bare LaTeX factor as it appears in the ratio, e.g. n^2; defaults to symbol if omitted — NO \\$>",
+            "role": "numerator" | "denominator"   // numerator = target increases with it; denominator = target decreases with it
+          },
+          ...   // 2-8 variables; symbols UNIQUE
+        ]
+      }
+    }
+    // ROLE RULE: a variable whose increase INCREASES the target is "numerator";
+    // one whose increase DECREASES the target is "denominator". Every graded
+    // "variables" entry MUST be a student-facing PHYSICAL QUANTITY that genuinely
+    // varies. Put FIXED CONSTANTS (π, ℏ, numeric factors like 2) in
+    // numeratorConstants/denominatorConstants — NEVER as graded variables.
+    // The assembled ground truth (constants + variable factors by role) MUST
+    // canonically equal BOTH correctFormula AND final_answer, so make final_answer
+    // the same monomial ratio (symbolic, no substituted numbers).
+    // SCOPE: use "predict" for ANY single monomial-ratio answer. ONLY when the
+    // answer has ADDED terms (e.g. $v^2 = u^2 + 2as$, or a sum) is it NOT a
+    // monomial ratio — then keep the "equation" contract above instead.
 
 * type "roadmap"  => emit a MOVES CONTRACT (NO "options"/"tiles" — CODE assembles
   the build tiles + accepted ordering from your prose move arrays):
@@ -461,21 +503,18 @@ const EXAMPLE_CLASS_12 = {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
-        prompt: "Assemble the SYMBOLIC form of the orbit radius from the structural tiles — the momentum on top, the charge-field product underneath. Build the form; the value comes later.",
-        build: {
-          equation: {
-            lhs_terms: ["r"],
-            relation: "=",
-            rhs_terms: ["$\\frac{mv}{qB}$"],
-            distractor_terms: [
-              { term: "$\\frac{qB}{mv}$", feedback: "That tile inverts the ratio; the recap keeps the momentum on top so the radius grows with the speed." },
-              { term: "$\\frac{mv^2}{qB}$", feedback: "That tile keeps an extra power of the speed; the recap settles the radius with a single power of v." }
-            ]
-          },
-          feedbackCorrect: "You've assembled the symbolic radius; the recap below carries the structure through to its value.",
-          feedbackWrong: "Reassemble the skeleton: the radius is the momentum over the charge-field product, which the recap then values."
+        prompt: "Predict how the orbit radius depends on each quantity: does raising it push the radius up (numerator), down (denominator), or leave it unchanged? Your picks assemble the symbolic form.",
+        predict: {
+          target: "r",
+          correctFormula: "$r = \\frac{mv}{qB}$",
+          variables: [
+            { symbol: "m", label: "the electron mass", role: "numerator" as const },
+            { symbol: "v", label: "the electron speed", role: "numerator" as const },
+            { symbol: "q", label: "the electron charge", role: "denominator" as const },
+            { symbol: "B", label: "the magnetic field strength", role: "denominator" as const }
+          ]
         },
-        tip: "Assemble the SHAPE — momentum over the charge-field product — and let the recap fill the value."
+        tip: "A heavier or faster electron bends into a wider circle; a stronger charge or field bends it tighter."
       }
     ]
   }
@@ -603,21 +642,19 @@ const EXAMPLE_COLLEGE = {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
-        prompt: "Assemble the SYMBOLIC energy-level skeleton from the structural tiles — the level index on top, the well width squared underneath. Build the form; numbers come later.",
-        build: {
-          equation: {
-            lhs_terms: ["$E_n$"],
-            relation: "=",
-            rhs_terms: ["$\\frac{n^2\\pi^2\\hbar^2}{2mL^2}$"],
-            distractor_terms: [
-              { term: "$\\frac{n\\pi\\hbar}{2mL}$", feedback: "That tile is the quantized wavenumber scale, not the energy; the recap keeps the squared structure that the energy carries." },
-              { term: "$\\frac{2mL^2}{n^2\\pi^2\\hbar^2}$", feedback: "That tile inverts the ratio; the recap keeps the level index and ℏ on top so the energy rises with the level number." }
-            ]
-          },
-          feedbackCorrect: "You've assembled the symbolic energy levels; the recap below carries the structure through to its value.",
-          feedbackWrong: "Reassemble the skeleton: the energy is the squared level index times ℏ over twice the mass and width squared, which the recap then values."
+        prompt: "Predict how each energy level depends on the physical quantities: does raising it push the energy up (numerator), down (denominator), or leave it unchanged? The fixed constants are already placed; your picks assemble the rest.",
+        predict: {
+          target: "E_n",
+          correctFormula: "$E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$",
+          numeratorConstants: ["\\pi^2", "\\hbar^2"],
+          denominatorConstants: ["2"],
+          variables: [
+            { symbol: "n", label: "the quantum level index", factor: "n^2", role: "numerator" as const },
+            { symbol: "m", label: "the particle mass", role: "denominator" as const },
+            { symbol: "L", label: "the well width", factor: "L^2", role: "denominator" as const }
+          ]
         },
-        tip: "Assemble the SHAPE of the levels — index squared on top, width squared below — and let the recap fill the value."
+        tip: "Higher levels carry more energy; a heavier particle in a wider well sits at lower energy — π and ℏ are fixed constants."
       }
     ]
   }
@@ -801,6 +838,25 @@ interface GeneratedBuild {
   feedbackWrong: string;
 }
 
+// PredictContract — for a terminal `form` step whose answer is a single
+// monomial ratio, the MODEL emits this structured predict contract INSTEAD of
+// the `equation` contract. Mirrors PredictData in lib/types.ts. The runtime
+// getStepFormat upgrades such a step to format "predict" from this data; the
+// generated `format` stays "build".
+interface PredictContractVariable {
+  symbol: string;
+  label: string;
+  factor?: string;
+  role: PredictRole;
+}
+interface PredictContract {
+  target: string;
+  correctFormula: string;
+  numeratorConstants?: string[];
+  denominatorConstants?: string[];
+  variables: PredictContractVariable[];
+}
+
 interface GeneratedStep {
   type: string;
   format?: "mcq" | "claim" | "multiselect" | "build";
@@ -811,6 +867,7 @@ interface GeneratedStep {
   claim?: GeneratedClaim;
   multiselect?: GeneratedMultiSelect;
   build?: GeneratedBuild;
+  predict?: PredictContract;
   tip: string;
 }
 
@@ -975,11 +1032,12 @@ CRITICAL QUALITY RULES:
    - "title": Short descriptive title (~80 chars max)
    - "goal": A SHORT qualitative statement of WHAT to find — e.g. "Find the RMS speed of the gas molecules", "Determine the orbital radius". NEVER include the numerical value, symbolic formula, or units of the answer in the goal — the answer is revealed only in the recap. The goal must read like a question prompt, not a spoiler.
    - "final_answer": The numerical/symbolic answer (shown only in the recap)
-   - Last step MUST be type "form" (ASSEMBLE THE FORM): a build step that assembles the SYMBOLIC answer skeleton from atomic tiles with NO substituted numbers, with non-committal feedback (no celebration). The exact value is revealed only in the recap.
+   - Last step MUST be type "form" (ASSEMBLE THE FORM): the terminal step that presents the SYMBOLIC answer skeleton with NO substituted numbers. When the answer is a single MONOMIAL RATIO (product/quotient of powers, no added terms) emit a "predict" contract (predict-the-dependence — STRONGLY PREFERRED); ONLY when the answer has added terms keep the "equation" contract. The exact value is revealed only in the recap.
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap/produces → "claim" object; identify/feeds → "multiselect" object;
-     setup/form → "equation" contract (Contract C term arrays); roadmap → "moves"
-     contract; principle → "options" (exactly 4: 1 correct, 3 wrong).
+     setup → "equation" contract (Contract C term arrays); form → "predict"
+     contract for a single monomial-ratio answer, else "equation" contract;
+     roadmap → "moves" contract; principle → "options" (exactly 4: 1 correct, 3 wrong).
    - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
    - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
 }
@@ -1259,14 +1317,33 @@ export function validateAndNormalize(
         `Step ${i} format "${step.format}" conflicts with type "${step.type}" (expected "${format}")`
       );
     }
-    step.format = format;
+    // `formatForType` never returns "predict" (predict form steps are normalized
+    // to "build"), so this narrowing cast is safe.
+    step.format = format as GeneratedStep["format"];
+
+    // PREDICT CONTRACT GUARDS (common-field block, before the per-step switch).
+    // The predict contract may live ONLY on the terminal `form` step, and never
+    // alongside a `build`/`equation` contract on that step.
+    if (step.predict && step.type !== "form") {
+      throw new Error('Only terminal "form" steps may carry predict');
+    }
+    if (step.type === "form" && step.predict && step.build) {
+      throw new Error(
+        "predict form step must not also carry build/equation data"
+      );
+    }
 
     // Reject leftover content objects from other formats. Each format owns
     // exactly one content shape; a step carrying a foreign shape (e.g. a trap
     // step with both `claim` and stale `options`) is malformed and would ship
     // contradictory data to the DB/admin payloads even though `format` wins at
     // runtime.
-    const FORMAT_FIELDS: Record<StepFormat, keyof GeneratedStep> = {
+    //
+    // `predict` is intentionally NOT a FORMAT_FIELDS key: a predict form step
+    // is normalized to format "build" but legitimately carries `predict` and NOT
+    // `build`, so it must not be flagged by this stale-shape loop. The
+    // common-field guards above already constrain where `predict` may appear.
+    const FORMAT_FIELDS: Partial<Record<StepFormat, keyof GeneratedStep>> = {
       mcq: "options",
       claim: "claim",
       multiselect: "multiselect",
@@ -1276,6 +1353,9 @@ export function validateAndNormalize(
       StepFormat,
       keyof GeneratedStep
     ][]) {
+      // A predict form step (format "build") carries `predict` and NOT `build`,
+      // so the `build` stale-field check does not apply to it.
+      if (step.type === "form" && step.predict && field === "build") continue;
       if (fmt !== format && step[field] != null) {
         throw new Error(
           `Step ${i} (${format}) has a stale "${field}" field from format "${fmt}"`
@@ -1316,6 +1396,15 @@ export function validateAndNormalize(
         validateMultiSelectStep(step, i);
         break;
       case "build":
+        // Predict-the-dependence terminal form step: it carries the `predict`
+        // contract INSTEAD of the `equation` contract, so it skips
+        // assembleBuildFromContract / sanitizeFormFeedback / validateBuildStep
+        // entirely (no build tiles, and its UI copy is fixed, not model
+        // feedback, so FORM_BANNED_WORDS / sanitizeFormFeedback do not apply).
+        if (step.type === "form" && step.predict) {
+          validatePredictStep(step, i, problem.final_answer);
+          break;
+        }
         // Contract C: if the model supplied a constrained `equation` (setup/form)
         // or `moves` (roadmap) contract instead of pre-assembled tiles, CODE
         // assembles tiles/accepted/distractors deterministically here — BEFORE any
@@ -1348,8 +1437,24 @@ export function validateAndNormalize(
   // relation rather than restating the answer skeleton.
   const formStep = steps[steps.length - 1];
   const formOrdering = formStep.build?.accepted?.[0];
+  // A predict form step assembles no `equation`, so derive its normalized final
+  // relation from `predict.correctFormula` (split on the first "=") so the guard
+  // is preserved — a setup that restates the predict answer still throws.
+  let formNorm: string | null = null;
   if (Array.isArray(formOrdering)) {
-    const formNorm = normalizeEquationOrdering(formOrdering);
+    formNorm = normalizeEquationOrdering(formOrdering);
+  } else if (formStep.predict?.correctFormula) {
+    const cf = formStep.predict.correctFormula;
+    const eqIdx = cf.indexOf("=");
+    if (eqIdx !== -1) {
+      formNorm = normalizeEquationOrdering([
+        cf.slice(0, eqIdx),
+        "=",
+        cf.slice(eqIdx + 1),
+      ]);
+    }
+  }
+  if (formNorm !== null) {
     for (let i = 0; i < steps.length; i++) {
       const s = steps[i];
       if (s.type !== "setup") continue;
@@ -1848,6 +1953,161 @@ export function tileHasEmbeddedRelation(tile: string): boolean {
   }
 
   return false; // no top-level relation -> atomic fragment
+}
+
+/**
+ * Validate a terminal `form` step's `predict` contract (predict-the-dependence).
+ * Unlike the equation-contract path, a predict step ships FIXED UI copy (no model
+ * feedback), so FORM_BANNED_WORDS / sanitizeFormFeedback do NOT apply here.
+ *
+ * Structural checks: `target` a non-empty bare token (no `$`); `correctFormula` a
+ * non-empty `$…$`-wrapped string; `variables` length 2-8; each variable has a
+ * non-empty `label`, a bare `symbol` (no `$`), a bare `factor` (defaults to
+ * `symbol`; no `$`), and `role ∈ {numerator, denominator}`; symbols unique; each
+ * numerator/denominator constant (if present) is a bare non-empty string (no `$`).
+ *
+ * Semantic check (the real guard): assemble the ground-truth formula from the
+ * roles + constants and assert it canonically equals BOTH `correctFormula` AND the
+ * problem `finalAnswer`. The strict `canonicalPredictFormula` sorts each side and
+ * strips `$`/whitespace, so display order and `I\rho L` vs `I \rho L` compare
+ * equal — but an additive answer or a role set that doesn't reproduce the stated
+ * answer is rejected into the retry loop. A parse failure counts as a validation
+ * failure (the parser throws) and likewise drives a retry.
+ */
+function validatePredictStep(
+  step: GeneratedStep,
+  i: number,
+  finalAnswer: string
+): void {
+  const predict = step.predict;
+  if (!predict) {
+    throw new Error(`Step ${i} (predict) missing required "predict" object`);
+  }
+
+  // target: non-empty bare token, no `$`.
+  if (typeof predict.target !== "string" || predict.target.trim().length === 0) {
+    throw new Error(`Step ${i} predict.target must be a non-empty string`);
+  }
+  if (predict.target.includes("$")) {
+    throw new Error(
+      `Step ${i} predict.target "${predict.target}" must be a bare token (no "$")`
+    );
+  }
+
+  // correctFormula: non-empty, `$…$`-wrapped.
+  if (
+    typeof predict.correctFormula !== "string" ||
+    predict.correctFormula.trim().length === 0
+  ) {
+    throw new Error(`Step ${i} predict.correctFormula must be a non-empty string`);
+  }
+  const cf = predict.correctFormula.trim();
+  if (!cf.startsWith("$") || !cf.endsWith("$")) {
+    throw new Error(
+      `Step ${i} predict.correctFormula "${predict.correctFormula}" must be wrapped in "$…$"`
+    );
+  }
+
+  // variables: length 2-8.
+  if (!Array.isArray(predict.variables)) {
+    throw new Error(`Step ${i} predict.variables must be an array`);
+  }
+  if (predict.variables.length < 2 || predict.variables.length > 8) {
+    throw new Error(
+      `Step ${i} predict.variables must have 2-8 entries, got ${predict.variables.length}`
+    );
+  }
+
+  const symbolsSeen = new Set<string>();
+  for (const v of predict.variables) {
+    if (typeof v.label !== "string" || v.label.trim().length === 0) {
+      throw new Error(`Step ${i} predict variable is missing a non-empty label`);
+    }
+    if (typeof v.symbol !== "string" || v.symbol.trim().length === 0) {
+      throw new Error(`Step ${i} predict variable is missing a non-empty symbol`);
+    }
+    if (v.symbol.includes("$")) {
+      throw new Error(
+        `Step ${i} predict variable symbol "${v.symbol}" must be a bare token (no "$")`
+      );
+    }
+    // factor defaults to symbol; reject `$` when supplied.
+    if (v.factor !== undefined) {
+      if (typeof v.factor !== "string" || v.factor.trim().length === 0) {
+        throw new Error(
+          `Step ${i} predict variable "${v.symbol}" has an empty factor`
+        );
+      }
+      if (v.factor.includes("$")) {
+        throw new Error(
+          `Step ${i} predict variable factor "${v.factor}" must be a bare token (no "$")`
+        );
+      }
+    }
+    if (v.role !== "numerator" && v.role !== "denominator") {
+      throw new Error(
+        `Step ${i} predict variable "${v.symbol}" has invalid role "${v.role}" (must be "numerator" or "denominator")`
+      );
+    }
+    if (symbolsSeen.has(v.symbol)) {
+      throw new Error(
+        `Step ${i} predict variables have a duplicate symbol "${v.symbol}"`
+      );
+    }
+    symbolsSeen.add(v.symbol);
+  }
+
+  // Constants: each entry a bare non-empty string.
+  const checkConstants = (list: string[] | undefined, side: string) => {
+    if (list === undefined) return;
+    if (!Array.isArray(list)) {
+      throw new Error(`Step ${i} predict.${side} must be an array`);
+    }
+    for (const c of list) {
+      if (typeof c !== "string" || c.trim().length === 0) {
+        throw new Error(`Step ${i} predict.${side} has an empty constant`);
+      }
+      if (c.includes("$")) {
+        throw new Error(
+          `Step ${i} predict.${side} constant "${c}" must be a bare token (no "$")`
+        );
+      }
+    }
+  };
+  checkConstants(predict.numeratorConstants, "numeratorConstants");
+  checkConstants(predict.denominatorConstants, "denominatorConstants");
+
+  // Semantic guard: assemble ground truth from roles + constants and assert it
+  // canonically equals BOTH correctFormula AND finalAnswer.
+  const groundTruthEntries = predict.variables.map((v) => ({
+    factor: v.factor ?? v.symbol,
+    role: v.role,
+  }));
+  const assembled = assemblePredictFormula(predict.target, groundTruthEntries, {
+    numerator: predict.numeratorConstants,
+    denominator: predict.denominatorConstants,
+  });
+
+  // These parses THROW on a non-monomial-ratio (e.g. additive) formula, which is
+  // the desired validation failure driving the retry loop.
+  const assembledCanon = canonicalPredictFormula(assembled);
+  const correctCanon = canonicalPredictFormula(predict.correctFormula);
+  if (!canonicalFormulaEquals(assembledCanon, correctCanon)) {
+    throw new Error(
+      `Step ${i} predict roles+constants assemble "${assembled}" which does not match predict.correctFormula "${predict.correctFormula}"`
+    );
+  }
+  if (typeof finalAnswer !== "string" || finalAnswer.trim().length === 0) {
+    throw new Error(
+      `Step ${i} predict form requires a non-empty problem final_answer`
+    );
+  }
+  const finalCanon = canonicalPredictFormula(finalAnswer);
+  if (!canonicalFormulaEquals(assembledCanon, finalCanon)) {
+    throw new Error(
+      `Step ${i} predict roles+constants assemble "${assembled}" which does not match problem final_answer "${finalAnswer}"`
+    );
+  }
 }
 
 function validateBuildStep(step: GeneratedStep, i: number): void {

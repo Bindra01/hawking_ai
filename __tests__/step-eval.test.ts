@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { evaluateStep, isAnswerReady, type Answer } from "@/lib/step-eval";
+import {
+  evaluateStep,
+  isAnswerReady,
+  describeAnswer,
+  describeCorrectAnswer,
+  type Answer,
+} from "@/lib/step-eval";
 import type { Step } from "@/lib/types";
 
 const mcqStep: Step = {
@@ -66,6 +72,26 @@ const buildStep: Step = {
     distractors: [{ tile: "v", feedback: "v is velocity, not part of F = ma." }],
     feedbackCorrect: "Nailed it — that is Newton's second law.",
     feedbackWrong: "Not the right arrangement, try again.",
+  },
+  tip: "tip",
+};
+
+// A predict-the-dependence terminal form step. Ground truth: r = m v / (q B).
+const predictStep: Step = {
+  type: "form",
+  format: "build",
+  label: "Assemble the form",
+  icon: "F",
+  prompt: "Predict how the radius depends on each quantity.",
+  predict: {
+    target: "r",
+    correctFormula: "$r = \\frac{mv}{qB}$",
+    variables: [
+      { symbol: "m", label: "the mass", factor: "m", role: "numerator" },
+      { symbol: "v", label: "the speed", factor: "v", role: "numerator" },
+      { symbol: "q", label: "the charge", factor: "q", role: "denominator" },
+      { symbol: "B", label: "the field", factor: "B", role: "denominator" },
+    ],
   },
   tip: "tip",
 };
@@ -139,6 +165,50 @@ describe("evaluateStep — build", () => {
   });
 });
 
+describe("evaluateStep — predict", () => {
+  it("all roles matching ground truth is correct", () => {
+    const r = evaluateStep(predictStep, {
+      kind: "predict",
+      choices: { m: "up", v: "up", q: "down", B: "down" },
+    });
+    expect(r.correct).toBe(true);
+  });
+  it("one variable on the wrong side is incorrect", () => {
+    const r = evaluateStep(predictStep, {
+      kind: "predict",
+      choices: { m: "up", v: "up", q: "up", B: "down" },
+    });
+    expect(r.correct).toBe(false);
+  });
+  it("a 'none' choice never matches a numerator/denominator role (incorrect)", () => {
+    const r = evaluateStep(predictStep, {
+      kind: "predict",
+      choices: { m: "none", v: "up", q: "down", B: "down" },
+    });
+    expect(r.correct).toBe(false);
+  });
+});
+
+describe("describeAnswer / describeCorrectAnswer — predict", () => {
+  it("describeAnswer assembles the student's picked formula", () => {
+    const s = describeAnswer(predictStep, {
+      kind: "predict",
+      choices: { m: "up", v: "up", q: "down", B: "down" },
+    });
+    expect(s).toBe("$r = \\frac{m v}{q B}$");
+  });
+  it("describeAnswer with an area-backwards style pick lands the factor on the wrong side", () => {
+    const s = describeAnswer(predictStep, {
+      kind: "predict",
+      choices: { m: "up", v: "up", q: "down", B: "up" },
+    });
+    expect(s).toBe("$r = \\frac{m v B}{q}$");
+  });
+  it("describeCorrectAnswer returns the correctFormula", () => {
+    expect(describeCorrectAnswer(predictStep)).toBe("$r = \\frac{mv}{qB}$");
+  });
+});
+
 describe("isAnswerReady", () => {
   it("mcq ready when index >= 0", () => {
     expect(isAnswerReady(mcqStep, { kind: "mcq", index: 0 })).toBe(true);
@@ -181,5 +251,21 @@ describe("isAnswerReady", () => {
   });
   it("null answer not ready", () => {
     expect(isAnswerReady(mcqStep, null)).toBe(false);
+  });
+  it("predict ready when every variable has a choice", () => {
+    expect(
+      isAnswerReady(predictStep, {
+        kind: "predict",
+        choices: { m: "up", v: "none", q: "down", B: "down" },
+      })
+    ).toBe(true);
+  });
+  it("predict not ready when a variable choice is missing", () => {
+    expect(
+      isAnswerReady(predictStep, {
+        kind: "predict",
+        choices: { m: "up", v: "up", q: "down" },
+      })
+    ).toBe(false);
   });
 });

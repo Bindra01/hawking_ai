@@ -11,6 +11,7 @@ import McqStep from "./steps/McqStep";
 import ClaimStep from "./steps/ClaimStep";
 import MultiSelectStep from "./steps/MultiSelectStep";
 import BuildStep from "./steps/BuildStep";
+import PredictStep from "./steps/PredictStep";
 
 export const STEP_COLORS: Record<string, string> = {
   trap: "#ff4b4b",
@@ -107,6 +108,13 @@ export default function StepQuestion({
   // build steps are unaffected.
   const isTerminalForm = step.type === "form" && isLast;
 
+  // The predict-the-dependence form step. Its in-component panels ARE the
+  // feedback, so the generic FeedbackCard/shake are suppressed and the CTA is
+  // always the purple forward action regardless of verdict (the dual panels
+  // already carry the verdict). Grading is NOT neutralized — a real `correct`
+  // boolean still flows to onNext for XP/stars.
+  const isPredictForm = format === "predict";
+
   const ready = isAnswerReady(step, answer);
 
   function handleAnswerChange(next: Answer) {
@@ -119,7 +127,7 @@ export default function StepQuestion({
     const evaluated = evaluateStep(step, answer);
     setResult(evaluated);
     setSubmitted(true);
-    if (!isPredict && !evaluated.correct) {
+    if (!isPredict && !isPredictForm && !evaluated.correct) {
       setShake(true);
       setTimeout(() => setShake(false), 420);
     }
@@ -150,6 +158,8 @@ export default function StepQuestion({
         return <MultiSelectStep {...childProps} />;
       case "build":
         return <BuildStep {...childProps} />;
+      case "predict":
+        return <PredictStep {...childProps} />;
       case "mcq":
       default:
         return <McqStep {...childProps} neutral={isPredict} />;
@@ -190,7 +200,7 @@ export default function StepQuestion({
       {/* Feedback + tip (hidden in read-only review mode) */}
       {!readOnly && (
         <AnimatePresence>
-          {submitted && result && (
+          {submitted && result && !isPredictForm && (
             <FeedbackCard correct={isCorrect} feedback={result.feedback} neutral={isPredict} />
           )}
           {showTip && <TipCard tip={step.tip} />}
@@ -224,10 +234,20 @@ export default function StepQuestion({
             className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
             style={{
               // Terminal predict step uses calm slate-teal regardless of
-              // correctness so the button never signals right/wrong.
-              background: isPredict ? "#6fb3b8" : isCorrect ? "#7c3aed" : "#ff4b4b",
+              // correctness so the button never signals right/wrong. The
+              // predict-the-dependence form step always uses the purple forward
+              // action (the dual panels already carry the verdict).
+              background: isPredictForm
+                ? "#7c3aed"
+                : isPredict
+                ? "#6fb3b8"
+                : isCorrect
+                ? "#7c3aed"
+                : "#ff4b4b",
               color: "#fff",
-              boxShadow: isPredict
+              boxShadow: isPredictForm
+                ? "0 5px 0 #5b21b6"
+                : isPredict
                 ? "0 5px 0 #0e2326"
                 : `0 5px 0 ${isCorrect ? "#5b21b6" : "#cc3333"}`,
               letterSpacing: "1.5px",

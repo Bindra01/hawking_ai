@@ -55,6 +55,21 @@ type BuildData = {
   feedbackWrong: string;
 };
 
+type PredictContractVariable = {
+  symbol: string;
+  label: string;
+  factor?: string;
+  role: "numerator" | "denominator";
+};
+
+type PredictData = {
+  target: string;
+  correctFormula: string;
+  numeratorConstants?: string[];
+  denominatorConstants?: string[];
+  variables: PredictContractVariable[];
+};
+
 type Step = {
   type: string;
   format?: "mcq" | "claim" | "multiselect" | "build";
@@ -65,6 +80,7 @@ type Step = {
   claim?: ClaimData;
   multiselect?: MultiSelectData;
   build?: BuildData;
+  predict?: PredictData;
   tip: string;
 };
 
@@ -301,6 +317,30 @@ function makeFormStep(prompt: string): Step {
       feedbackWrong: neutralFormFeedback("a reshaped skeleton; reassemble the symbolic form and let the recap value it"),
     },
     tip: "Build the FORMULA first; numbers go in only at the recap",
+  };
+}
+
+// A valid predict-the-dependence form step (type "form", TERMINAL). Carries a
+// `predict` contract instead of `build`/`equation`. Default answer is the
+// monomial ratio r = m v / (q B) (no constants). The problem's final_answer
+// must canonically equal the assembled ground truth for validateAndNormalize.
+function makePredictFormStep(prompt: string): Step {
+  return {
+    type: "form",
+    label: "ASSEMBLE THE FORM",
+    icon: "🏗️",
+    prompt,
+    predict: {
+      target: "r",
+      correctFormula: "$r = \\frac{mv}{qB}$",
+      variables: [
+        { symbol: "m", label: "the mass", role: "numerator" },
+        { symbol: "v", label: "the speed", role: "numerator" },
+        { symbol: "q", label: "the charge", role: "denominator" },
+        { symbol: "B", label: "the field strength", role: "denominator" },
+      ],
+    },
+    tip: "A heavier or faster particle bends into a wider circle.",
   };
 }
 
@@ -1366,19 +1406,28 @@ describe("validateAndNormalize", () => {
   });
 
   it("examples' terminal form assembles the symbolic skeleton (not the numeric value)", () => {
-    // The examples carry Contract-C term arrays; run each through
-    // validateAndNormalize (which assembles tiles/accepted) on a clone before
-    // introspecting the assembled `accepted`.
+    // The examples carry either a Contract-C equation contract OR a predict
+    // contract on their terminal form; run each through validateAndNormalize on a
+    // clone before introspecting the terminal form step.
     for (const example of Object.values(__TEST_EXAMPLES)) {
       const ex = structuredClone(example) as unknown as TestProblem;
       validateAndNormalize(ex, example.subject, example.topic, example.difficulty);
       const steps = ex.solution_flow.steps;
       const formStep = steps[steps.length - 1];
       expect(formStep.type).toBe("form");
-      const accepted = formStep.build!.accepted!;
-      expect(accepted.length).toBeGreaterThan(0);
-      // The accepted arrangement assembles a multi-tile SYMBOLIC relation.
-      expect(accepted[0].length).toBeGreaterThanOrEqual(2);
+      if (formStep.predict) {
+        // A predict form step carries the correct monomial-ratio form and NOT a
+        // build contract; its correctFormula is symbolic ($…$-wrapped) and equals
+        // the problem's final_answer.
+        expect(formStep.build).toBeUndefined();
+        expect(formStep.predict.correctFormula).toMatch(/^\$.*\$$/);
+        expect(formStep.predict.variables.length).toBeGreaterThanOrEqual(2);
+      } else {
+        const accepted = formStep.build!.accepted!;
+        expect(accepted.length).toBeGreaterThan(0);
+        // The accepted arrangement assembles a multi-tile SYMBOLIC relation.
+        expect(accepted[0].length).toBeGreaterThanOrEqual(2);
+      }
     }
   });
 
@@ -1866,6 +1915,9 @@ describe("validateAndNormalize", () => {
       const steps = ex.solution_flow.steps;
       const terminal = steps[steps.length - 1];
       expect(terminal.type).toBe("form");
+      // A predict form step ships FIXED UI copy (no model feedback), so the
+      // banned-word sanitizer does not apply to it.
+      if (terminal.predict) continue;
       const build = terminal.build!;
       const strings = [
         build.feedbackCorrect,
@@ -1879,6 +1931,272 @@ describe("validateAndNormalize", () => {
         }
       }
     }
+  });
+
+  // ─── Predict-the-dependence terminal form contract ──────────────────────────
+
+  // A problem whose terminal form is a predict contract (monomial ratio, no
+  // constants). final_answer must canonically equal the assembled ground truth.
+  function makePredictProblem(): TestProblem {
+    return {
+      title: "Radius of a charged particle in a magnetic field",
+      subject: "electrodynamics",
+      topic: "Magnetic Force",
+      difficulty: "class_12",
+      scenario: "A particle of charge q and mass m moves at speed v in a field B.",
+      goal: "Find the orbit radius.",
+      final_answer: "$r = \\frac{mv}{qB}$",
+      diagram_type: null as null,
+      solution_flow: {
+        steps: [
+          makeMcqStep("principle", "Which principle governs the radius of the charged particle's circular orbit here?"),
+          makeBuildStep("Build the force-balance equation relating the magnetic and centripetal forces."),
+          makeRoadmapStep("Tap the high-level moves into the order that reaches the orbit radius."),
+          makePredictFormStep("Predict how the radius depends on each quantity to assemble the symbolic form."),
+        ],
+      },
+    };
+  }
+
+  it("accepts a predict-contract terminal form (monomial ratio, no constants)", () => {
+    const problem = makePredictProblem();
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).not.toThrow();
+  });
+
+  it("accepts a predict contract with fixed numerator/denominator constants", () => {
+    const problem = makePredictProblem();
+    problem.final_answer = "$E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$";
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict = {
+      target: "E_n",
+      correctFormula: "$E_n = \\frac{n^2\\pi^2\\hbar^2}{2mL^2}$",
+      numeratorConstants: ["\\pi^2", "\\hbar^2"],
+      denominatorConstants: ["2"],
+      variables: [
+        { symbol: "n", label: "the level index", factor: "n^2", role: "numerator" },
+        { symbol: "m", label: "the mass", role: "denominator" },
+        { symbol: "L", label: "the well width", factor: "L^2", role: "denominator" },
+      ],
+    };
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).not.toThrow();
+  });
+
+  it("accepts a predict contract even when final_answer is unspaced", () => {
+    // The strict canonicalizer strips whitespace, so an unspaced final_answer
+    // still canonically matches the assembled (space-joined) ground truth.
+    const problem = makePredictProblem();
+    problem.final_answer = "$r=\\frac{mv}{qB}$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).not.toThrow();
+  });
+
+  it("rejects a predict variable missing a role", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (form.predict!.variables[0] as any).role;
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/invalid role/i);
+  });
+
+  it("rejects a predict variable with a 'none' role", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (form.predict!.variables[0] as any).role = "none";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/invalid role/i);
+  });
+
+  it("rejects a predict contract with an empty target", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.target = "";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/predict\.target/i);
+  });
+
+  it("rejects a predict contract with fewer than 2 variables", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.variables = [
+      { symbol: "m", label: "the mass", role: "numerator" },
+    ];
+    form.predict!.correctFormula = "$r = m$";
+    problem.final_answer = "$r = m$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/2-8 entries/i);
+  });
+
+  it("rejects a predict contract with duplicate variable symbols", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.variables[1].symbol = "m";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/duplicate symbol/i);
+  });
+
+  it("rejects a predict target that is $…$-wrapped (must be bare)", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.target = "$r$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/bare token/i);
+  });
+
+  it("rejects a predict variable symbol that is $…$-wrapped (must be bare)", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.variables[0].symbol = "$m$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/bare token/i);
+  });
+
+  it("rejects a predict constant that is $…$-wrapped (must be bare)", () => {
+    const problem = makePredictProblem();
+    problem.final_answer = "$r = \\frac{\\pi mv}{qB}$";
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.correctFormula = "$r = \\frac{\\pi mv}{qB}$";
+    form.predict!.numeratorConstants = ["$\\pi$"];
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/bare token/i);
+  });
+
+  it("rejects a correctFormula that does not match the assembled roles+constants", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    // Invert the ratio in correctFormula so it no longer matches the roles.
+    form.predict!.correctFormula = "$r = \\frac{qB}{mv}$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/does not match predict\.correctFormula/i);
+  });
+
+  it("rejects a multi-digit constant mismatch (assembled 12 vs stated 21)", () => {
+    // The assembled ground truth carries denominatorConstants ["12"], but both
+    // correctFormula and final_answer say "21". Since a multi-digit number is a
+    // whole token, these must NOT compare equal.
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict = {
+      target: "r",
+      correctFormula: "$r = \\frac{mv}{21 qB}$",
+      denominatorConstants: ["12"],
+      variables: [
+        { symbol: "m", label: "the mass", role: "numerator" },
+        { symbol: "v", label: "the speed", role: "numerator" },
+        { symbol: "q", label: "the charge", role: "denominator" },
+        { symbol: "B", label: "the field", role: "denominator" },
+      ],
+    };
+    problem.final_answer = "$r = \\frac{mv}{21 qB}$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/does not match predict\.correctFormula/i);
+  });
+
+  it("rejects a final_answer that does not match the assembled roles+constants", () => {
+    const problem = makePredictProblem();
+    // correctFormula stays consistent with the roles, but final_answer diverges.
+    problem.final_answer = "$r = \\frac{qB}{mv}$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/does not match problem final_answer/i);
+  });
+
+  it("rejects an additive final_answer for a predict form (not a monomial ratio)", () => {
+    const problem = makePredictProblem();
+    problem.final_answer = "$r = m + v$";
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.predict!.correctFormula = "$r = m + v$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow();
+  });
+
+  it("accepts a numeric equation-contract form step unchanged (no predict)", () => {
+    // A form step that keeps the equation contract still flows through the build
+    // path unaffected by the predict additions.
+    const problem = makeValidProblem();
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).not.toThrow();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    expect(form.predict).toBeUndefined();
+    expect(form.build).toBeDefined();
+  });
+
+  it("accepts a form step carrying predict and NO build (stale-field exception)", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    expect(form.build).toBeUndefined();
+    expect(form.predict).toBeDefined();
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).not.toThrow();
+  });
+
+  it("rejects a non-form step carrying a predict contract", () => {
+    const problem = makePredictProblem();
+    // Attach predict to the setup (build) step, which is not a terminal form.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (problem.solution_flow.steps[1] as any).predict = {
+      target: "r",
+      correctFormula: "$r = \\frac{mv}{qB}$",
+      variables: [
+        { symbol: "m", label: "the mass", role: "numerator" },
+        { symbol: "v", label: "the speed", role: "numerator" },
+      ],
+    };
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/Only terminal "form" steps may carry predict/i);
+  });
+
+  it("rejects a form step carrying BOTH predict and build contracts", () => {
+    const problem = makePredictProblem();
+    const form = problem.solution_flow.steps[problem.solution_flow.steps.length - 1];
+    form.build = {
+      tiles: ["r", "=", "$\\frac{mv}{qB}$"],
+      accepted: [["r", "=", "$\\frac{mv}{qB}$"]],
+      distractors: [{ tile: "$\\frac{qB}{mv}$", feedback: neutralFormFeedback("the inverted ratio") }],
+      feedbackCorrect: neutralFormFeedback("the symbolic radius"),
+      feedbackWrong: neutralFormFeedback("a reshaped radius"),
+    };
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/must not also carry build/i);
+  });
+
+  it("rejects a setup step that restates the predict terminal form's answer", () => {
+    const problem = makePredictProblem();
+    // Make the setup assemble r = mv/qB — the SAME relation as the predict form.
+    const setup = makeEquationSetupStep("Set up the orbit-radius relation from the term tiles.");
+    setup.build!.equation = {
+      lhs_terms: ["r"],
+      relation: "=",
+      rhs_terms: ["$\\frac{mv}{qB}$"],
+      distractor_terms: [
+        { term: "$\\frac{qB}{mv}$", feedback: "that inverts the ratio; the radius grows with the momentum" },
+      ],
+    };
+    problem.solution_flow.steps[1] = setup;
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow(/assembles the same equation as the terminal form/i);
   });
 });
 

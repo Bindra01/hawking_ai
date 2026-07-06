@@ -145,4 +145,34 @@ describe("getStepFormat", () => {
     const step: Step = { ...base, type: "setup" };
     expect(getStepFormat(step)).toBe("build");
   });
+
+  it("resolves a predict form step to predict even when format is set to build", () => {
+    // A generated predict form step keeps format "build"; getStepFormat must
+    // upgrade it to "predict" from the presence of `predict`.
+    const step: Step = {
+      ...base,
+      type: "form",
+      format: "build",
+      predict: {
+        target: "r",
+        correctFormula: "$r = \\frac{mv}{qB}$",
+        variables: [
+          { symbol: "m", label: "the mass", factor: "m", role: "numerator" },
+          { symbol: "B", label: "the field", factor: "B", role: "denominator" },
+        ],
+      },
+    };
+    expect(getStepFormat(step)).toBe("predict");
+  });
+
+  it("resolves a legacy form step with only build (no predict) to build", () => {
+    // Backward compat: a stored form step carrying only a build contract still
+    // renders as build — predict detection is purely by the `predict` field.
+    const step: Step = {
+      ...base,
+      type: "form",
+      build: { tiles: [], accepted: [], distractors: [], feedbackCorrect: "c", feedbackWrong: "w" },
+    };
+    expect(getStepFormat(step)).toBe("build");
+  });
 });

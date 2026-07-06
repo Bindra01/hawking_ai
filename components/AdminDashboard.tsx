@@ -548,6 +548,32 @@ function StepPreview({ step }: { step: Step }) {
     );
   }
 
+  if (format === "predict" && step.predict) {
+    const { target, variables } = step.predict;
+    return (
+      <div className="flex flex-col gap-1.5 mt-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-bold" style={{ color: "#6b6b80" }}>
+            Target
+          </span>
+          <MathText text={`$${target}$`} className="text-xs" style={{ color: "#e5e5e5" }} />
+        </div>
+        {variables.map((v, j) => (
+          <div key={j} className="flex items-start gap-1.5">
+            <MathText text={`$${v.symbol}$`} className="text-xs" style={{ color: "#e5e5e5" }} />
+            <span className="text-xs" style={{ color: "#6b6b80" }}>→</span>
+            <span
+              className="text-xs"
+              style={{ color: v.role === "numerator" ? "#34d399" : "#38bdf8" }}
+            >
+              {v.role}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (format === "build" && step.build) {
     const { tiles, accepted } = step.build;
     return (

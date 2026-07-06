@@ -1,4 +1,11 @@
 import { getStepFormat, type Step } from "@/lib/types";
+import {
+  assemblePredictFormula,
+  predictConstants,
+  predictEntries,
+  roleForChoice,
+  type PredictChoice,
+} from "@/lib/predict-form";
 
 /**
  * A student's answer for a single step. One variant per format. The UI builds
@@ -9,7 +16,8 @@ export type Answer =
   | { kind: "mcq"; index: number }
   | { kind: "claim"; saidTrap: boolean }
   | { kind: "multiselect"; indices: number[] }
-  | { kind: "build"; order: number[] };
+  | { kind: "build"; order: number[] }
+  | { kind: "predict"; choices: Record<string, PredictChoice> };
 
 /**
  * Whether the student has supplied enough input for this step to be checkable.
@@ -38,6 +46,15 @@ export function isAnswerReady(step: Step, answer: Answer | null): boolean {
         return false;
       }
       return true;
+    }
+    case "predict": {
+      // Gate CHECK until EVERY variable row has a non-empty choice.
+      if (!step.predict) return false;
+      const { choices } = answer;
+      return step.predict.variables.every((v) => {
+        const c = choices[v.symbol];
+        return c === "up" || c === "down" || c === "none";
+      });
     }
     default:
       return false;
@@ -112,6 +129,21 @@ export function evaluateStep(
       };
     }
 
+    case "predict": {
+      if (answer.kind !== "predict" || !step.predict) {
+        return { correct: false, feedback: "" };
+      }
+      // Compare BY ROLE PER VARIABLE (not by assembled-string equality). The
+      // loop iterates ONLY variables — fixed constants are never graded. A
+      // "none" choice on a real variable always mismatches (ground truth is
+      // never "none").
+      const correct = step.predict.variables.every(
+        (v) => roleForChoice(answer.choices[v.symbol] ?? "none") === v.role
+      );
+      // The in-component panels are the feedback; keep the generic string empty.
+      return { correct, feedback: "" };
+    }
+
     default:
       return { correct: false, feedback: "" };
   }
@@ -167,6 +199,16 @@ export function describeAnswer(step: Step, answer: Answer | null): string {
       return placed.join(" ");
     }
 
+    case "predict": {
+      if (answer.kind !== "predict" || !step.predict) return "(no answer)";
+      const { student } = predictEntries(step, answer.choices);
+      return assemblePredictFormula(
+        step.predict.target,
+        student,
+        predictConstants(step)
+      );
+    }
+
     default:
       return "(no answer)";
   }
@@ -198,6 +240,11 @@ export function describeCorrectAnswer(step: Step): string {
 
     case "build":
       return step.build?.accepted?.[0]?.join(" ") ?? "";
+
+    case "predict":
+      // Normalized-equal to the assembled ground truth by the Task 4 generator
+      // assertion; used by the recap.
+      return step.predict?.correctFormula ?? "";
 
     default:
       return "";
