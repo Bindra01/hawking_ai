@@ -253,9 +253,19 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     // The assembled ground truth (constants + variable factors by role) MUST
     // canonically equal BOTH correctFormula AND final_answer, so make final_answer
     // the same monomial ratio (symbolic, no substituted numbers).
-    // SCOPE: use "predict" for ANY single monomial-ratio answer. ONLY when the
-    // answer has ADDED terms (e.g. $v^2 = u^2 + 2as$, or a sum) is it NOT a
-    // monomial ratio — then keep the "equation" contract above instead.
+    // SCOPE: use "predict" for a single monomial-ratio answer made of DISTINCT
+    // free physical quantities. Keep the "equation" contract above instead (do
+    // NOT emit "predict") whenever ANY of these hold:
+    //   - the answer has ADDED terms (e.g. $v^2 = u^2 + 2as$, or a sum such as
+    //     $R_{eq} = \\frac{R_1 R_2}{R_1 + R_2}$) — not a monomial ratio;
+    //   - the answer reduces to a bare NUMBER or a pure numeric fraction (e.g.
+    //     $V_R = \\frac{V}{3}$), i.e. it has fewer than 2 distinct free variables;
+    //   - the SAME quantity symbol appears more than once or cancels (e.g. an $R$
+    //     over another $R$, or $2R$ alongside $R$) — every "variables" entry must
+    //     be a DISTINCT quantity that does not repeat elsewhere in the ratio.
+    // These do NOT reduce to a clean product/quotient of distinct free variables,
+    // so forcing "predict" would fail validation and burn the retry budget —
+    // author them on the "equation" contract.
 
 * type "roadmap"  => emit a MOVES CONTRACT (NO "options"/"tiles" — CODE assembles
   the build tiles + accepted ordering from your prose move arrays):
