@@ -58,8 +58,37 @@ export const VALID_STATUSES = [
 
 /** Suggested topics per subject for the admin generation form. */
 export const TOPIC_SUGGESTIONS: Record<string, string[]> = {
-  mechanics: ["Kinematics", "Newton's Laws", "Work-Energy", "Rotational Motion", "Gravitation", "Oscillations", "Fluid Mechanics"],
-  electrodynamics: ["Electrostatics", "Current Electricity", "Magnetism", "Electromagnetic Induction", "AC Circuits", "Electromagnetic Waves"],
-  thermodynamics: ["Heat Transfer", "Kinetic Theory", "Laws of Thermodynamics", "Calorimetry", "Thermal Expansion"],
-  quantum_mechanics: ["Photoelectric Effect", "Bohr Model", "De Broglie Wavelength", "Nuclear Physics", "Radioactivity"],
+  mechanics: [
+    "Kinematics", "Newton's Laws", "Work-Energy", "Rotational Motion",
+    "Gravitation", "Oscillations", "Fluid Mechanics",
+    "Vectors", "Units and Dimensions", "Momentum", "Torque", "Power",
+    "Uniform Circular Motion", "Energy Conservation", "Collisions",
+    "Centre of Mass", "Lagrangian", "Hamiltonian", "Rigid Body",
+  ],
+  electrodynamics: [
+    "Electrostatics", "Current Electricity", "Magnetism",
+    "Electromagnetic Induction", "AC Circuits", "Electromagnetic Waves",
+    "Coulomb's Law", "Electric Dipole", "Gauss's Law", "Electric Flux",
+    "Electric Potential", "Ohm's Law", "Current Density", "Electric Energy",
+    "Electric Power", "Magnetic Field", "Lorentz Force", "Biot-Savart Law",
+    "Ampere's Circuital Law", "Magnetic Dipole Moment", "Faraday's Law",
+    "Lenz's Law", "Maxwell's Equations", "Displacement Current", "Electric Field",
+  ],
+  thermodynamics: [
+    "Heat Transfer", "Kinetic Theory", "Laws of Thermodynamics",
+    "Calorimetry", "Thermal Expansion",
+    "Temperature and Heat", "Specific Heat", "Newton's Law of Cooling",
+    "Ideal Gas Equation", "Molecular Model of Gas", "Pressure",
+    "Law of Equipartition of Energy", "State Variables (P, V, T)",
+    "Work Done by/on Gas", "First Law of Thermodynamics", "Entropy",
+  ],
+  quantum_mechanics: [
+    "Photoelectric Effect", "Bohr Model of Hydrogen", "De Broglie Wavelength",
+    "Nuclear Physics", "Radioactivity",
+    "Matter Waves", "Dual Nature of Matter and Radiation",
+    "Rutherford Atomic Model", "Schrödinger Equation", "Wave Function",
+    "Normalisation", "Heisenberg Uncertainty Principle",
+    "Infinite Potential Well", "Harmonic Oscillator",
+    "Probability", "Probability Density",
+  ],
 };

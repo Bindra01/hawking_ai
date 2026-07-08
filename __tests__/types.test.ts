@@ -17,6 +17,9 @@ describe("formatForType", () => {
     ["depends", "multiselect"],
     ["scale", "mcq"],
     ["limit", "claim"],
+    ["roadmap", "build"],
+    ["produces", "claim"],
+    ["feeds", "multiselect"],
     ["form", "build"],
   ];
 
@@ -66,6 +69,26 @@ describe("new reasoning-chain step types (depends/scale/limit/form)", () => {
     expect(STEP_BG.scale).toBe("#08291f");
     expect(STEP_BG.limit).toBe("#2a2008");
     expect(STEP_BG.form).toBe("#06251f");
+  });
+});
+
+describe("derivation-roadmap step types (roadmap/feeds/produces)", () => {
+  it("stepIcon resolves the three derivation-roadmap types", () => {
+    expect(stepIcon("roadmap")).toBe("🗺️");
+    expect(stepIcon("produces")).toBe("🔎");
+    expect(stepIcon("feeds")).toBe("🔌");
+  });
+
+  it("STEP_COLORS carries the three derivation-roadmap accent tokens", () => {
+    expect(STEP_COLORS.roadmap).toBe("#fb923c");
+    expect(STEP_COLORS.feeds).toBe("#e879f9");
+    expect(STEP_COLORS.produces).toBe("#2dd4bf");
+  });
+
+  it("STEP_BG carries the three derivation-roadmap badge-background tokens", () => {
+    expect(STEP_BG.roadmap).toBe("#2a1505");
+    expect(STEP_BG.feeds).toBe("#260a2c");
+    expect(STEP_BG.produces).toBe("#06231f");
   });
 });
 
@@ -120,6 +143,36 @@ describe("getStepFormat", () => {
 
   it("falls back to formatForType when no shape data present", () => {
     const step: Step = { ...base, type: "setup" };
+    expect(getStepFormat(step)).toBe("build");
+  });
+
+  it("resolves a predict form step to predict even when format is set to build", () => {
+    // A generated predict form step keeps format "build"; getStepFormat must
+    // upgrade it to "predict" from the presence of `predict`.
+    const step: Step = {
+      ...base,
+      type: "form",
+      format: "build",
+      predict: {
+        target: "r",
+        correctFormula: "$r = \\frac{mv}{qB}$",
+        variables: [
+          { symbol: "m", label: "the mass", factor: "m", role: "numerator" },
+          { symbol: "B", label: "the field", factor: "B", role: "denominator" },
+        ],
+      },
+    };
+    expect(getStepFormat(step)).toBe("predict");
+  });
+
+  it("resolves a legacy form step with only build (no predict) to build", () => {
+    // Backward compat: a stored form step carrying only a build contract still
+    // renders as build — predict detection is purely by the `predict` field.
+    const step: Step = {
+      ...base,
+      type: "form",
+      build: { tiles: [], accepted: [], distractors: [], feedbackCorrect: "c", feedbackWrong: "w" },
+    };
     expect(getStepFormat(step)).toBe("build");
   });
 });

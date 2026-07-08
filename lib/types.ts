@@ -1,13 +1,13 @@
 export type Subject = "mechanics" | "electrodynamics" | "thermodynamics" | "quantum_mechanics";
 export type Difficulty = "class_11" | "class_12" | "college";
-export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach" | "depends" | "scale" | "limit" | "form";
+export type StepType = "trap" | "identify" | "principle" | "setup" | "sanity" | "connect" | "why" | "solve" | "approach" | "depends" | "scale" | "limit" | "roadmap" | "produces" | "feeds" | "form";
 export type ProblemStatus = "draft" | "approved" | "published" | "rejected";
 
 /**
  * The interaction mechanic a step renders with. Derived deterministically from
  * the step's `type` (see `formatForType`) — the LLM never picks this directly.
  */
-export type StepFormat = "mcq" | "claim" | "multiselect" | "build";
+export type StepFormat = "mcq" | "claim" | "multiselect" | "build" | "predict";
 
 export interface StepOption {
   text: string;
@@ -52,6 +52,45 @@ export interface BuildData {
   feedbackWrong: string;
 }
 
+/** A variable's ground-truth position in a monomial-ratio answer. A variable
+ *  that appears in the formula always has an effect, so ground truth is never
+ *  "none" — "none" ("No effect") is only ever a student choice. */
+export type PredictRole = "numerator" | "denominator";
+
+/** One free, student-facing variable in a predict-the-dependence form step. */
+export interface PredictVariable {
+  /** BARE token the student sees, e.g. "I", "\\rho", "A" (NO $…$). */
+  symbol: string;
+  /** Plain-language name, e.g. "current", "resistivity". */
+  label: string;
+  /** What this variable contributes to the rendered formula; OPTIONAL, defaults
+   *  to `symbol`, e.g. symbol "L" with factor "L^2" for a squared variable (NO $…$). */
+  factor?: string;
+  /** Ground-truth side of the ratio this variable belongs to. */
+  role: PredictRole;
+}
+
+/**
+ * Predict-the-dependence contract for the terminal `form` step, used only when
+ * the final answer is a single monomial ratio (a product/quotient of distinct
+ * free variables times fixed constants). Fixed constants are ALWAYS rendered in
+ * their side regardless of the student's picks and are NOT graded — they let a
+ * monomial-ratio answer with π/ℏ/integers render exactly (e.g.
+ * `E_n = \frac{n^2\pi^2\hbar^2}{2mL^2}`).
+ */
+export interface PredictData {
+  /** BARE target quantity symbol, e.g. "V" (NO $…$). */
+  target: string;
+  /** Canonical rendered correct form ($…$-wrapped); MUST equal `final_answer`. */
+  correctFormula: string;
+  /** Fixed constant factors always in the numerator, e.g. ["\\pi^2","\\hbar^2"] (NO $…$). */
+  numeratorConstants?: string[];
+  /** Fixed constant factors always in the denominator, e.g. ["2"] (NO $…$). */
+  denominatorConstants?: string[];
+  /** Every FREE student-facing variable, in render order. */
+  variables: PredictVariable[];
+}
+
 export interface Step {
   type: StepType;
   /** Optional; when absent the renderer resolves it via `getStepFormat`. */
@@ -64,6 +103,8 @@ export interface Step {
   claim?: ClaimData;
   multiselect?: MultiSelectData;
   build?: BuildData;
+  /** Present for `predict` (predict-the-dependence) terminal form steps. */
+  predict?: PredictData;
   tip: string;
 }
 
@@ -80,6 +121,9 @@ export const VALID_STEP_TYPES: StepType[] = [
   "depends",
   "scale",
   "limit",
+  "roadmap",
+  "produces",
+  "feeds",
   "form",
 ];
 
@@ -89,8 +133,19 @@ export const VALID_STEP_TYPES: StepType[] = [
  * the regeneration auditor both reject a flow containing any of these.
  * `solve` (PREDICT THE FORM) was retired alongside `connect`/`sanity` when the
  * terminal beat became the `form` (ASSEMBLE THE FORM) build step.
+ * `depends`/`scale`/`limit` (the WHAT IT INVOLVES → HOW IT SCALES → CHECK THE
+ * EXTREME reasoning chain) were retired in turn when the derivation-roadmap
+ * pedagogy (`roadmap`/`feeds`/`produces`) replaced them; they keep their
+ * `formatForType` mappings so stored rows still render but are never generated.
  */
-export const LEGACY_ONLY_STEP_TYPES: StepType[] = ["connect", "sanity", "solve"];
+export const LEGACY_ONLY_STEP_TYPES: StepType[] = [
+  "connect",
+  "sanity",
+  "solve",
+  "depends",
+  "scale",
+  "limit",
+];
 
 /**
  * Canonical step-type → format map. Used by the generator and by validation,
@@ -99,19 +154,18 @@ export const LEGACY_ONLY_STEP_TYPES: StepType[] = ["connect", "sanity", "solve"]
 export function formatForType(type: StepType): StepFormat {
   switch (type) {
     case "trap":
+    case "limit":
+    case "produces":
       return "claim";
     case "identify":
+    case "depends":
+    case "feeds":
       return "multiselect";
     case "setup":
-      return "build";
-    case "depends":
-      return "multiselect";
-    case "scale":
-      return "mcq";
-    case "limit":
-      return "claim";
+    case "roadmap":
     case "form":
       return "build";
+    case "scale":
     case "principle":
     case "connect":
     case "why":
@@ -130,6 +184,10 @@ export function formatForType(type: StepType): StepFormat {
  * still render as `mcq` instead of being mis-resolved from their `type`.
  */
 export function getStepFormat(step: Step): StepFormat {
+  // `predict` MUST be checked before `format` and `build`: a generated predict
+  // form step is normalized to `format: "build"`, so a format-first return would
+  // render BuildStep instead of the predict-the-dependence renderer.
+  if (step.predict) return "predict";
   if (step.format) return step.format;
   if (step.claim) return "claim";
   if (step.multiselect) return "multiselect";

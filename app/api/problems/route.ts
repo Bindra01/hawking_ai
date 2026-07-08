@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const problems = await prisma.problems.findMany({
     where,
-    orderBy: { created_at: "asc" },
+    orderBy: { created_at: "desc" },
     select: {
       id: true,
       title: true,

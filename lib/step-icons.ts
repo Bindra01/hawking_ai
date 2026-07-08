@@ -13,6 +13,9 @@ export const STEP_ICONS: Record<string, string> = {
   depends: "🎛️",
   scale: "📈",
   limit: "🔭",
+  roadmap: "🗺️",
+  produces: "🔎",
+  feeds: "🔌",
   form: "🏗️",
 };
 

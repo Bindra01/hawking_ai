@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import PlayScreen from "@/components/PlayScreen";
 import { Problem } from "@/lib/types";
 import { shuffleStepOptions } from "@/lib/shuffle-options";
+import { sanitizeGoal } from "@/lib/sanitize-goal";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -23,6 +24,9 @@ export default async function PlayPage({ params }: Props) {
   const problem = await prisma.problems.findUnique({ where: { id } });
   if (!problem) notFound();
 
+  // Never reveal the final answer inside the goal card during play.
+  const sanitizedGoal = sanitizeGoal(problem.goal, problem.final_answer);
+
   const problemData = shuffleStepOptions({
     id: problem.id,
     title: problem.title,
@@ -30,7 +34,7 @@ export default async function PlayPage({ params }: Props) {
     topic: problem.topic,
     difficulty: problem.difficulty as Problem["difficulty"],
     scenario: problem.scenario,
-    goal: problem.goal,
+    goal: sanitizedGoal,
     final_answer: problem.final_answer,
     diagram_type: problem.diagram_type,
     solution_flow: problem.solution_flow as unknown as Problem["solution_flow"],
