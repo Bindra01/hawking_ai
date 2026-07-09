@@ -418,11 +418,13 @@ function makeValidOpening(): [Step, Step] {
 // Helper to create a valid problem for mutation in tests.
 // Step layout (6 steps): 0 principle (mcq, RECALL THE PRINCIPLE — mandatory
 // opener), 1 setup (build — the central governing equation, mandatory second
-// step), 2 identify (multiselect), 3 trap (claim — a mid-flow beat, never
-// first), 4 approach (mcq), 5 form (build, ASSEMBLE THE FORM — terminal).
+// step), 2 feeds (multiselect, WHAT GOES IN — mandatory per decision #1029),
+// 3 produces (claim, WHAT IT PRODUCES — mandatory per decision #1029),
+// 4 approach (mcq), 5 form (build, ASSEMBLE THE FORM — terminal).
 // Invariants: step 0 is "principle", step 1 is "setup", the last step is
-// "form", and the trap appears mid-flow (never at index 0). The fixed indices
-// keep the per-format tests below aligned by index.
+// "form", and every flow carries at least one feeds and one produces step. The
+// fixed indices keep the per-format tests below aligned by index (feeds shares
+// the "multiselect" format with identify; produces shares "claim" with trap).
 function makeValidProblem(): TestProblem {
   return {
     title: "Test Problem",
@@ -437,8 +439,8 @@ function makeValidProblem(): TestProblem {
       steps: [
         makeMcqStep("principle", "Which physics framework should you reach for on this specific projectile problem?"),
         makeBuildStep("Build the central kinematic equation that relates the given quantities; some quantities you need are not given yet."),
-        makeMultiSelectStep("Tap every quantity that actually controls the outcome of this throw."),
-        makeClaimStep("Your instinct is to ignore air resistance entirely here — sound right, or is that a trap?"),
+        makeFeedsStep("Tap every quantity that actually feeds into the move that produces the answer."),
+        makeProducesStep("You solved the governing equation — sound right that it hands you the answer directly, or is that a trap?"),
         makeApproachStep("With the equation set up, what's the cleanest next move to reach the answer?"),
         makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles — numbers come later."),
       ],
@@ -632,7 +634,9 @@ describe("validateAndNormalize", () => {
     problem.solution_flow.steps = [
       ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the answer."),
       makeClaimStep("Your instinct is to ignore the boundary conditions here — sound right, or is that a trap?"),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
@@ -656,17 +660,37 @@ describe("validateAndNormalize", () => {
     ).toThrow("Step 0 missing required fields");
   });
 
-  it("accepts a problem with exactly 4 steps (minimum)", () => {
+  it("accepts a problem with exactly 6 steps (minimum with mandatory feeds+produces)", () => {
     const problem = makeValidProblem();
-    // Minimal LEAN form-last flow: principle → setup → roadmap → form.
+    // Minimal LEAN form-last flow now REQUIRES feeds + produces (decision #1029):
+    // principle → setup → roadmap → feeds → produces → form.
     problem.solution_flow.steps = [
       ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the answer."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
       validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
     ).not.toThrow();
+  });
+
+  it("rejects a flow whose feeds+produces precede the roadmap (decision #1029 positional guard)", () => {
+    // principle → setup → feeds → produces → roadmap → form: the counts are
+    // satisfied, but the terminal form immediately follows the roadmap, which is
+    // the exact reported bug. The positional guard must reject it.
+    const problem = makeValidProblem();
+    problem.solution_flow.steps = [
+      ...makeValidOpening(),
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the answer."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
+      makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
+    ];
+    expect(() =>
+      validateAndNormalize(problem, "mechanics", "Kinematics", "class_11")
+    ).toThrow(/between the roadmap and the terminal form/);
   });
 
   it("accepts a problem with exactly 8 steps (maximum)", () => {
@@ -1245,10 +1269,13 @@ describe("validateAndNormalize", () => {
   it("accepts a legal zero-approach form-last flow", () => {
     const problem = makeValidProblem();
     // The contract explicitly allows ZERO approach steps (lower bound 0).
-    // principle → setup → roadmap → form has no approach steps and ends in form.
+    // principle → setup → roadmap → feeds → produces → form has no approach steps
+    // and ends in form (feeds+produces are mandatory per decision #1029).
     problem.solution_flow.steps = [
       ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the answer."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(problem.solution_flow.steps.some((s) => s.type === "approach")).toBe(false);
@@ -1501,12 +1528,12 @@ describe("validateAndNormalize", () => {
 
   it("assembles a setup equation contract into atomic tiles with '=' on its own tile", () => {
     const problem = makeValidProblem();
-    // Replace the setup step (index 3) with a Contract-C equation step.
-    problem.solution_flow.steps[3] = makeEquationSetupStep(
+    // Replace the setup step (index 1) with a Contract-C equation step.
+    problem.solution_flow.steps[1] = makeEquationSetupStep(
       "Build the force-balance equation from the constrained term arrays here."
     );
     validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
-    const build = problem.solution_flow.steps[3].build!;
+    const build = problem.solution_flow.steps[1].build!;
     // The relation operator is its own tile and the accepted ordering is
     // lhs + relation + rhs.
     expect(build.tiles).toContain("=");
@@ -1527,6 +1554,7 @@ describe("validateAndNormalize", () => {
       ...makeValidOpening(),
       makeRoadmapStep("Tap the high-level moves into the order that reaches the answer."),
       makeFeedsStep("Tap every input the first move actually consumes here."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     validateAndNormalize(problem, "mechanics", "Kinematics", "class_11");
@@ -1559,6 +1587,8 @@ describe("validateAndNormalize", () => {
     problem.solution_flow.steps = [
       ...makeValidOpening(),
       roadmap,
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the answer."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
@@ -1570,7 +1600,7 @@ describe("validateAndNormalize", () => {
     // The whole point of Contract C: even though the model 'meant' an equation,
     // the assembled tiles are atomic, so the embedded-relation guard never fires.
     const problem = makeValidProblem();
-    problem.solution_flow.steps[3] = makeEquationSetupStep(
+    problem.solution_flow.steps[1] = makeEquationSetupStep(
       "Build the force-balance equation from the constrained term arrays here."
     );
     expect(() =>
@@ -1785,6 +1815,8 @@ describe("validateAndNormalize", () => {
       makeMcqStep("principle", "Which governing principle pins down the pressure of this ideal gas sample?"),
       setup,
       makeRoadmapStep("Tap the high-level moves into the order that reaches the pressure."),
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the pressure."),
+      makeProducesStep("You solved the governing relation — sound right that it hands you the pressure, or is that a trap?"),
       form,
     ];
     expect(() =>
@@ -1814,6 +1846,8 @@ describe("validateAndNormalize", () => {
       makeMcqStep("principle", "Which governing principle pins down the orbit radius for this charge?"),
       setup,
       makeRoadmapStep("Tap the high-level moves into the order that reaches the radius."),
+      makeFeedsStep("Tap every quantity that actually feeds into the move that produces the radius."),
+      makeProducesStep("You solved the force balance — sound right that it hands you the radius, or is that a trap?"),
       form,
     ];
     expect(() =>
@@ -1845,6 +1879,7 @@ describe("validateAndNormalize", () => {
       // so the second beat adds no new required input.
       feedsWith(["The mass m", "The width L"], ["A red herring A"], "Tap the inputs the first move consumes."),
       feedsWith(["The mass m"], ["A red herring B"], "Tap the inputs the second move consumes."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
@@ -1867,6 +1902,7 @@ describe("validateAndNormalize", () => {
         ["The elapsed time t"],
         "Tap the inputs the boundary-condition move consumes."
       ),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
@@ -1883,6 +1919,7 @@ describe("validateAndNormalize", () => {
       ...makeValidOpening(),
       feedsWith(["The mass m", "The speed v"], ["A red herring A"], "Tap the inputs the first move consumes."),
       feedsWith(["The mass m", "The field B"], ["A red herring B"], "Tap the inputs the second move consumes."),
+      makeProducesStep("You solved the governing equation — sound right that it hands you the answer, or is that a trap?"),
       makeFormStep("Assemble the SYMBOLIC form of the answer from the structural tiles."),
     ];
     expect(() =>
@@ -1952,6 +1989,8 @@ describe("validateAndNormalize", () => {
           makeMcqStep("principle", "Which principle governs the radius of the charged particle's circular orbit here?"),
           makeBuildStep("Build the force-balance equation relating the magnetic and centripetal forces."),
           makeRoadmapStep("Tap the high-level moves into the order that reaches the orbit radius."),
+          makeFeedsStep("Tap every quantity that actually feeds into the move that produces the radius."),
+          makeProducesStep("You solved the force balance — sound right that it hands you the radius, or is that a trap?"),
           makePredictFormStep("Predict how the radius depends on each quantity to assemble the symbolic form."),
         ],
       },
@@ -1963,6 +2002,54 @@ describe("validateAndNormalize", () => {
     expect(() =>
       validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
     ).not.toThrow();
+  });
+
+  it("accepts a predict form whose final_answer is a plugged-in NUMBER (decision #1028)", () => {
+    // Numeric-answer problems (e.g. Centripetal Force -> 19.8 m/s) are now
+    // eligible for predict as long as the SYMBOLIC form (correctFormula) is a
+    // clean monomial ratio. The numeric final_answer cannot be canonicalized as
+    // a monomial ratio, so the assembled-vs-final_answer cross-check is skipped;
+    // the assembled tiles are still graded against correctFormula.
+    const problem = makePredictProblem();
+    problem.final_answer = "≈ 19.8 m/s";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).not.toThrow();
+  });
+
+  it("accepts a predict form whose numeric final_answer has a 'target =' prefix (decision #1028)", () => {
+    // A plugged-in number can be phrased as "a = 3.4 m/s^2" (an "=" plus a
+    // numeric RHS). This is still a numeric value, NOT a symbolic relation, so
+    // the assembled-vs-final_answer cross-check is skipped rather than throwing.
+    const problem = makePredictProblem();
+    problem.final_answer = "$r = 2.3 \\times 10^{-5}$ m";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).not.toThrow();
+  });
+
+  it("rejects a predict form whose SYMBOLIC final_answer is additive (masking guard)", () => {
+    // Decision #1028 skips the assembled-vs-final_answer cross-check ONLY for a
+    // plugged-in NUMBER. A SYMBOLIC relational final_answer (contains "=") must
+    // still parse as the same monomial ratio. An additive final_answer paired
+    // with a valid monomial correctFormula is contradictory and MUST throw —
+    // otherwise a non-monomial answer could masquerade as predict-eligible.
+    const problem = makePredictProblem();
+    problem.final_answer = "$r = m + v$"; // additive: not a monomial ratio
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow();
+  });
+
+  it("rejects a predict form whose SYMBOLIC final_answer is a root (masking guard)", () => {
+    // A bare (no "=") symbolic answer with no digits (e.g. a root) is NOT a
+    // plugged-in number, so it is parsed and its parse failure throws rather
+    // than being silently skipped.
+    const problem = makePredictProblem();
+    problem.final_answer = "$\\sqrt{r g \\tan\\theta}$";
+    expect(() =>
+      validateAndNormalize(problem, "electrodynamics", "Magnetic Force", "class_12")
+    ).toThrow();
   });
 
   it("accepts a predict contract with fixed numerator/denominator constants", () => {

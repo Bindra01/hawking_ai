@@ -81,7 +81,12 @@ export interface PredictVariable {
 export interface PredictData {
   /** BARE target quantity symbol, e.g. "V" (NO $…$). */
   target: string;
-  /** Canonical rendered correct form ($…$-wrapped); MUST equal `final_answer`. */
+  /**
+   * Canonical rendered correct SYMBOLIC form ($…$-wrapped) — the monomial ratio
+   * graded against. It equals `final_answer` only when the answer is written
+   * symbolically; when `final_answer` is a plugged-in NUMBER it need NOT match
+   * (predict grades the symbolic dependence, not the numeric value — decision #1028).
+   */
   correctFormula: string;
   /** Fixed constant factors always in the numerator, e.g. ["\\pi^2","\\hbar^2"] (NO $…$). */
   numeratorConstants?: string[];

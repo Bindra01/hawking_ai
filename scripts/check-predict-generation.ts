@@ -6,11 +6,13 @@
  * for a spread of symbolic monomial-ratio topics plus a numeric topic, then
  * asserts the predict contract holds where expected:
  *
- *   - A symbolic monomial-ratio problem's terminal `form` step carries a valid
- *     `predict` contract whose assembled ground truth CANONICALLY equals both
- *     `predict.correctFormula` and the problem `final_answer` (order-invariant).
- *   - A numeric / additive problem's terminal `form` step keeps the `equation`
- *     (build) contract — never `predict`.
+ *   - A monomial-ratio problem's terminal `form` step carries a valid `predict`
+ *     contract whose assembled ground truth CANONICALLY equals `correctFormula`
+ *     (and, when the final_answer is itself symbolic, also the final_answer).
+ *     Per decision #1028 predict applies even when the final_answer is a
+ *     plugged-in NUMBER, as long as the SYMBOLIC form is a clean monomial ratio.
+ *   - An additive / root / trig problem's terminal `form` step keeps the
+ *     `equation` (build) contract — never `predict`.
  *   - Every generated problem passes validateAndNormalize (implicit — generateProblem
  *     throws otherwise).
  *
@@ -47,7 +49,13 @@ const CASES: Case[] = [
   { subject: "electrodynamics", topic: "Ohm's Law and Resistance", difficulty: "class_12", expect: "predict" },
   { subject: "electrodynamics", topic: "Magnetic Force on a Moving Charge", difficulty: "class_12", expect: "predict" },
   { subject: "electrodynamics", topic: "Resistivity and Conductance", difficulty: "class_12", expect: "either" },
-  // Numeric answer — should keep the equation (build) contract.
+  // Numeric-answer topic whose SYMBOLIC form is a monomial ratio distinct from
+  // its upstream governing law (setup qvB = mv²/r vs form r = mv/(qB)) — per
+  // decision #1028 this should now be eligible for predict even though the
+  // final_answer is a plugged-in number. Marked "either" because the exact
+  // answer shape (and whether the model plugs in numbers) is at its discretion.
+  { subject: "electrodynamics", topic: "Magnetic Force on a Moving Charge", difficulty: "class_11", expect: "either" },
+  // RMS speed is a ROOT (√(3RT/M)) — not a monomial ratio, keeps equation/build.
   { subject: "thermodynamics", topic: "Kinetic Theory", difficulty: "class_11", expect: "build" },
 ];
 
@@ -82,16 +90,30 @@ function checkPredictContract(step: Step, finalAnswer: string): void {
 
   const assembledCanon = canonicalPredictFormula(assembled);
   const correctCanon = canonicalPredictFormula(predict.correctFormula);
-  const finalCanon = canonicalPredictFormula(finalAnswer);
 
   assert(
     canonicalFormulaEquals(assembledCanon, correctCanon),
     `assembled "${assembled}" != correctFormula "${predict.correctFormula}"`
   );
-  assert(
-    canonicalFormulaEquals(assembledCanon, finalCanon),
-    `assembled "${assembled}" != final_answer "${finalAnswer}"`
-  );
+  // final_answer may legitimately be a plugged-in NUMBER (predict is scoped to
+  // the symbolic dependence). Skip the cross-check ONLY for a plugged-in number,
+  // detected the same way as validatePredictStep: examine the value after an
+  // optional "<symbol> =" prefix (strip $, ≈/\approx) — if it begins with a
+  // numeric literal it is a plugged-in number, otherwise it is symbolic and must
+  // parse as the same monomial ratio.
+  const answerValue = finalAnswer
+    .slice(finalAnswer.indexOf("=") + 1)
+    .replace(/\$/g, "")
+    .replace(/\\approx|\\sim|\\simeq|\\approxeq|[≈~]/g, "")
+    .trim();
+  const isPluggedInNumber = /^[+\-]?\d/.test(answerValue);
+  const finalCanon = isPluggedInNumber ? null : canonicalPredictFormula(finalAnswer);
+  if (finalCanon !== null) {
+    assert(
+      canonicalFormulaEquals(assembledCanon, finalCanon),
+      `assembled "${assembled}" != final_answer "${finalAnswer}"`
+    );
+  }
 }
 
 async function runCase(c: Case): Promise<boolean> {

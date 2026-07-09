@@ -231,7 +231,7 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     {
       "predict": {
         "target": "<bare target symbol, e.g. r or E_n — NO \\$>",
-        "correctFormula": "$<the full correct monomial ratio>$",  // \\$…\\$-wrapped; MUST equal final_answer
+        "correctFormula": "$<the full correct SYMBOLIC monomial ratio>$",  // \\$…\\$-wrapped; the symbolic form graded against (need NOT equal a numeric final_answer)
         "numeratorConstants": [ "<bare fixed constant>", ... ],   // OPTIONAL fixed factors that ALWAYS sit in the numerator (e.g. "\\pi^2", "\\hbar^2"); never graded
         "denominatorConstants": [ "<bare fixed constant>", ... ], // OPTIONAL fixed factors that ALWAYS sit in the denominator (e.g. "2"); never graded
         "variables": [
@@ -251,15 +251,27 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     // varies. Put FIXED CONSTANTS (π, ℏ, numeric factors like 2) in
     // numeratorConstants/denominatorConstants — NEVER as graded variables.
     // The assembled ground truth (constants + variable factors by role) MUST
-    // canonically equal BOTH correctFormula AND final_answer, so make final_answer
-    // the same monomial ratio (symbolic, no substituted numbers).
-    // SCOPE: use "predict" for a single monomial-ratio answer made of DISTINCT
-    // free physical quantities. Keep the "equation" contract above instead (do
-    // NOT emit "predict") whenever ANY of these hold:
-    //   - the answer has ADDED terms (e.g. $v^2 = u^2 + 2as$, or a sum such as
+    // canonically equal correctFormula.
+    // NUMERIC-ANSWER PROBLEMS: predict grades the SYMBOLIC dependence, so it
+    // applies EVEN WHEN final_answer is a plugged-in number (e.g. "≈ 19.8 m/s").
+    // In that case correctFormula is the SYMBOLIC monomial-ratio form the number
+    // was computed from (e.g. for a numeric radius, $r = \\frac{mv}{qB}$), and the
+    // assembled ground truth is checked against correctFormula only — a numeric
+    // final_answer does NOT have to match the formula. Do NOT rearrange a
+    // root/trig/log answer to force a ratio (e.g. do NOT square $v=\\sqrt{rg\\tan\\theta}$
+    // into $v^2 = rg\\tan\\theta$ to make it look monomial): such answers are NOT
+    // eligible for predict even after rearrangement — keep them on "equation".
+    // SCOPE: use "predict" whenever the answer's SYMBOLIC form is a single
+    // monomial ratio made of DISTINCT free physical quantities — whether
+    // final_answer is written symbolically OR as a plugged-in number. Keep the
+    // "equation" contract above instead (do NOT emit "predict") only when the
+    // SYMBOLIC form itself is not a clean monomial ratio, i.e. ANY of these hold:
+    //   - it has ADDED terms (e.g. $v^2 = u^2 + 2as$, or a sum such as
     //     $R_{eq} = \\frac{R_1 R_2}{R_1 + R_2}$) — not a monomial ratio;
-    //   - the answer reduces to a bare NUMBER or a pure numeric fraction (e.g.
-    //     $V_R = \\frac{V}{3}$), i.e. it has fewer than 2 distinct free variables;
+    //   - it involves a ROOT, trig, log, or exponential that cannot be written as
+    //     a product/quotient of powers (e.g. $v = \\sqrt{r g \\tan\\theta}$);
+    //   - it has fewer than 2 distinct free variables (reduces to essentially one
+    //     symbol times constants);
     //   - the SAME quantity symbol appears more than once or cancels (e.g. an $R$
     //     over another $R$, or $2R$ alongside $R$) — every "variables" entry must
     //     be a DISTINCT quantity that does not repeat elsewhere in the ratio.
@@ -292,8 +304,8 @@ steps, and do NOT add claim/multiselect/build objects to the "principle" MCQ typ
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
-// Class 11 — LEAN kinetic-theory flow (5 steps): principle -> setup -> roadmap
-// (2 moves) -> feeds -> form. The fixed opening is principle (RECALL THE
+// Class 11 — LEAN kinetic-theory flow (6 steps): principle -> setup -> roadmap
+// (2 moves) -> feeds -> produces -> form. The fixed opening is principle (RECALL THE
 // PRINCIPLE MCQ) then setup (the central governing equation, distinct from the
 // terminal form). This example deliberately models the HARD case where the
 // final formula (v_rms = √(3RT/M)) IS the obvious central relation: the setup
@@ -386,6 +398,19 @@ const EXAMPLE_CLASS_11 = {
         tip: "List only the quantities the RMS speed truly consumes before assembling it."
       },
       {
+        type: "produces",
+        label: "WHAT IT PRODUCES",
+        icon: "🔎",
+        prompt: "You solved the equipartition balance for ⟨v²⟩. Sound right, or is that a trap?",
+        claim: {
+          statement: "Solving the energy balance hands you the RMS speed directly, with no further step.",
+          isTrap: true,
+          feedbackTrap: "Right — it's a trap. Solving the balance only produces the MEAN-SQUARE speed ⟨v²⟩; you still have to take the square root to reach the RMS speed.",
+          feedbackSound: "Not quite — this is a trap. The balance yields ⟨v²⟩, the mean-square speed; the RMS speed needs one more move, the square root."
+        },
+        tip: "Name what a move actually produces — the mean-square speed is not yet the RMS speed."
+      },
+      {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
@@ -412,15 +437,21 @@ const EXAMPLE_CLASS_11 = {
 // Class 12 — LEAN 3-move roadmap (6 steps): principle -> setup -> roadmap
 // (3 moves) -> feeds -> produces -> form. The fixed opening is principle then
 // setup (the central force-balance equation, distinct from the terminal form).
-// Tuned between the class-11 and college examples.
+// Tuned between the class-11 and college examples. This example deliberately
+// models the NUMERIC-ANSWER predict case (decision #1028): the final_answer is a
+// plugged-in NUMBER (≈ 2.3 × 10⁻⁵ m), yet the terminal form still uses the
+// PREDICT contract because the SYMBOLIC form r = mv/(qB) is a clean monomial
+// ratio. correctFormula carries the symbolic ratio graded against; a numeric
+// final_answer does NOT have to equal it. This shows the generator that a
+// numeric final_answer does NOT force the equation/build contract.
 const EXAMPLE_CLASS_12 = {
   title: "Radius of an electron's circular orbit in a uniform magnetic field",
   subject: "electrodynamics",
   topic: "Magnetic Force",
   difficulty: "class_12",
-  scenario: "An electron of charge q and mass m enters a uniform magnetic field B at speed v, perpendicular to the field. Find the radius of its circular orbit.",
-  goal: "Derive the expression for the radius of the charged particle's circular path.",
-  final_answer: "$r = \\frac{mv}{qB}$",
+  scenario: "An electron (charge q = 1.6 × 10⁻¹⁹ C, mass m = 9.11 × 10⁻³¹ kg) enters a uniform magnetic field B = 0.50 T at speed v = 2.0 × 10⁶ m/s, perpendicular to the field. Find the radius of its circular orbit.",
+  goal: "Find the radius of the electron's circular path.",
+  final_answer: "$\\approx 2.3 \\times 10^{-5}$ m",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -761,20 +792,22 @@ const MISCONCEPTIONS_BY_TOPIC: Record<string, Record<string, Array<{id: string; 
 
 const DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
   class_11: `CLASS 11 (JEE Mains prep, age 16-17):
-- Use 4-6 steps (max 8). Focus on building correct problem-solving habits.
+- Use 6-8 steps. The minimum realizable flow is principle → setup → roadmap → feeds → produces → form (6 steps); never emit fewer. Focus on building correct problem-solving habits.
 - ALWAYS open with "principle" (the key concept/law for THIS problem), then
   "setup" (the central governing equation), then the rest.
 - A mid-flow "trap" step (if used) should target the most common beginner mistake (wrong units, wrong formula, sign errors) — but it is NEVER the first step.
 - Keep math at single-variable algebra, basic calculus (derivatives), and trigonometry.
 - Wrong answer feedback should be patient and educational — explain the mistake clearly.
-- Keep the derivation roadmap SHORT (2 moves). Recommended step pattern:
-  principle → setup → roadmap (2 moves) → feeds → form (it may gracefully
-  collapse to principle → setup → roadmap (2 moves) → form).
+- Keep the derivation roadmap SHORT (2 moves). REQUIRED step pattern:
+  principle → setup → roadmap (2 moves) → feeds → produces → form. The flow MUST
+  include a "feeds" (WHAT GOES IN) AND a "produces" (WHAT IT PRODUCES) step after
+  the roadmap — the terminal "form" step must NEVER immediately follow the
+  roadmap.
 - The "setup" equation MUST be a DIFFERENT governing/intermediate relation than the terminal "form" skeleton — NEVER the same equation. Class 11 is where the governing relation most often equals the answer, so pick a distinct governing law (a definition/balance/conservation relation), not the rearranged answer.
 - When the final formula is ITSELF the central relation (e.g. RMS speed v_rms = √(3RT/M), simple kinematic results like v = u + at), the "setup" MUST be the UPSTREAM, DOMAIN-APPROPRIATE governing law it derives from — force balance, a kinematic definition (e.g. a = dv/dt), a conservation law, a constitutive relation, or an energy balance / equipartition (e.g. ½M⟨v²⟩ = 3/2·RT) ONLY when the topic is thermal — and NEVER the rearranged answer. Match the upstream law to the actual topic; do not force a thermodynamic framing onto mechanics or electrostatics problems.`,
 
   class_12: `CLASS 12 (JEE Mains/Advanced prep, age 17-18):
-- Use 5-7 steps (max 8). Problems should require multi-step reasoning.
+- Use 6-8 steps. The minimum realizable flow is principle → setup → roadmap → feeds → produces → form (6 steps); never emit fewer. Problems should require multi-step reasoning.
 - ALWAYS open with "principle" (the key concept/law for THIS problem), then
   "setup" (the central governing equation), then the rest.
 - A mid-flow "trap" step (if used) should target a subtle conceptual error (not just arithmetic) — but it is NEVER the first step.
@@ -1042,11 +1075,12 @@ CRITICAL QUALITY RULES:
    - "title": Short descriptive title (~80 chars max)
    - "goal": A SHORT qualitative statement of WHAT to find — e.g. "Find the RMS speed of the gas molecules", "Determine the orbital radius". NEVER include the numerical value, symbolic formula, or units of the answer in the goal — the answer is revealed only in the recap. The goal must read like a question prompt, not a spoiler.
    - "final_answer": The numerical/symbolic answer (shown only in the recap)
-   - Last step MUST be type "form" (ASSEMBLE THE FORM): the terminal step that presents the SYMBOLIC answer skeleton with NO substituted numbers. When the answer is a single MONOMIAL RATIO (product/quotient of powers, no added terms) emit a "predict" contract (predict-the-dependence — STRONGLY PREFERRED); ONLY when the answer has added terms keep the "equation" contract. The exact value is revealed only in the recap.
+   - Last step MUST be type "form" (ASSEMBLE THE FORM): the terminal step that presents the SYMBOLIC answer skeleton with NO substituted numbers. The predict-vs-equation choice depends ONLY on the SYMBOLIC form of the answer, NOT on whether final_answer is written as a number: when the SYMBOLIC form is a single MONOMIAL RATIO (product/quotient of powers, no added terms — e.g. $r=\\frac{mv}{qB}$, $\\lambda=\\frac{h}{mv}$, $F=qvB$) emit a "predict" contract (predict-the-dependence — STRONGLY PREFERRED), EVEN WHEN final_answer is a plugged-in NUMBER (put the symbolic ratio in correctFormula); keep the "equation" contract ONLY when the SYMBOLIC form has added terms, a root, trig, or log. The exact value is revealed only in the recap.
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap/produces → "claim" object; identify/feeds → "multiselect" object;
      setup → "equation" contract (Contract C term arrays); form → "predict"
-     contract for a single monomial-ratio answer, else "equation" contract;
+     contract when the SYMBOLIC form is a single monomial ratio (even if
+     final_answer is numeric), else "equation" contract;
      roadmap → "moves" contract; principle → "options" (exactly 4: 1 correct, 3 wrong).
    - For MCQ steps, each wrong option object MUST have: { "text": "...", "correct": false, "feedback": "...", "distractor_type": "misconception" | "procedural_slip" | "half_right" }
    - For MCQ steps, each correct option object has: { "text": "...", "correct": true, "feedback": "..." }`;
@@ -1488,6 +1522,46 @@ export function validateAndNormalize(
   const feedsSteps = steps.filter((s) => s.type === "feeds");
   if (feedsSteps.length > 2) {
     throw new Error(`at most 2 feeds steps allowed, got ${feedsSteps.length}`);
+  }
+
+  // (2a) MANDATORY WHAT-GOES-IN / WHAT-IT-PRODUCES GUARD (decision #1029). Every
+  // flow — at every difficulty — MUST include at least one `feeds` (WHAT GOES IN)
+  // AND at least one `produces` (WHAT IT PRODUCES) step; the graceful-collapse
+  // shortcut is no longer permitted. These throws feed the existing retry loop.
+  if (feedsSteps.length < 1) {
+    throw new Error(
+      'flow must include at least one "feeds" (WHAT GOES IN) step after the roadmap'
+    );
+  }
+  const producesSteps = steps.filter((s) => s.type === "produces");
+  if (producesSteps.length < 1) {
+    throw new Error(
+      'flow must include at least one "produces" (WHAT IT PRODUCES) step after the roadmap'
+    );
+  }
+  // When the flow uses a `roadmap` (MAP THE DERIVATION) — the derivation-roadmap
+  // pedagogy's spine, present in every generated flow — at least one `feeds` and
+  // one `produces` MUST sit strictly BETWEEN that roadmap and the terminal `form`
+  // step, so the terminal step never immediately follows MAP THE DERIVATION (the
+  // exact reported bug). Counting feeds/produces alone is not enough: a flow like
+  // principle→setup→feeds→produces→roadmap→form would satisfy the counts while
+  // still letting form follow the roadmap. (Legal non-roadmap flows — e.g. an
+  // approach-based flow — are unaffected: the positional check is skipped.)
+  const lastRoadmapIndex = steps.map((s) => s.type).lastIndexOf("roadmap");
+  if (lastRoadmapIndex !== -1) {
+    const formIndex = steps.length - 1; // last-step-is-form invariant enforced above
+    const between = (t: string) =>
+      steps.some((s, idx) => s.type === t && idx > lastRoadmapIndex && idx < formIndex);
+    if (!between("feeds")) {
+      throw new Error(
+        'flow must include at least one "feeds" (WHAT GOES IN) step between the roadmap and the terminal form'
+      );
+    }
+    if (!between("produces")) {
+      throw new Error(
+        'flow must include at least one "produces" (WHAT IT PRODUCES) step between the roadmap and the terminal form'
+      );
+    }
   }
   if (feedsSteps.length === 2) {
     const mattersOf = (s: GeneratedStep) =>
@@ -1977,12 +2051,14 @@ export function tileHasEmbeddedRelation(tile: string): boolean {
  * numerator/denominator constant (if present) is a bare non-empty string (no `$`).
  *
  * Semantic check (the real guard): assemble the ground-truth formula from the
- * roles + constants and assert it canonically equals BOTH `correctFormula` AND the
- * problem `finalAnswer`. The strict `canonicalPredictFormula` sorts each side and
- * strips `$`/whitespace, so display order and `I\rho L` vs `I \rho L` compare
- * equal — but an additive answer or a role set that doesn't reproduce the stated
- * answer is rejected into the retry loop. A parse failure counts as a validation
- * failure (the parser throws) and likewise drives a retry.
+ * roles + constants and assert it canonically equals `correctFormula`
+ * (unconditionally) and — only when `finalAnswer` is itself a symbolic relation
+ * (contains "=") — the `finalAnswer` too. A plugged-in NUMERIC final answer is
+ * NOT cross-checked (decision #1028). The strict `canonicalPredictFormula` sorts
+ * each side and strips `$`/whitespace, so display order and `I\rho L` vs
+ * `I \rho L` compare equal — but an additive answer or a role set that doesn't
+ * reproduce the stated form is rejected into the retry loop. A parse failure
+ * counts as a validation failure (the parser throws) and likewise drives a retry.
  */
 function validatePredictStep(
   step: GeneratedStep,
@@ -2088,7 +2164,8 @@ function validatePredictStep(
   checkConstants(predict.denominatorConstants, "denominatorConstants");
 
   // Semantic guard: assemble ground truth from roles + constants and assert it
-  // canonically equals BOTH correctFormula AND finalAnswer.
+  // canonically equals correctFormula (always) and finalAnswer (only when
+  // finalAnswer is a symbolic relation, not a plugged-in number — decision #1028).
   const groundTruthEntries = predict.variables.map((v) => ({
     factor: v.factor ?? v.symbol,
     role: v.role,
@@ -2112,8 +2189,33 @@ function validatePredictStep(
       `Step ${i} predict form requires a non-empty problem final_answer`
     );
   }
-  const finalCanon = canonicalPredictFormula(finalAnswer);
-  if (!canonicalFormulaEquals(assembledCanon, finalCanon)) {
+  // `correctFormula` is the authoritative SYMBOLIC monomial-ratio form the step
+  // grades against. `final_answer` may legitimately be a plugged-in NUMBER (e.g.
+  // "≈ 517 m/s", "$\\approx 2.3 \\times 10^{-5}$ m", "$a = 3.4$ m/s^2") — predict
+  // is scoped to the symbolic dependence, so a numeric final answer does NOT have
+  // to canonically equal the assembled form. We skip the cross-check ONLY for a
+  // plugged-in numeric answer, detected by looking at the answer's VALUE (the
+  // part after an optional "<symbol> =" prefix, with $, ≈/\\approx and whitespace
+  // stripped): if that value begins with a numeric literal it is a plugged-in
+  // number. Every other final answer is a symbolic form and MUST parse as the
+  // same monomial ratio as the assembled ground truth:
+  //   - A symbolic answer that is additive/root/trig (e.g. "$r = m + v$",
+  //     "$\\sqrt{rg\\tan\\theta}$") begins with a symbol/command, so it is parsed
+  //     and canonicalPredictFormula THROWS — correct: a non-monomial symbolic
+  //     answer paired with a predict contract is contradictory and must force a
+  //     retry (it should have been an "equation" form). We let that throw
+  //     propagate rather than silently skipping it.
+  const answerValue = finalAnswer
+    .slice(finalAnswer.indexOf("=") + 1) // "<symbol> =" prefix (or whole string if no "=")
+    .replace(/\$/g, "")
+    .replace(/\\approx|\\sim|\\simeq|\\approxeq|[≈~]/g, "")
+    .trim();
+  const isPluggedInNumber = /^[+\-]?\d/.test(answerValue);
+  let finalCanon: ReturnType<typeof canonicalPredictFormula> | null = null;
+  if (!isPluggedInNumber) {
+    finalCanon = canonicalPredictFormula(finalAnswer);
+  }
+  if (finalCanon !== null && !canonicalFormulaEquals(assembledCanon, finalCanon)) {
     throw new Error(
       `Step ${i} predict roles+constants assemble "${assembled}" which does not match problem final_answer "${finalAnswer}"`
     );
