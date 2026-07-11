@@ -938,6 +938,45 @@ interface GeneratedProblem {
 const MAX_RETRIES = 4;
 
 /**
+ * True when a validation error means the terminal answer is genuinely
+ * INELIGIBLE for the "predict" contract (it is not a clean monomial ratio of
+ * >=2 distinct free variables), so the correct fix is to switch that step to the
+ * "equation" contract. Distinguished from errors where "predict" was rejected
+ * for a REPAIRABLE reason (bad role/constant assembly, a duplicate setup, a
+ * committal-feedback nit) — those should be fixed in place WITHOUT abandoning
+ * predict.
+ *
+ * Eligibility rejections come from `canonicalPredictFormula` throwing on a
+ * calculus operator / derivative shape, an ADDITIVE answer ("unexpected
+ * operator" on a top-level `+`/`-`/`\pm`), or a root/parenthesized/grouped shape
+ * ("unconsumed input"), or from the "predict.variables must have 2-8 entries"
+ * arity guard (too few / too many distinct free quantities). A plain "does not
+ * match predict.correctFormula" mismatch is NOT an eligibility problem — the
+ * answer can still be predict, the model just mis-assigned roles — so it is
+ * deliberately excluded here.
+ */
+function isPredictIneligibilityError(message: string): boolean {
+  if (/predict\.variables must have/.test(message)) return true;
+  if (/canonicalPredictFormula:/.test(message)) {
+    // These canonical failures mean the SHAPE is genuinely not a monomial ratio,
+    // so the answer cannot be authored on the "predict" contract:
+    //   - calculus operator / is a derivative / not a single monomial ratio /
+    //     more than one "=" / missing "=" — explicit shape rejections.
+    //   - "unexpected operator" — a bare `+`/`-`/`\pm` at the top level, i.e. an
+    //     ADDITIVE answer (e.g. parallel resistance $\frac{R_1 R_2}{R_1+R_2}$).
+    //   - "unconsumed input" — a token the factor grammar cannot consume, i.e. a
+    //     root/parenthesized/grouped shape (e.g. $\sqrt{...}$, $(V_b-V_d)^2/R$).
+    // After the `\cdot`/`\times`/magnitude-bar tokenizer normalization, these two
+    // no longer fire on legitimate monomial ratios, so they are now reliable
+    // ineligibility signals rather than tokenizer gaps.
+    return /calculus operator|is a derivative|not a single monomial ratio|more than one "="|missing "="|unexpected operator|unconsumed input/.test(
+      message
+    );
+  }
+  return false;
+}
+
+/**
  * Build the corrective chat messages appended on a generation retry.
  *
  * The retry loops previously re-prompted with the IDENTICAL system+user prompt,
@@ -946,18 +985,25 @@ const MAX_RETRIES = 4;
  * current $I_d = \varepsilon_0 \frac{d\Phi_E}{dt}$) simply recurred on every
  * attempt until the retry budget was exhausted and generation hard-failed. By
  * echoing the previous attempt's validation error back to the model as an
- * assistant/user turn, the re-roll is actually informed by what went wrong and
- * can self-correct (e.g. switch the terminal step to the "equation" contract).
- * The corrective text names BOTH predict-ineligibility reasons the model is
- * prone to: a non-monomial answer (added terms/root/trig/log/derivative) AND an
- * answer with fewer than 2 distinct free variables (the "predict.variables must
- * have 2-8 entries, got 1" rejection), so neither case is under-steered.
- * Returns [] on the first attempt (no prior error).
+ * assistant/user turn, the re-roll is actually informed by what went wrong.
+ *
+ * IMPORTANT — the steer is CONDITIONAL. Only when the error is a genuine
+ * predict-INELIGIBILITY rejection (see `isPredictIneligibilityError`) do we tell
+ * the model to move the terminal step onto the "equation" contract. For any
+ * OTHER rejection (e.g. a duplicate setup relation, committal feedback, a role
+ * mis-assignment) we echo the error and ask for a targeted fix WITHOUT telling
+ * it to drop "predict" — otherwise an unrelated error needlessly converts an
+ * eligible predict-the-dependence answer into an equation-assembly step, which
+ * is exactly the "Assemble the Form" interaction we want to preserve for clean
+ * monomial ratios. Returns [] on the first attempt (no prior error).
  */
 function retryCorrectionMessages(
   lastError: Error | null
 ): ChatCompletionMessageParam[] {
   if (!lastError) return [];
+  const eligibility = isPredictIneligibilityError(lastError.message)
+    ? ` The terminal "form" step used the "predict" contract for an answer that is NOT predict-eligible. Author that terminal step on the "equation" contract instead (NOT "predict") because the answer is one of: it has added terms, a root/trig/log, or a derivative/differential/integral such as d\u03a6/dt; OR it has FEWER THAN 2 distinct free physical quantities (this is what "predict.variables must have 2-8 entries, got 1" means: too few graded quantities for predict). Do NOT change the terminal contract for any other reason — keep "predict" for clean monomial ratios of 2+ distinct free quantities.`
+    : ` Keep the SAME step types and terminal contract as before (do NOT switch a "predict" terminal step to "equation" — this error is unrelated to predict eligibility); just fix exactly the problem named in the error.`;
   return [
     {
       role: "assistant",
@@ -966,7 +1012,7 @@ function retryCorrectionMessages(
     },
     {
       role: "user",
-      content: `Your previous attempt was REJECTED with this error:\n\n${lastError.message}\n\nGenerate the problem again, fixing exactly this problem. A terminal "form" step may use the "predict" contract ONLY when the answer is a clean monomial ratio of at least TWO DISTINCT free physical quantities. Author that terminal step on the "equation" contract instead (NOT "predict") whenever any of these hold: (a) the answer has added terms, a root/trig/log, or a derivative/differential/integral such as d\u03a6/dt; or (b) the answer has FEWER THAN 2 distinct free physical quantities — e.g. it reduces to a single symbol times constants such as $I_d = I$ or $E = kQ$ (this is what "predict.variables must have 2-8 entries, got 1" means: too few graded quantities for predict). Return ONLY valid JSON — no markdown, no code fences, no explanation.`,
+      content: `Your previous attempt was REJECTED with this error:\n\n${lastError.message}\n\nGenerate the problem again, fixing exactly this problem.${eligibility} Return ONLY valid JSON — no markdown, no code fences, no explanation.`,
     },
   ];
 }

@@ -330,4 +330,61 @@ describe("canonicalPredictFormula — rejects non-monomial-ratios", () => {
     expect(r.numFactors).toEqual(["q"]);
     expect(r.denFactors).toEqual(["d"]);
   });
+
+  it("normalizes explicit multiplication \\cdot and \\times to inter-factor products (reported: Coulomb)", () => {
+    // \cdot / \times denote the same product a space already denotes; a monomial
+    // ratio written with an explicit dot must parse, not hard-fail.
+    const dot = canonicalPredictFormula("$p = m \\cdot v$");
+    expect(dot.numFactors).toEqual(["m", "v"]);
+    expect(canonicalFormulaEquals(dot, canonicalPredictFormula("$p = m v$"))).toBe(true);
+    const cross = canonicalPredictFormula("$W = F \\times d$");
+    expect(cross.numFactors).toEqual(["F", "d"]);
+    expect(canonicalFormulaEquals(cross, canonicalPredictFormula("$W = F d$"))).toBe(true);
+  });
+
+  it("normalizes \\cdot / \\times when followed immediately by a digit (no space)", () => {
+    // A TeX control word ends at the first non-letter, so `\cdot2` and
+    // `\times10` ARE the multiplication operator and must normalize — a `\b`
+    // boundary would fail between the trailing letter and a digit and leave the
+    // operator in place, falsely tripping "unexpected operator".
+    const dot = canonicalPredictFormula("$F = k\\cdot2 q$");
+    expect(dot.numFactors).toEqual(["2", "k", "q"]);
+    const cross = canonicalPredictFormula("$A = 2\\times10 x$");
+    expect(cross.numFactors).toEqual(["10", "2", "x"]);
+    // But a command with a trailing letter is NOT the multiplication operator, so
+    // it is left intact (tokenized as its own symbol) rather than normalized to a
+    // space — `\timesb` stays a single factor, distinct from `b`.
+    const notOp = canonicalPredictFormula("$z = a\\timesb$");
+    expect(notOp.numFactors).toEqual(["\\timesb", "a"]);
+  });
+
+  it("strips magnitude/absolute-value bars, keeping contents (reported bug: Coulomb's law)", () => {
+    // $F = k|q_1 q_2| / r^2$ is a legitimate monomial ratio; the magnitude of a
+    // product grades identically to the product for dependence purposes.
+    const bare = canonicalPredictFormula("$F = \\frac{k |q_1 q_2|}{r^2}$");
+    expect(bare.numFactors).toEqual(["k", "q_1", "q_2"]);
+    expect(bare.denFactors).toEqual(["r^2"]);
+    expect(
+      canonicalFormulaEquals(bare, canonicalPredictFormula("$F = \\frac{k q_1 q_2}{r^2}$"))
+    ).toBe(true);
+    // \left| ... \right| and \lvert ... \rvert forms behave identically.
+    expect(
+      canonicalPredictFormula("$F = \\frac{k \\left| q_1 q_2 \\right|}{r^2}$").numFactors
+    ).toEqual(["k", "q_1", "q_2"]);
+    expect(
+      canonicalPredictFormula("$F = \\frac{k \\lvert q_1 q_2 \\rvert}{r^2}$").numFactors
+    ).toEqual(["k", "q_1", "q_2"]);
+  });
+
+  it("full Coulomb form with \\cdot AND magnitude bars parses as a monomial ratio (exact reported case)", () => {
+    const r = canonicalPredictFormula("$F = \\frac{k \\cdot |q_1 q_2|}{r^2}$");
+    expect(r.numFactors).toEqual(["k", "q_1", "q_2"]);
+    expect(r.denFactors).toEqual(["r^2"]);
+  });
+
+  it("still THROWS on a parenthesized difference squared — not a monomial ratio", () => {
+    // Magnitude-bar stripping must NOT accidentally accept an additive group
+    // wrapped in parentheses (e.g. potential-difference power $P=(V_b-V_d)^2/R$).
+    expect(() => canonicalPredictFormula("$P = \\frac{(V_b - V_d)^2}{R}$")).toThrow();
+  });
 });

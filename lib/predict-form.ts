@@ -164,6 +164,27 @@ export function canonicalPredictFormula(formula: string): CanonicalFormula {
   // Normalize prime notation to a bare `'` so `v'`, `v^{\prime}`, and `v^\prime`
   // (all the same physical quantity) canonicalize to one token.
   s = s.replace(/\^\{?\\prime\}?/g, "'").replace(/\\prime/g, "'");
+  // Normalize EXPLICIT multiplication operators to a plain inter-factor space:
+  // `\cdot` and `\times` mean "these factors are multiplied", which is exactly
+  // what a space already denotes to the tokenizer. Without this, a legitimate
+  // monomial ratio written with an explicit dot (e.g. Coulomb's law
+  // `\frac{k \cdot q_1 q_2}{r^2}`) hard-fails with "unexpected operator". A
+  // trailing/leading run of spaces is collapsed later.
+  //
+  // Use a negative lookahead for a following LETTER rather than a JS `\b`: a TeX
+  // control word ends at the first non-letter, so `\cdot2`, `\times10^3`, and
+  // `\times\alpha` ARE the operator (and must normalize), while `\cdotfoo` /
+  // `\timesx` are different commands and must NOT be consumed. `\b` fails to
+  // match between the trailing letter and a digit, so `\cdot2` would otherwise
+  // survive and falsely trip "unexpected operator".
+  s = s.replace(/\\(?:cdot|times)(?![A-Za-z])/g, " ");
+  // Strip MAGNITUDE / absolute-value bars, keeping their contents. In a monomial
+  // ratio the magnitude of a product is the product of magnitudes, so `|q_1 q_2|`
+  // grades identically to `q_1 q_2` for dependence purposes. All bar forms —
+  // bare `|`, `\left|`/`\right|`, `\lvert`/`\rvert` — become an inter-factor
+  // space in one pass. (Identity-preserving for distinctness: the quantities
+  // inside are unchanged.)
+  s = s.replace(/\\left\s*\||\\right\s*\||\\lvert|\\rvert|\|/g, " ");
   // Flatten `^{x}` → `^x` and `_{x}` → `_x`, but ONLY when the brace body has no
   // embedded `_`/`^`. A nested-script body like `v_{rms^2}` is left braced (and
   // then rejected downstream) rather than silently flattened to the same token
