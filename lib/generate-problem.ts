@@ -7,6 +7,7 @@ import {
   VALID_STEP_TYPES,
 } from "@/lib/types";
 import { getOpenAIClient } from "@/lib/openai";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { STEP_ICONS } from "@/lib/step-icons";
 import { sanitizeGoal } from "@/lib/sanitize-goal";
 import {
@@ -270,6 +271,12 @@ PER-TYPE CONTENT — each step type emits a SPECIFIC structure (not always optio
     //     $R_{eq} = \\frac{R_1 R_2}{R_1 + R_2}$) — not a monomial ratio;
     //   - it involves a ROOT, trig, log, or exponential that cannot be written as
     //     a product/quotient of powers (e.g. $v = \\sqrt{r g \\tan\\theta}$);
+    //   - it contains a DERIVATIVE, DIFFERENTIAL, or INTEGRAL — anything with
+    //     $\\frac{d\\dots}{d\\dots}$, a bare $d\\dots$ differential, $\\partial$, or
+    //     $\\int$ (e.g. displacement current $I_d = \\varepsilon_0 \\frac{d\\Phi_E}{dt}$,
+    //     or $F = \\frac{dp}{dt}$): a rate/derivative is NOT a product/quotient of
+    //     powers of free quantities, so it is NOT predict-eligible — author it on
+    //     the "equation" contract;
     //   - it has fewer than 2 distinct free variables (reduces to essentially one
     //     symbol times constants);
     //   - the SAME quantity symbol appears more than once or cancels (e.g. an $R$
@@ -930,6 +937,40 @@ interface GeneratedProblem {
 
 const MAX_RETRIES = 4;
 
+/**
+ * Build the corrective chat messages appended on a generation retry.
+ *
+ * The retry loops previously re-prompted with the IDENTICAL system+user prompt,
+ * so a validation failure the model was prone to repeat (e.g. emitting a
+ * "predict" terminal contract for a non-monomial answer like the displacement
+ * current $I_d = \varepsilon_0 \frac{d\Phi_E}{dt}$) simply recurred on every
+ * attempt until the retry budget was exhausted and generation hard-failed. By
+ * echoing the previous attempt's validation error back to the model as an
+ * assistant/user turn, the re-roll is actually informed by what went wrong and
+ * can self-correct (e.g. switch the terminal step to the "equation" contract).
+ * The corrective text names BOTH predict-ineligibility reasons the model is
+ * prone to: a non-monomial answer (added terms/root/trig/log/derivative) AND an
+ * answer with fewer than 2 distinct free variables (the "predict.variables must
+ * have 2-8 entries, got 1" rejection), so neither case is under-steered.
+ * Returns [] on the first attempt (no prior error).
+ */
+function retryCorrectionMessages(
+  lastError: Error | null
+): ChatCompletionMessageParam[] {
+  if (!lastError) return [];
+  return [
+    {
+      role: "assistant",
+      content:
+        "I produced JSON that failed validation on the previous attempt.",
+    },
+    {
+      role: "user",
+      content: `Your previous attempt was REJECTED with this error:\n\n${lastError.message}\n\nGenerate the problem again, fixing exactly this problem. A terminal "form" step may use the "predict" contract ONLY when the answer is a clean monomial ratio of at least TWO DISTINCT free physical quantities. Author that terminal step on the "equation" contract instead (NOT "predict") whenever any of these hold: (a) the answer has added terms, a root/trig/log, or a derivative/differential/integral such as d\u03a6/dt; or (b) the answer has FEWER THAN 2 distinct free physical quantities — e.g. it reduces to a single symbol times constants such as $I_d = I$ or $E = kQ$ (this is what "predict.variables must have 2-8 entries, got 1" means: too few graded quantities for predict). Return ONLY valid JSON — no markdown, no code fences, no explanation.`,
+    },
+  ];
+}
+
 // ─── MISCONCEPTION LOOKUP ───────────────────────────────────────────────────
 
 function lookupMisconceptions(subject: string, topic: string): string {
@@ -1075,7 +1116,7 @@ CRITICAL QUALITY RULES:
    - "title": Short descriptive title (~80 chars max)
    - "goal": A SHORT qualitative statement of WHAT to find — e.g. "Find the RMS speed of the gas molecules", "Determine the orbital radius". NEVER include the numerical value, symbolic formula, or units of the answer in the goal — the answer is revealed only in the recap. The goal must read like a question prompt, not a spoiler.
    - "final_answer": The numerical/symbolic answer (shown only in the recap)
-   - Last step MUST be type "form" (ASSEMBLE THE FORM): the terminal step that presents the SYMBOLIC answer skeleton with NO substituted numbers. The predict-vs-equation choice depends ONLY on the SYMBOLIC form of the answer, NOT on whether final_answer is written as a number: when the SYMBOLIC form is a single MONOMIAL RATIO (product/quotient of powers, no added terms — e.g. $r=\\frac{mv}{qB}$, $\\lambda=\\frac{h}{mv}$, $F=qvB$) emit a "predict" contract (predict-the-dependence — STRONGLY PREFERRED), EVEN WHEN final_answer is a plugged-in NUMBER (put the symbolic ratio in correctFormula); keep the "equation" contract ONLY when the SYMBOLIC form has added terms, a root, trig, or log. The exact value is revealed only in the recap.
+   - Last step MUST be type "form" (ASSEMBLE THE FORM): the terminal step that presents the SYMBOLIC answer skeleton with NO substituted numbers. The predict-vs-equation choice depends ONLY on the SYMBOLIC form of the answer, NOT on whether final_answer is written as a number: when the SYMBOLIC form is a single MONOMIAL RATIO (product/quotient of powers, no added terms — e.g. $r=\\frac{mv}{qB}$, $\\lambda=\\frac{h}{mv}$, $F=qvB$) emit a "predict" contract (predict-the-dependence — STRONGLY PREFERRED), EVEN WHEN final_answer is a plugged-in NUMBER (put the symbolic ratio in correctFormula); keep the "equation" contract when the SYMBOLIC form has added terms, a root, trig, log, OR a derivative/differential/integral (e.g. a rate like $\\frac{d\\Phi_E}{dt}$ — displacement current $I_d=\\varepsilon_0\\frac{d\\Phi_E}{dt}$ is NOT a monomial ratio). The exact value is revealed only in the recap.
    - The content shape DEPENDS on the step type (see PER-TYPE CONTENT above):
      trap/produces → "claim" object; identify/feeds → "multiselect" object;
      setup → "equation" contract (Contract C term arrays); form → "predict"
@@ -1125,14 +1166,16 @@ Now generate a NEW, ORIGINAL problem. Return ONLY valid JSON — no markdown, no
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let response;
     try {
+      const messages: ChatCompletionMessageParam[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+        ...retryCorrectionMessages(lastError),
+      ];
       response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         max_tokens: 8192,
         temperature: 0.7,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        messages,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -2370,14 +2413,16 @@ Return ONLY valid JSON — no markdown, no code fences, no explanation.`;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     let response;
     try {
+      const messages: ChatCompletionMessageParam[] = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+        ...retryCorrectionMessages(lastError),
+      ];
       response = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         max_tokens: 8192,
         temperature: 0.7,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        messages,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

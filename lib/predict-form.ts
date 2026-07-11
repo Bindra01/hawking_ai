@@ -124,9 +124,10 @@ export interface CanonicalFormula {
  *   2. split on the FIRST `=` (throw if there is more than one `=`).
  *   3. parse the RHS as `\frac{num}{den}` or a bare numerator (den empty).
  *   4. tokenize each side by repeatedly consuming one factor from the front — a
- *      factor is `\cmd` optionally followed by `^power`, or a single letter/digit
- *      optionally followed by `^power`. If any character remains, or an operator
- *      is encountered, THROW.
+ *      factor is a `\cmd`/letter/multi-digit base optionally carrying `_sub`
+ *      and/or `^power` in any order (so `\varepsilon_0`, `k_B`, `v_rms` are
+ *      single factors). If any character remains, or an operator is
+ *      encountered, THROW.
  *   5. SORT each side's factors (multiplication commutes) → order-invariant key.
  *
  * This tolerance applies ONLY to the generator-time equivalence assertion; the
@@ -145,7 +146,30 @@ export function canonicalPredictFormula(formula: string): CanonicalFormula {
   //    compare equal. Unspaced input (e.g. `n^2\pi^2\hbar^2`) still tokenizes
   //    because `^power` and `\command` boundaries break the factor regex.
   let s = formula.replace(/\$/g, "");
-  s = s.replace(/\^\{([^{}]*)\}/g, "^$1").replace(/_\{([^{}]*)\}/g, "_$1");
+  // Strip purely DECORATIVE command wrappers so a symbol dressed in physics
+  // convention canonicalizes to the same token as its plain form. Two families,
+  // both identity-preserving (they change rendering, not which quantity it is):
+  //   - typography: `m_{\mathrm{e}}` → `m_{e}`, `R_{\mathrm{eq}}` → `R_{eq}`,
+  //     `T_{\text{c}}` → `T_{c}`;
+  //   - vector/accent decorations, ubiquitous in E&M/mechanics answers (fields,
+  //     forces, momentum): `\vec{v}` → `v`, `\vec{E}` → `E`, `\hat{n}` → `n`,
+  //     `\dot{x}` → `x`. Without this, `\frac{q}{\vec{E}}`-style monomial ratios
+  //     would hard-fail with "unconsumed input", the same crash class users hit.
+  // Run twice so a wrapper nested one level deep (e.g. inside a subscript brace)
+  // is unwrapped before the brace-flattening pass below. (The needle is a fixed
+  // command set, not user LaTeX, so a static RegExp is safe here.)
+  const wrapperRe =
+    /\\(?:mathrm|mathbf|mathsf|mathit|mathcal|text|rm|bf|it|vec|hat|bar|tilde|dot|ddot|overline|underline|boldsymbol)\{([^{}]*)\}/g;
+  s = s.replace(wrapperRe, "$1").replace(wrapperRe, "$1");
+  // Normalize prime notation to a bare `'` so `v'`, `v^{\prime}`, and `v^\prime`
+  // (all the same physical quantity) canonicalize to one token.
+  s = s.replace(/\^\{?\\prime\}?/g, "'").replace(/\\prime/g, "'");
+  // Flatten `^{x}` → `^x` and `_{x}` → `_x`, but ONLY when the brace body has no
+  // embedded `_`/`^`. A nested-script body like `v_{rms^2}` is left braced (and
+  // then rejected downstream) rather than silently flattened to the same token
+  // as the structurally-different `v_{rms}^2` — this keeps the strict guard from
+  // treating two different LaTeX structures as equal.
+  s = s.replace(/\^\{([^{}_^]*)\}/g, "^$1").replace(/_\{([^{}_^]*)\}/g, "_$1");
   s = s.replace(/\s+/g, " ").trim();
   s = s.replace(/\s*([={}])\s*/g, "$1");
 
@@ -167,10 +191,49 @@ export function canonicalPredictFormula(formula: string): CanonicalFormula {
     throw new Error(`canonicalPredictFormula: empty right-hand side in "${formula}"`);
   }
 
+  // 2b. reject CALCULUS operators outright. A derivative, differential, or
+  // integral is a rate/limit, not a product/quotient of powers of free
+  // quantities, so it can never be a monomial ratio. `\int`, `\oint`,
+  // `\partial`, `\nabla`, `\sum`, `\prod` are unambiguous. The Leibniz
+  // derivative `\frac{d...}{d...}` is trickier because the tokenizer would
+  // otherwise read the differential `d` as an ordinary single-letter factor
+  // (e.g. `\frac{dp}{dt}` → [d,p]/[d,t]), silently mis-grading `d` as a physical
+  // variable; detect the classic shape where BOTH sides of a `\frac` begin with
+  // a differential `d` glued (no space) directly to a symbol/command.
+  if (/\\(?:int|oint|partial|nabla|sum|prod)\b/.test(rhs)) {
+    throw new Error(
+      `canonicalPredictFormula: RHS "${rhs}" contains a calculus operator and is not a single monomial ratio`
+    );
+  }
+  // Parse the `\frac{num}{den}` shape ONCE here; reused by the Leibniz guard
+  // below and by step 3.
+  const fracMatch = /^\\frac\{([^{}]*)\}\{([^{}]*)\}$/.exec(rhs);
+  // A "differential" side of a derivative starts with `d` (optionally a
+  // higher-order power like `d^2` / `d^{2}`), then either a symbol/command it
+  // differentiates (`dt`, `d p`, `d\Phi`, `d^2x`), OR nothing at all (the bare
+  // operator numerator in `\frac{d}{dt}`). This guard fires only when BOTH
+  // sides of the `\frac` look like this, so a lone distance variable `d` on one
+  // side (e.g. `\frac{q}{d}`) never trips it and still parses as a monomial
+  // ratio. Note `startsWithDifferential` requires the char after `d` (and any
+  // order power) to be a space, a LETTER, a command, or end-of-string — so a
+  // subscripted distance like `d_1` does NOT look like a differential (its next
+  // char is `_`), and a ratio of two distances `\frac{d_1}{d_2}` correctly
+  // parses as a monomial ratio rather than tripping the derivative guard.
+  const startsWithDifferential = (s: string) =>
+    /^d(?:\^\{?\d+\}?)?(?:\s|[A-Za-z]|\\|$)/.test(s.trim());
+  if (
+    fracMatch &&
+    startsWithDifferential(fracMatch[1]) &&
+    startsWithDifferential(fracMatch[2])
+  ) {
+    throw new Error(
+      `canonicalPredictFormula: RHS "${rhs}" is a derivative (d.../d...) and is not a single monomial ratio`
+    );
+  }
+
   // 3. parse RHS as \frac{num}{den} or a bare numerator.
   let numStr: string;
   let denStr: string;
-  const fracMatch = /^\\frac\{([^{}]*)\}\{([^{}]*)\}$/.exec(rhs);
   if (fracMatch) {
     numStr = fracMatch[1];
     denStr = fracMatch[2];
@@ -197,18 +260,29 @@ export function canonicalPredictFormula(formula: string): CanonicalFormula {
 
 /**
  * Repeatedly consume one factor at a time from the front of `side`. A factor is
- * `\cmd` optionally followed by `^power`, or a single letter/digit optionally
- * followed by `^power`. Throws on any operator or unconsumed character.
+ * a base (`\cmd` / multi-digit number / single letter) followed by zero or more
+ * `_sub`/`^power` groups in any order (the subscript is kept as part of the
+ * token, so `\varepsilon_0`, `k_B`, `v_rms` are single factors), plus optional
+ * trailing prime marks. Throws on any operator or unconsumed character.
  */
 function tokenizeFactors(side: string, original: string): string[] {
   const factors: string[] = [];
   let rest = side;
-  // \cmd | multi-digit number | single letter, each optionally followed by
-  // ^power (a \cmd, a multi-digit number, or a single letter). The `\d+`
+  // A factor is a BASE (\cmd | multi-digit number | single letter) followed by
+  // zero or more sub/superscripts in any order (`_sub` / `^power`). The `\d+`
   // alternative MUST precede the single-char fallback so a multi-digit constant
   // like "12" tokenizes as ONE factor — otherwise "12" and "21" would both sort
   // to ["1","2"] and compare equal, letting a wrong "Correct form" ship.
-  const factorRe = /^(?:\\[a-zA-Z]+|\d+|[A-Za-z])(?:\^(?:\\[a-zA-Z]+|\d+|[A-Za-z]))?/;
+  //
+  // Subscripts are consumed as PART of the symbol (not treated as operators):
+  // vacuum permittivity `\varepsilon_0`, Boltzmann's `k_B`, `v_rms`, `N_A`,
+  // `x_1` are single physical quantities that routinely appear in perfectly
+  // valid monomial ratios (e.g. $I_d = \frac{I A}{\varepsilon_0}$). Because the
+  // whole subscript is kept in the token, distinctness is preserved — `x_1` and
+  // `x_2` remain different factors and never compare equal. (Brace groups like
+  // `_{rms}` / `^{10}` are already flattened to `_rms` / `^10` upstream.)
+  const factorRe =
+    /^(?:\\[a-zA-Z]+|\d+|[A-Za-z])'*(?:[_^](?:\\[a-zA-Z]+|[A-Za-z0-9]+)'*)*/;
 
   while (rest.length > 0) {
     // Spaces are inter-factor boundaries (preserved by canonicalPredictFormula so
