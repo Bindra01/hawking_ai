@@ -1444,8 +1444,9 @@ describe("validateAndNormalize", () => {
       expect(formStep.type).toBe("form");
       if (formStep.predict) {
         // A predict form step carries the correct monomial-ratio form and NOT a
-        // build contract; its correctFormula is symbolic ($…$-wrapped) and equals
-        // the problem's final_answer.
+        // build contract; its correctFormula is the SYMBOLIC ($…$-wrapped) ratio,
+        // which may differ from a plugged-in NUMERIC final_answer (e.g. the
+        // class_11/class_12 examples have numeric final_answers).
         expect(formStep.build).toBeUndefined();
         expect(formStep.predict.correctFormula).toMatch(/^\$.*\$$/);
         expect(formStep.predict.variables.length).toBeGreaterThanOrEqual(2);
@@ -1458,17 +1459,23 @@ describe("validateAndNormalize", () => {
     }
   });
 
-  it("Class-11 example's terminal form is symbolic, not the numeric final_answer", () => {
+  it("Class-11 example's terminal form is a predict contract on the monomial-ratio answer", () => {
     const example = __TEST_EXAMPLES.EXAMPLE_CLASS_11;
-    expect(example.final_answer).toBe("≈ 517 m/s");
+    // The class_11 example carries a NUMERIC final_answer but a monomial-ratio
+    // SYMBOLIC form, so the terminal step is a predict contract (not equation).
+    expect(example.final_answer).toBe("≈ 10 N");
     const ex = structuredClone(example) as unknown as TestProblem;
     validateAndNormalize(ex, example.subject, example.topic, example.difficulty);
     const steps = ex.solution_flow.steps;
     const formStep = steps[steps.length - 1];
     expect(formStep.type).toBe("form");
-    // The assembled skeleton must NOT contain the numeric value 517.
-    const assembled = formStep.build!.accepted![0].join(" ");
-    expect(assembled).not.toContain("517");
+    // A predict terminal assembles no build/equation contract; it grades the
+    // symbolic monomial ratio, and its correctFormula must stay symbolic — no
+    // plugged-in numeric value from the final_answer (only the power exponent 2).
+    expect(formStep.build).toBeUndefined();
+    expect(formStep.predict!.correctFormula).toBe("$T = \\frac{mv^2}{r}$");
+    expect(formStep.predict!.correctFormula).not.toContain("10");
+    expect(formStep.predict!.variables.length).toBeGreaterThanOrEqual(2);
   });
 
   it("sanitizes the goal so it never reveals the final_answer (numeric)", () => {
@@ -1492,10 +1499,10 @@ describe("validateAndNormalize", () => {
 
   it("preserves a goal that does not contain the final_answer", () => {
     const problem = makeValidProblem();
-    problem.goal = "Find the RMS speed of the gas molecules at the given temperature.";
-    problem.final_answer = "≈ 517 m/s";
-    validateAndNormalize(problem, "thermodynamics", "Kinetic Theory", "class_11");
-    expect(problem.goal).toBe("Find the RMS speed of the gas molecules at the given temperature.");
+    problem.goal = "Find the tension in the string holding the ball in its circular path.";
+    problem.final_answer = "≈ 10 N";
+    validateAndNormalize(problem, "mechanics", "Uniform Circular Motion", "class_11");
+    expect(problem.goal).toBe("Find the tension in the string holding the ball in its circular path.");
   });
 
   it("examples contain no legacy-only (solve/sanity/connect/depends/scale/limit) steps", () => {

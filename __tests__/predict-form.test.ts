@@ -224,6 +224,51 @@ describe("canonicalPredictFormula — rejects non-monomial-ratios", () => {
     );
   });
 
+  it("throws on a trig right-hand side (\\sin/\\cos/\\tan)", () => {
+    // Without the transcendental-function guard the tokenizer would read
+    // \sin/\theta as ordinary \cmd factors and silently grade
+    // $a = g\sin\theta$ as a monomial ratio [g, \sin, \theta].
+    expect(() => canonicalPredictFormula("$a = g \\sin\\theta$")).toThrow(
+      /transcendental function/
+    );
+    expect(() => canonicalPredictFormula("$P = V I \\cos\\phi$")).toThrow(
+      /transcendental function/
+    );
+    expect(() => canonicalPredictFormula("$x = A \\tan\\theta$")).toThrow(
+      /transcendental function/
+    );
+  });
+
+  it("throws on a log/exp right-hand side", () => {
+    expect(() => canonicalPredictFormula("$S = k \\ln W$")).toThrow(
+      /transcendental function/
+    );
+    expect(() => canonicalPredictFormula("$N = N_0 \\exp(-t)$")).toThrow(
+      /transcendental function/
+    );
+  });
+
+  it("throws when a trig/log name is followed by a digit, subscript, or brace (not just \\b)", () => {
+    // A TeX control word ends at the first non-letter, so a digit/`_`/`{` after
+    // the name must still trip the guard — plain \b would NOT match before those.
+    expect(() => canonicalPredictFormula("$a = g \\sin2\\theta$")).toThrow(
+      /transcendental function/
+    );
+    expect(() => canonicalPredictFormula("$a = g \\sin_0\\theta$")).toThrow(
+      /transcendental function/
+    );
+    expect(() => canonicalPredictFormula("$y = k \\log_{10} x$")).toThrow(
+      /transcendental function/
+    );
+    // Indian/JEE notation \cosec and reciprocal-hyperbolic \sech are covered too.
+    expect(() => canonicalPredictFormula("$x = A \\cosec\\theta$")).toThrow(
+      /transcendental function/
+    );
+    expect(() => canonicalPredictFormula("$x = A \\sech t$")).toThrow(
+      /transcendental function/
+    );
+  });
+
   it("accepts subscripted physical symbols as single factors (reported bug: \\varepsilon_0)", () => {
     // $I_d = \frac{I A}{\varepsilon_0}$ is a legitimate monomial ratio; the
     // subscript in vacuum permittivity must NOT be read as an operator.

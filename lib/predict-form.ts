@@ -1,5 +1,15 @@
 import type { PredictRole, Step } from "@/lib/types";
 
+// Transcendental (non-algebraic) LaTeX functions: trig, inverse/hyperbolic trig,
+// log, ln, lg (log base 10), exp. A quantity wrapped in one of these is not a
+// product/quotient of powers, so an answer containing it is not a monomial ratio.
+// The trailing `(?![A-Za-z])` is a TeX control-word boundary (a `\command` ends
+// at the first non-letter): it lets `\sec` match in `g \sec\theta` but NOT inside
+// a longer command like `\sech`, and — unlike `\b` — it still fires on `\sin2`,
+// `\sin_0`, and `\log_{10}` where a non-letter (digit / `_`) follows the name.
+const TRANSCENDENTAL_FN =
+  /\\(?:sin|cos|tan|cot|sec|csc|cosec|sinh|cosh|tanh|coth|sech|csch|arcsin|arccos|arctan|arccot|arcsec|arccsc|log|ln|lg|exp)(?![A-Za-z])/;
+
 /**
  * Pure helpers for the predict-the-dependence "Assemble the Form" step. No React
  * here — all branching logic (assembly, canonicalization) lives in this module so
@@ -224,6 +234,18 @@ export function canonicalPredictFormula(formula: string): CanonicalFormula {
   if (/\\(?:int|oint|partial|nabla|sum|prod)\b/.test(rhs)) {
     throw new Error(
       `canonicalPredictFormula: RHS "${rhs}" contains a calculus operator and is not a single monomial ratio`
+    );
+  }
+  // 2c. reject TRANSCENDENTAL functions (trig, inverse/hyperbolic trig, log, ln,
+  // exp). A quantity wrapped in sin/cos/log/… is a non-algebraic function of its
+  // argument, not a product/quotient of powers, so the answer is not a monomial
+  // ratio and the "which quantity is in the numerator vs denominator" prediction
+  // is meaningless for it. Without this guard the tokenizer would read `\sin`,
+  // `\cos`, `\log`, … as ordinary `\cmd` factors and silently grade e.g.
+  // `a = g\sin\theta` as a monomial ratio with factors [g, \sin, \theta].
+  if (TRANSCENDENTAL_FN.test(rhs)) {
+    throw new Error(
+      `canonicalPredictFormula: RHS "${rhs}" contains a transcendental function (trig/log/exp) and is not a single monomial ratio`
     );
   }
   // Parse the `\frac{num}{den}` shape ONCE here; reused by the Leibniz guard

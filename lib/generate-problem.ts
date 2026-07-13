@@ -311,25 +311,31 @@ steps, and do NOT add claim/multiselect/build objects to the "principle" MCQ typ
 
 // ─── EXAMPLE PROBLEMS (one per difficulty) ───────────────────────────────────
 
-// Class 11 — LEAN kinetic-theory flow (6 steps): principle -> setup -> roadmap
-// (2 moves) -> feeds -> produces -> form. The fixed opening is principle (RECALL THE
-// PRINCIPLE MCQ) then setup (the central governing equation, distinct from the
-// terminal form). This example deliberately models the HARD case where the
-// final formula (v_rms = √(3RT/M)) IS the obvious central relation: the setup
-// must be the UPSTREAM governing law (the equipartition energy balance
-// ½M⟨v²⟩ = 3/2·RT) it derives from, NOT the rearranged answer — so setup and
-// form stay genuinely distinct and clear the setup≠form guard (decision #825).
-// setup/form use the Contract-C `equation` shape; roadmap uses the `moves`
-// contract. CODE assembles every build step's tiles/accepted from these
-// constrained arrays (see assembleBuildFromContract).
+// Class 11 — LEAN uniform-circular-motion flow (6 steps): principle -> setup ->
+// roadmap (2 moves) -> feeds -> produces -> form. The fixed opening is principle
+// (RECALL THE PRINCIPLE MCQ) then setup (the central governing equation, distinct
+// from the terminal form). This example is deliberately chosen so its answer is a
+// clean MONOMIAL RATIO ($T = \frac{mv^2}{r}$), so the terminal "form" step uses the
+// PREDICT contract (predict-the-dependence: which quantity pushes the target up
+// vs down) — the "ASSEMBLE THE FORM" learning goal — rather than the equation
+// builder. Like EXAMPLE_CLASS_12 it also models the NUMERIC-ANSWER predict case
+// (final_answer is a plugged-in number ≈ 10 N, yet the terminal form still uses
+// PREDICT because the SYMBOLIC form is a monomial ratio — see decision #1028).
+// The setup is Newton's second law for
+// circular motion ($T = m a_c$) — the UPSTREAM governing law the answer derives
+// from once the centripetal acceleration $a_c$ (not given) is expanded — so setup
+// and form stay genuinely distinct and clear the setup≠form guard (decision #825).
+// setup uses the Contract-C `equation` shape, form uses the `predict` contract,
+// roadmap uses the `moves` contract. CODE assembles every build step's
+// tiles/accepted from these constrained arrays (see assembleBuildFromContract).
 const EXAMPLE_CLASS_11 = {
-  title: "RMS speed of nitrogen molecules at 300 K",
-  subject: "thermodynamics",
-  topic: "Kinetic Theory",
-  scenario: "A sample of nitrogen gas (molar mass M = 0.028 kg/mol) is held at T = 300 K (R = 8.314 J/mol·K). What is the root-mean-square speed of its molecules?",
+  title: "Tension in a string whirling a ball in a horizontal circle",
+  subject: "mechanics",
+  topic: "Uniform Circular Motion",
+  scenario: "A ball of mass m = 0.20 kg is tied to a string and whirled in a horizontal circle of radius r = 0.50 m on a frictionless table at a constant speed v = 5.0 m/s. Find the tension in the string.",
   difficulty: "class_11",
-  goal: "Find the RMS speed of the gas molecules at the given temperature.",
-  final_answer: "≈ 517 m/s",
+  goal: "Find the tension in the string holding the ball in its circular path.",
+  final_answer: "≈ 10 N",
   diagram_type: null,
   solution_flow: {
     steps: [
@@ -337,105 +343,101 @@ const EXAMPLE_CLASS_11 = {
         type: "principle",
         label: "RECALL THE PRINCIPLE",
         icon: "⚡",
-        prompt: "You need the typical molecular speed of a gas at a known temperature. Which principle connects that microscopic speed to the temperature?",
+        prompt: "A ball moves at constant speed in a horizontal circle on a frictionless table. Which principle sets the tension the string must supply?",
         options: [
-          { text: "Equipartition: the average translational kinetic energy of the molecules is fixed by the temperature, ⟨KE⟩ = 3/2·kT.", correct: true, feedback: "Exactly — kinetic theory ties the average translational kinetic energy directly to temperature, and that is what sets the molecular speed." },
-          { text: "The ideal gas law PV = nRT alone fixes the molecular speed.", correct: false, feedback: "PV = nRT relates the bulk state variables; on its own it never exposes the microscopic molecular speed, which comes from the kinetic-energy–temperature link.", distractor_type: "misconception" as const },
-          { text: "Conservation of momentum in wall collisions sets the speed directly.", correct: false, feedback: "Wall collisions explain the pressure, but you still need the equipartition energy relation to pin the speed to the temperature.", distractor_type: "half_right" as const },
-          { text: "The Maxwell-Boltzmann distribution's peak (most probable speed) is the root-mean-square speed.", correct: false, feedback: "The most probable speed is a different moment of the distribution; the RMS speed comes from the mean-square energy, which equipartition fixes.", distractor_type: "procedural_slip" as const }
+          { text: "The string tension is the net inward force, and circular motion requires that net force to equal the mass times the centripetal acceleration.", correct: true, feedback: "Exactly — the tension is the only inward force, so Newton's second law makes it equal to m times the centripetal acceleration." },
+          { text: "The tension balances the ball's weight so the net force is zero.", correct: false, feedback: "On a horizontal frictionless table gravity is vertical and plays no part; the tension is not balancing weight, it is providing the unbalanced inward force.", distractor_type: "misconception" as const },
+          { text: "Conservation of energy fixes the tension, since the string does work on the ball.", correct: false, feedback: "The tension points toward the center, perpendicular to the motion, so it does NO work; energy is constant and cannot set the tension.", distractor_type: "half_right" as const },
+          { text: "The tension equals the ball's momentum divided by the time for one revolution.", correct: false, feedback: "Momentum over a time is an impulse-style estimate, not the centripetal condition; the tension comes from Newton's second law with the centripetal acceleration.", distractor_type: "procedural_slip" as const }
         ],
-        tip: "Temperature is a direct measure of average molecular kinetic energy."
+        tip: "On a frictionless table the string tension is the entire inward (centripetal) force."
       },
       {
         type: "setup",
         label: "SET UP THE MATH",
         icon: "🔧",
-        prompt: "The RMS speed formula is the answer you're heading for — so DON'T start there. Assemble the upstream governing law it derives from: the equipartition energy balance that ties the mean-square speed to the temperature. You'll solve it for the speed next.",
+        prompt: "Build the central governing relation: Newton's second law for circular motion, with the tension as the net inward force equal to the mass times the centripetal acceleration. You'll still need the centripetal acceleration a_c, which isn't given — first assemble the governing law from the tiles.",
         build: {
           equation: {
-            lhs_terms: ["$\\frac{1}{2} M \\langle v^2 \\rangle$"],
+            lhs_terms: ["$T$"],
             relation: "=",
-            rhs_terms: ["$\\frac{3}{2} R T$"],
+            rhs_terms: ["$m a_c$"],
             distractor_terms: [
-              { term: "$\\frac{1}{2} R T$", feedback: "That keeps only one translational degree of freedom; a monatomic-style ½RT drops the factor of three for the three independent directions." },
-              { term: "$\\frac{3}{2} k_B T$", feedback: "That is the per-molecule form; with molar mass M on the left you must pair it with the molar 3/2·RT, not the per-molecule Boltzmann version." }
+              { term: "$m g$", feedback: "That is the ball's weight, a vertical force; on a horizontal table it never enters the inward force balance that sets the tension." },
+              { term: "$\\frac{1}{2} m v^2$", feedback: "That is kinetic energy, not a force; the tension comes from Newton's second law, not from an energy expression." }
             ]
           },
-          feedbackCorrect: "Right — equipartition sets ½M⟨v²⟩ equal to 3/2·RT; rearranging this upstream law is what delivers the RMS speed.",
-          feedbackWrong: "Start from the governing balance: half the molar mass times the mean-square speed equals three-halves R T. That is the law the answer is rearranged from."
+          feedbackCorrect: "Right — the tension is the net inward force, so Newton's second law makes it equal to m times the centripetal acceleration a_c.",
+          feedbackWrong: "Start from Newton's second law for circular motion: the tension equals the mass times the centripetal acceleration, T = m·a_c."
         },
-        tip: "Write the energy balance the answer is derived FROM, not the rearranged answer itself."
+        tip: "Write the governing law the tension obeys — mass times centripetal acceleration — not the final substituted formula."
       },
       {
         type: "roadmap",
         label: "MAP THE DERIVATION",
         icon: "🗺️",
-        prompt: "Tap the high-level moves into the ORDER an expert would chain them to reach the RMS speed. Two of the tiles are wrong moves — leave them out.",
+        prompt: "Tap the high-level moves into the ORDER an expert would chain them to reach the tension. Two of the tiles are wrong moves — leave them out.",
         build: {
           moves: [
-            "Solve the equipartition balance for the mean-square speed ⟨v²⟩",
-            "Take the square root of ⟨v²⟩ to get the root-mean-square speed"
+            "Express the centripetal acceleration through the speed and radius, a_c = v²/r",
+            "Substitute it into Newton's second law to express the tension"
           ],
           distractor_moves: [
-            { move: "Take the square root before isolating the mean-square speed", feedback: "You must isolate ⟨v²⟩ from the energy balance first; rooting the unsolved equation mixes the temperature factor under the radical incorrectly." },
-            { move: "Convert the temperature to Celsius before substituting", feedback: "The kinetic relation is built on absolute temperature; switching to Celsius breaks the proportionality between energy and temperature entirely." }
+            { move: "Add the weight mg into the inward force balance", feedback: "Weight is vertical and the circle is horizontal, so folding mg into the inward balance corrupts the relation that sets the tension." },
+            { move: "Find the time for one revolution before the tension", feedback: "The period follows from the speed and radius after the fact; reaching for it first skips the centripetal relation you actually need." }
           ],
-          feedbackCorrect: "Exactly the right plan: rearrange the energy balance for the mean-square speed, then take the root to land the RMS speed.",
-          feedbackWrong: "Rebuild the plan: first solve the balance for ⟨v²⟩, then take the square root to reach the RMS speed."
+          feedbackCorrect: "Exactly the right plan: write the centripetal acceleration in terms of v and r, then substitute into Newton's second law for the tension.",
+          feedbackWrong: "Rebuild the plan: first express a_c = v²/r, then substitute it into T = m·a_c to reach the tension."
         },
-        tip: "Sequence the moves before touching algebra — isolate the square first, root it second."
+        tip: "Sequence the moves before algebra — expand the acceleration first, substitute second."
       },
       {
         type: "feeds",
         label: "WHAT GOES IN",
         icon: "🔌",
-        prompt: "For the move that produces the RMS speed, tap every quantity that actually feeds into it — and leave the same-family red herrings.",
+        prompt: "For the move that produces the tension, tap every quantity that actually feeds into it — and leave the same-family red herrings.",
         multiselect: {
           items: [
-            { text: "The molar mass M", matters: true },
-            { text: "The gas constant R", matters: true },
-            { text: "The absolute temperature T", matters: true },
-            { text: "The pressure of the sample", matters: false },
-            { text: "The volume of the container", matters: false },
-            { text: "The number of moles n", matters: false }
+            { text: "The ball's mass m", matters: true },
+            { text: "The ball's speed v", matters: true },
+            { text: "The circle's radius r", matters: true },
+            { text: "The gravitational field g", matters: false },
+            { text: "The time for one revolution", matters: false },
+            { text: "The length of string beyond the radius", matters: false }
           ],
-          feedbackCorrect: "Right — only the molar mass, the gas constant, and the absolute temperature set the RMS speed; pressure, volume, and amount all cancel out.",
-          feedbackWrong: "The RMS speed depends only on the molar mass, the gas constant, and the absolute temperature. Pressure, volume, and the number of moles never enter."
+          feedbackCorrect: "Right — only the mass, the speed, and the radius set the tension; gravity is vertical, and the period and any extra string length never enter.",
+          feedbackWrong: "The tension depends only on the mass, the speed, and the radius. Gravity, the revolution time, and extra string length play no part on a horizontal frictionless table."
         },
-        tip: "List only the quantities the RMS speed truly consumes before assembling it."
+        tip: "List only the quantities the tension truly consumes before assembling it."
       },
       {
         type: "produces",
         label: "WHAT IT PRODUCES",
         icon: "🔎",
-        prompt: "You solved the equipartition balance for ⟨v²⟩. Sound right, or is that a trap?",
+        prompt: "You wrote the centripetal acceleration a_c = v²/r. Sound right, or is that a trap?",
         claim: {
-          statement: "Solving the energy balance hands you the RMS speed directly, with no further step.",
+          statement: "Computing the centripetal acceleration hands you the tension directly, with no further step.",
           isTrap: true,
-          feedbackTrap: "Right — it's a trap. Solving the balance only produces the MEAN-SQUARE speed ⟨v²⟩; you still have to take the square root to reach the RMS speed.",
-          feedbackSound: "Not quite — this is a trap. The balance yields ⟨v²⟩, the mean-square speed; the RMS speed needs one more move, the square root."
+          feedbackTrap: "Right — it's a trap. The centripetal acceleration is only an acceleration; you still have to multiply by the mass through Newton's second law to reach the tension.",
+          feedbackSound: "Not quite — this is a trap. a_c = v²/r is an acceleration, not a force; the tension needs one more move, multiplying by the mass."
         },
-        tip: "Name what a move actually produces — the mean-square speed is not yet the RMS speed."
+        tip: "Name what a move actually produces — an acceleration is not yet the force."
       },
       {
         type: "form",
         label: "ASSEMBLE THE FORM",
         icon: "🏗️",
-        prompt: "Assemble the SYMBOLIC RMS-speed relation from the structural tiles — the temperature factor, the gas constant, the molar mass under a root. Build the form; numbers come later.",
-        build: {
-          equation: {
-            lhs_terms: ["$v_{rms}$"],
-            relation: "=",
-            rhs_terms: ["$\\sqrt{\\frac{3RT}{M}}$"],
-            distractor_terms: [
-              { term: "$\\frac{3RT}{M}$", feedback: "That is the mean-square speed before the root is applied; the recap restores the radical that the RMS form carries." },
-              { term: "$\\sqrt{\\frac{RT}{M}}$", feedback: "That arrangement drops the factor of three from the three translational directions; the recap settles where it belongs under the root." }
-            ]
-          },
-          feedbackCorrect: "You've assembled the symbolic RMS speed; the recap below carries the structure through to its value.",
-          feedbackWrong: "Reassemble the skeleton: the RMS speed is the root of three R T over the molar mass, which the recap then values."
+        prompt: "Predict how the string tension depends on each quantity: does raising it push the tension up (numerator), down (denominator), or leave it unchanged? Your picks assemble the symbolic form.",
+        predict: {
+          target: "T",
+          correctFormula: "$T = \\frac{mv^2}{r}$",
+          variables: [
+            { symbol: "m", label: "the ball's mass", role: "numerator" as const },
+            { symbol: "v", label: "the ball's speed", factor: "v^2", role: "numerator" as const },
+            { symbol: "r", label: "the circle's radius", role: "denominator" as const }
+          ]
         },
-        tip: "Build the FORMULA first; numbers go in only at the recap."
+        tip: "A heavier or faster ball pulls the string harder; a wider circle eases the tension."
       }
     ]
   }
@@ -997,12 +999,50 @@ function isPredictIneligibilityError(message: string): boolean {
  * is exactly the "Assemble the Form" interaction we want to preserve for clean
  * monomial ratios. Returns [] on the first attempt (no prior error).
  */
+// A COMPACT equation-terminal "form" step, injected ONLY on the predict-
+// INELIGIBLE retry path. All three few-shot examples now carry a "predict"
+// terminal, so the model has no STRUCTURAL exemplar of the "equation" fallback
+// to imitate, and prose alone is ~0% adherence for GPT-4o — without a shape to
+// copy, non-ratio answers exhaust the retry budget and hard-FAIL. It reuses the
+// former class-11 RMS √(3RT/M) equation-terminal shape now retired from the
+// few-shots; the model adapts the terms to the current problem's answer.
+const EQUATION_TERMINAL_FALLBACK_SNIPPET = JSON.stringify(
+  {
+    type: "form",
+    label: "ASSEMBLE THE FORM",
+    icon: "🏗️",
+    prompt:
+      "Assemble the SYMBOLIC answer skeleton from the structural tiles — no substituted numbers. Build the form; the value comes later in the recap.",
+    build: {
+      equation: {
+        lhs_terms: ["$v_{rms}$"],
+        relation: "=",
+        rhs_terms: ["$\\sqrt{\\frac{3RT}{M}}$"],
+        distractor_terms: [
+          {
+            term: "$\\frac{3RT}{M}$",
+            feedback:
+              "That is the mean-square speed before the root is applied; the recap restores the radical the RMS form carries.",
+          },
+        ],
+      },
+      feedbackCorrect:
+        "The symbolic skeleton is assembled; the recap below carries the structure through to its value.",
+      feedbackWrong:
+        "The skeleton can be arranged as the root of three R T over the molar mass; the recap then carries it to the value.",
+    },
+    tip: "Build the FORMULA first; numbers go in only at the recap.",
+  },
+  null,
+  2
+);
+
 function retryCorrectionMessages(
   lastError: Error | null
 ): ChatCompletionMessageParam[] {
   if (!lastError) return [];
   const eligibility = isPredictIneligibilityError(lastError.message)
-    ? ` The terminal "form" step used the "predict" contract for an answer that is NOT predict-eligible. Author that terminal step on the "equation" contract instead (NOT "predict") because the answer is one of: it has added terms, a root/trig/log, or a derivative/differential/integral such as d\u03a6/dt; OR it has FEWER THAN 2 distinct free physical quantities (this is what "predict.variables must have 2-8 entries, got 1" means: too few graded quantities for predict). Do NOT change the terminal contract for any other reason — keep "predict" for clean monomial ratios of 2+ distinct free quantities.`
+    ? ` The terminal "form" step used the "predict" contract for an answer that is NOT predict-eligible. Author that terminal step on the "equation" contract instead (NOT "predict") because the answer is one of: it has added terms, a root/trig/log, or a derivative/differential/integral such as d\u03a6/dt; OR it has FEWER THAN 2 distinct free physical quantities (this is what "predict.variables must have 2-8 entries, got 1" means: too few graded quantities for predict). Do NOT change the terminal contract for any other reason — keep "predict" for clean monomial ratios of 2+ distinct free quantities. Here is the EXACT shape the "equation"-contract terminal "form" step must take (adapt the terms to THIS problem's answer; keep all feedback non-committal):\n\n${EQUATION_TERMINAL_FALLBACK_SNIPPET}`
     : ` Keep the SAME step types and terminal contract as before (do NOT switch a "predict" terminal step to "equation" — this error is unrelated to predict eligibility); just fix exactly the problem named in the error.`;
   return [
     {
@@ -1115,6 +1155,24 @@ CRITICAL QUALITY RULES:
    - The problem MUST have a definite numerical or symbolic answer.
    - It must be a REAL problem that could appear in JEE/NEET exams.
    - Avoid trivial plug-and-chug problems. The problem should require at least one non-obvious insight.
+   - FUNCTIONAL-FORM ANSWER (STRONGLY PREFERRED — pick problems whose answer teaches
+     dependence). For ANY class (11/12/college), STRONGLY prefer problems whose final
+     answer is a FUNCTIONAL FORM — a single MONOMIAL RATIO of the problem's main
+     physical quantities: a product/quotient of powers with NO added terms, NO root,
+     NO trig/log, NO derivative/integral (e.g. $r=\\frac{mv}{qB}$, $F=\\frac{mv^2}{r}$,
+     $\\lambda=\\frac{h}{mv}$, $F=\\frac{k q_1 q_2}{r^2}$, $B=\\mu_0 n I$). These are the
+     answers where the student must reason about HOW the target depends on each
+     quantity — which quantity pushes it UP (numerator) vs DOWN (denominator) — which
+     is exactly the "ASSEMBLE THE FORM" learning goal. The answer must depend on at
+     least 2 DISTINCT free physical quantities. This is a constraint on WHICH PROBLEM
+     you pick, NOT on how you format the terminal step: choose a problem whose natural,
+     physically-correct answer already IS such a ratio — do NOT distort, truncate, or
+     fake a non-ratio answer into a ratio to satisfy this.
+   - Only fall back to a non-ratio answer (root, sum of terms, trig/log, or a
+     derivative/differential/integral — e.g. RMS speed $\\sqrt{3RT/M}$, kinematics
+     $v^2=u^2+2as$, displacement current $I_d=\\varepsilon_0\\frac{d\\Phi_E}{dt}$) when the
+     topic genuinely has no good monomial-ratio problem. Such answers are the minority;
+     never distort or fake a non-ratio answer into a ratio to satisfy the preference.
 
 2. STEP FLOW — THE THINKING CHAIN:
    - Steps must form a logical narrative. Each step's answer feeds into the next step.

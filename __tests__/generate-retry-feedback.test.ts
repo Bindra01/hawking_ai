@@ -169,6 +169,45 @@ describe("generation retry loop injects the prior validation error (self-correct
     expect(correction).not.toMatch(/Keep the SAME step types and terminal contract/);
   });
 
+  it("includes a STRUCTURAL equation-terminal form-step exemplar on the ineligibility steer", async () => {
+    // All three full few-shot examples now use a predict terminal, so the model
+    // has no structural equation-terminal shape to imitate on the fallback path.
+    // Prose alone is ~0% adherence for GPT-4o, which caused non-ratio class_11
+    // answers (roots/sums/trig) to exhaust retries and hard-fail. The steer must
+    // therefore carry a compact equation-contract "form" step JSON to copy.
+    const bad = badPredictProblem(
+      "$v_{rms} = \\sqrt{\\frac{3RT}{M}}$",
+      {
+        target: "v_{rms}",
+        correctFormula: "$v_{rms} = \\sqrt{\\frac{3RT}{M}}$",
+        variables: [
+          { symbol: "R", label: "gas constant", role: "numerator" },
+          { symbol: "T", label: "temperature", role: "numerator" },
+        ],
+      },
+      { subject: "thermodynamics", topic: "Kinetic Theory", difficulty: "class_11" }
+    );
+    createMock
+      .mockResolvedValueOnce(completion(JSON.stringify(bad)))
+      .mockResolvedValueOnce(completion(JSON.stringify(VALID_PROBLEM)));
+
+    await generateProblem("thermodynamics", "Kinetic Theory", "class_11");
+
+    const secondMessages = createMock.mock.calls[1][0].messages;
+    const correction = secondMessages[secondMessages.length - 1].content as string;
+    // The steer names the equation contract AND carries a copyable JSON shape
+    // with an equation contract (build.equation) on a terminal form step.
+    expect(correction).toMatch(/Author that terminal step on the "equation" contract/);
+    expect(correction).toMatch(/EXACT shape the "equation"-contract terminal/);
+    expect(correction).toMatch(/"build"/);
+    expect(correction).toMatch(/"equation"/);
+    expect(correction).toMatch(/"lhs_terms"/);
+    // And the exemplar must NOT carry a predict payload (that would defeat the
+    // purpose of demonstrating the equation fallback).
+    const snippetStart = correction.indexOf("EXACT shape");
+    expect(correction.slice(snippetStart)).not.toMatch(/"predict"/);
+  });
+
   it("DOES steer to equation when a predict answer is ADDITIVE ('unexpected operator')", async () => {
     // Parallel resistance $R = \frac{R_1 R_2}{R_1 + R_2}$ has a top-level `+` in
     // the denominator, so canonicalPredictFormula throws "unexpected operator".
