@@ -1,0 +1,57 @@
+import { describe, expect, it } from "vitest";
+import { TutorSession } from "@/lib/tutor/session";
+import type { SpeechDriver } from "@/lib/tutor/speech";
+import type { Lesson } from "@/lib/tutor/types";
+class FakeSpeech implements SpeechDriver {
+  calls: { text: string; offset: number; rate: number; callbacks: Parameters<SpeechDriver["speak"]>[3] }[] = [];
+  stopped = 0;
+  speak(text: string, offset: number, rate: number, callbacks: Parameters<SpeechDriver["speak"]>[3]) { this.calls.push({ text, offset, rate, callbacks }); }
+  stop() { this.stopped++; }
+  get latest() { return this.calls.at(-1)!; }
+}
+const lesson = (title = "Work"): Lesson => ({ title, beats: ["Push a box along a floor.", "Work transfers energy."].map(narration => ({ narration, section: "Intuition", visual: { type: "write_text", text: narration, x: 40, y: 70, color: "ink" } })) });
+function setup() { const speech = new FakeSpeech(); const session = new TutorSession(speech); session.load(lesson()); session.play(); return { speech, session }; }
+describe("tutor session", () => {
+  it("resumes a saved mid-beat checkpoint after the answer without replaying old beats", () => {
+    const { speech, session } = setup();
+    speech.latest.callbacks.end();
+    speech.latest.callbacks.progress({ offset: 5, progress: .3 });
+    session.beginQuestion();
+    expect(session.getSnapshot().status).toBe("paused_for_question");
+    const saved = session.getSnapshot().stack[0];
+    session.generatingAnswer(); session.answer(lesson("Answer"));
+    speech.latest.callbacks.end(); speech.latest.callbacks.end();
+    expect(session.getSnapshot().active?.lesson.title).toBe("Work");
+    expect(session.getSnapshot().active?.position).toEqual(saved.position);
+    expect(speech.latest.offset).toBe(5);
+    expect(speech.latest.text).toBe("Work transfers energy.");
+    expect(session.getSnapshot().stack).toHaveLength(0);
+  });
+  it("ignores callbacks from canceled speech during an interruption", () => {
+    const { speech, session } = setup(); const stale = speech.latest.callbacks;
+    session.beginQuestion(); stale.progress({ offset: 20, progress: .9 }); stale.end();
+    expect(session.getSnapshot().active?.position.beat).toBe(0);
+    expect(session.getSnapshot().active?.position.progress).toBe(0);
+  });
+  it("freezes and resumes ordinary pause and rate change", () => {
+    const { speech, session } = setup(); speech.latest.callbacks.progress({ offset: 5, progress: .2 });
+    session.pause(); session.setRate(.75); session.play();
+    expect(speech.latest.offset).toBe(5); expect(speech.latest.rate).toBe(.75);
+  });
+  it("can retry failed answers or cancel without losing the checkpoint", () => {
+    const { session, speech } = setup(); speech.latest.callbacks.progress({ offset: 7, progress: .4 });
+    session.beginQuestion(); session.generatingAnswer(); session.answerFailed("Failed");
+    expect(session.getSnapshot().status).toBe("paused_for_question"); session.returnToLesson();
+    expect(speech.latest.offset).toBe(7); expect(session.getSnapshot().error).toBe("");
+  });
+  it("rejects stale answer after reset and does not accept nested interruption", () => {
+    const { session } = setup(); session.beginQuestion(); session.generatingAnswer(); session.answer(lesson("Answer"));
+    session.beginQuestion(); expect(session.getSnapshot().stack).toHaveLength(1);
+    session.reset(); session.answer(lesson("Late answer")); expect(session.getSnapshot().active).toBeNull();
+  });
+  it("completes and can load a new session", () => {
+    const { session, speech } = setup(); speech.latest.callbacks.end(); speech.latest.callbacks.end();
+    expect(session.getSnapshot().status).toBe("done"); session.load(lesson("Energy"));
+    expect(session.getSnapshot().status).toBe("ready"); expect(session.getSnapshot().active?.position.beat).toBe(0);
+  });
+});

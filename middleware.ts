@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // The standalone tutor is intentionally public and does not require Supabase.
+  if (request.nextUrl.pathname === "/tutor" || request.nextUrl.pathname === "/api/tutor") {
+    return NextResponse.next();
+  }
   let supabaseResponse = NextResponse.next({
     request,
   });
