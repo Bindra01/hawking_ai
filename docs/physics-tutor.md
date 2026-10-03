@@ -51,3 +51,7 @@ Unit tests cover generation with mocked provider responses and playback with a f
 ### Generation reliability follow-up
 
 Whole equations are normalized into adjacent term beats before rendering. The original model response keeps its 12–36 beat budget; normalization can increase visual beat count without adding spoken words. Main lessons still target 240–280 words, but validation accepts up to 340 to avoid discarding useful lessons for small duration overruns. Actual lessons can exceed two minutes. Safe constraint diagnostics contain no generated lesson content. Public streamed generation was verified with a 321-word Work lesson after 49.9 seconds.
+
+### Energy duration correction
+
+Duration targets must not act as exact schema limits. Generated lessons target 240–280 words, but production preparation accepts 120–600 words (answers: 20–180). Shape, layout, per-beat, response-byte, and original beat-count limits remain enforced. The active lesson displays an approximate duration based on narration length and selected pace. Lessons can exceed two minutes; actual voice timing varies.
