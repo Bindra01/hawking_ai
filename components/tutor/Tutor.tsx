@@ -20,6 +20,8 @@ export default function Tutor() {
   const [topic, setTopic] = useState("");
   const [lessonTopic, setLessonTopic] = useState("");
   const [question, setQuestion] = useState("");
+  const [editingTopic, setEditingTopic] = useState(false);
+  const [submittedQuestions, setSubmittedQuestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const supported = useSyncExternalStore(
@@ -76,6 +78,8 @@ export default function Tutor() {
       const lesson = await generate({ topic: value.trim() });
       if (id === requestId.current) {
         setLessonTopic(value.trim());
+        setEditingTopic(false);
+        setSubmittedQuestions([]);
         session.load(lesson);
       }
     } catch (e) {
@@ -92,6 +96,10 @@ export default function Tutor() {
   async function ask() {
     if (!question.trim() || state.status !== "paused_for_question") return;
     const id = ++requestId.current;
+    setSubmittedQuestions((previous) => [
+      ...previous.slice(0, state.stack.length - 1),
+      question.trim(),
+    ]);
     session.generatingAnswer();
     const main = state.stack.at(-1);
     const context = main?.lesson.beats
@@ -168,7 +176,9 @@ export default function Tutor() {
                 ? "Ready when you are"
                 : "Your own physics tutor";
   return (
-    <main className="tutor-shell">
+    <main
+      className={`tutor-shell ${active ? "tutor-active" : ""} ${editingTopic ? "editing-topic" : ""}`}
+    >
       <header className="tutor-header">
         <a href="/tutor" className="tutor-logo">
           <span className="logo-orbit">h</span>hawking
@@ -178,6 +188,23 @@ export default function Tutor() {
           CLASS 11–12 <span> / </span> LIVE LEARNING
         </span>
       </header>
+      {active && (
+        <div className="active-topic">
+          <div>
+            <span className="eyebrow">YOUR PHYSICS SESSION</span>
+            <h1>{main?.lesson.title}</h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              session.pause();
+              setEditingTopic(!editingTopic);
+            }}
+          >
+            {editingTopic ? "Back to lesson" : "Change topic"}
+          </button>
+        </div>
+      )}
       <section className="tutor-intro">
         <div>
           <p className="eyebrow">UNDERSTAND IT. DON’T JUST MEMORIZE IT.</p>
@@ -322,7 +349,20 @@ export default function Tutor() {
             <div className="card-kicker">
               <span className="question-icon">?</span> CURIOSITY WELCOME
             </div>
-            <h2>Wait, why?</h2>
+            <h2>{answering ? "Let’s clear that up." : "Wait, why?"}</h2>
+            {answering && (
+              <div className="answer-context">
+                <blockquote>
+                  {submittedQuestions[state.stack.length - 1]}
+                </blockquote>
+                <p>
+                  Main lesson paused at <strong>{mainSection}</strong>.{" "}
+                  {state.stack.length > 1
+                    ? "We’ll return to your previous answer, then your lesson."
+                    : "Your lesson resumes automatically after this answer."}
+                </p>
+              </div>
+            )}
             <p>
               Ask as you go. We’ll pause here, work it out, then pick up where
               you left off.

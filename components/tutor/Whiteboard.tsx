@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { INK, type Thread, type Visual } from "@/lib/tutor/types";
 
 function endpoint(v: Visual, progress: number) {
@@ -68,6 +69,7 @@ export function Whiteboard({
   thread: Thread | null;
   writing: boolean;
 }) {
+  const viewport = useRef<HTMLDivElement>(null);
   const position = thread?.position;
   const current =
     thread?.lesson.beats[
@@ -86,6 +88,23 @@ export function Whiteboard({
     thread?.lesson.beats.slice(start, (position?.beat ?? 0) + 1) ?? [];
   const cursor =
     current && position ? endpoint(current.visual, position.progress) : null;
+  const cursorX = cursor?.x ?? 0;
+  const cursorY = cursor?.y ?? 0;
+  useEffect(() => {
+    const container = viewport.current;
+    if (
+      !container ||
+      !writing ||
+      container.scrollWidth <= container.clientWidth
+    )
+      return;
+    const scale = container.scrollWidth / 800;
+    container.scrollTo({
+      left: Math.max(0, cursorX * scale - container.clientWidth * 0.65),
+      top: Math.max(0, cursorY * scale - container.clientHeight * 0.5),
+      behavior: "instant",
+    });
+  }, [cursorX, cursorY, writing]);
   return (
     <div className="tutor-board">
       <div className="board-label">
@@ -108,38 +127,51 @@ export function Whiteboard({
           <span className="board-note">One idea at a time.</span>
         </div>
       ) : (
-        <svg
-          viewBox="0 0 800 460"
-          role="img"
-          aria-label={`Whiteboard: ${current?.section}`}
+        <div
+          ref={viewport}
+          className="board-viewport"
+          tabIndex={0}
+          role="region"
+          aria-label="Scrollable whiteboard. Pause narration to pan freely."
         >
-          {visible.map((beat, i) => (
-            <Mark
-              key={`${start + i}-${beat.narration}`}
-              visual={beat.visual}
-              progress={
-                start + i < (position?.beat ?? 0)
-                  ? 1
-                  : (position?.progress ?? 0)
-              }
-            />
-          ))}
-          {cursor && writing && (
-            <g
-              transform={`translate(${cursor.x},${cursor.y})`}
-              aria-hidden="true"
-            >
-              <circle r="13" fill="#168575" opacity=".1" />
-              <circle r="4" fill="#168575" />
-              <path
-                d="M 3 -3 L 15 -15"
-                stroke="#168575"
-                strokeWidth="4"
-                strokeLinecap="round"
+          <svg
+            viewBox="0 0 800 460"
+            role="img"
+            aria-label={`Whiteboard: ${current?.section}`}
+          >
+            {visible.map((beat, i) => (
+              <Mark
+                key={`${start + i}-${beat.narration}`}
+                visual={beat.visual}
+                progress={
+                  start + i < (position?.beat ?? 0)
+                    ? 1
+                    : (position?.progress ?? 0)
+                }
               />
-            </g>
-          )}
-        </svg>
+            ))}
+            {cursor && writing && (
+              <g
+                transform={`translate(${cursor.x},${cursor.y})`}
+                aria-hidden="true"
+              >
+                <circle r="13" fill="#168575" opacity=".1" />
+                <circle r="4" fill="#168575" />
+                <path
+                  d="M 3 -3 L 15 -15"
+                  stroke="#168575"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </g>
+            )}
+          </svg>
+        </div>
+      )}
+      {thread && (
+        <div className="board-pan-hint">
+          The board follows the pen. Pause to pan and explore.
+        </div>
       )}
     </div>
   );

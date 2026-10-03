@@ -715,3 +715,117 @@
     padding-top: 20px;
   }
 }
+.active-topic {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 22px 0;
+}
+.active-topic .eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 8px;
+}
+.active-topic h1 {
+  font: 26px Georgia;
+  margin: 0;
+}
+.active-topic button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 9px 12px;
+  background: transparent;
+  color: var(--green);
+  font-size: 11px;
+}
+.tutor-active .tutor-intro {
+  display: none;
+}
+.tutor-active:not(.editing-topic) .topic-form {
+  display: none;
+}
+.board-viewport {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.board-pan-hint {
+  display: none;
+}
+.answer-context {
+  border-left: 2px solid #739b75;
+  padding-left: 12px;
+  margin-bottom: 15px;
+}
+.answer-context blockquote {
+  font: italic 16px/1.5 Georgia;
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+.answer-context p {
+  font-size: 11px;
+  margin-bottom: 0;
+}
+.tutor-active .tutor-board {
+  min-height: 0;
+}
+@media (max-width: 720px) {
+  .tutor-active .tutor-header {
+    height: 58px;
+  }
+  .active-topic {
+    padding: 15px 0;
+  }
+  .active-topic h1 {
+    font-size: 21px;
+  }
+  .active-topic button {
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .board-viewport {
+    height: 230px;
+  }
+  .board-viewport svg {
+    min-width: 620px;
+    height: 356.5px;
+  }
+  .board-pan-hint {
+    display: block;
+    padding: 7px 14px;
+    font-size: 8px;
+    color: var(--muted);
+    background: #f4f5ed;
+  }
+  .tutor-active .question-card {
+    padding: 16px;
+  }
+  .tutor-active .question-card h2 {
+    font-size: 22px;
+    margin: 10px 0 6px;
+  }
+  .tutor-active .question-card p {
+    font-size: 11px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .tutor-active .question-card textarea {
+    min-height: 66px;
+  }
+  .tutor-active .outline-card li:not(.current) {
+    display: none;
+  }
+  .tutor-active .outline-card {
+    padding-top: 17px;
+  }
+  .tutor-active .sidebar-note {
+    display: none;
+  }
+  .tutor-active .narration-caption {
+    max-height: 92px;
+    overflow: auto;
+  }
+  .answer-context blockquote {
+    font-size: 15px;
+  }
+}
