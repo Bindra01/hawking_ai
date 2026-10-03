@@ -135,6 +135,11 @@ describe("tutor validation", () => {
       }
     },
   );
+  it("accepts a small main-lesson word-count overrun without discarding useful content", () => {
+    const source = lesson();
+    source.beats[0].narration += " " + Array(29).fill("word").join(" ");
+    expect(validateLesson(source)).toEqual(source);
+  });
   it("budgets model beats before equation expansion, not after", () => {
     const source = lesson();
     source.beats = Array.from({ length: 36 }, () => ({

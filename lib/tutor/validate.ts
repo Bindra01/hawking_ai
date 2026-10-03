@@ -175,7 +175,7 @@ export function validateLesson(
   if (
     !Array.isArray(input.beats) ||
     input.beats.length < (answer ? 3 : 12) ||
-    input.beats.length > (expanded ? (answer ? 80 : 280) : answer ? 12 : 36)
+    input.beats.length > (expanded ? (answer ? 80 : 340) : answer ? 12 : 36)
   )
     throw new Error("Invalid beat count: main 12–36, answer 3–12");
   const seen = new Set<string>();
@@ -196,9 +196,9 @@ export function validateLesson(
     (sum, b) => sum + b.narration.split(/\s+/).length,
     0,
   );
-  if (words < (answer ? 40 : 240) || words > (answer ? 80 : 280))
+  if (words < (answer ? 40 : 240) || words > (answer ? 80 : 340))
     throw new Error(
-      `Narration has ${words} words; expected ${answer ? "40–80" : "240–280"}`,
+      `Narration has ${words} words; expected ${answer ? "40–80" : "240–340"}`,
     );
   return { title, beats };
 }

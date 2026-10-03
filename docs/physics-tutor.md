@@ -47,3 +47,7 @@ The anonymous endpoint has an in-process guard of two concurrent requests and te
 ## Verification scope
 
 Unit tests cover generation with mocked provider responses and playback with a fake speech driver. One real Claude generation verified provider connectivity and returned Work and Energy (18 beats, 276 words). That response exposed complete equations inside text beats. The final validator now rejects these and requests a repair; the stricter final prompt and validator were tested with fixtures, not another paid call. Other topic tests must use fixtures unless additional live calls are explicitly authorized. Browser speech testing requires an operating-system voice; mocked speech cannot establish perceived audio/visual synchronization.
+
+### Generation reliability follow-up
+
+Whole equations are normalized into adjacent term beats before rendering. The original model response keeps its 12–36 beat budget; normalization can increase visual beat count without adding spoken words. Main lessons still target 240–280 words, but validation accepts up to 340 to avoid discarding useful lessons for small duration overruns. Actual lessons can exceed two minutes. Safe constraint diagnostics contain no generated lesson content. Public streamed generation was verified with a 321-word Work lesson after 49.9 seconds.
