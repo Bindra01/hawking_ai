@@ -162,13 +162,14 @@ export function prepareLesson(value: unknown, answer = false): Lesson {
     input.beats.length > (answer ? 12 : 36)
   )
     throw new Error("Invalid beat count: main 12–36, answer 3–12");
-  return validateLesson(expandEquationBeats(value), answer, true);
+  return validateLesson(expandEquationBeats(value), answer, true, true);
 }
 
 export function validateLesson(
   value: unknown,
   answer = false,
   expanded = false,
+  tolerateDuration = false,
 ): Lesson {
   const input = object(value);
   const title = text(input.title, 100);
@@ -196,9 +197,13 @@ export function validateLesson(
     (sum, b) => sum + b.narration.split(/\s+/).length,
     0,
   );
-  if (words < (answer ? 40 : 240) || words > (answer ? 80 : 340))
+  // Duration is a teaching target, not a schema failure. Keep hard resource caps,
+  // but never discard a structurally valid three-minute lesson for being long.
+  const minimum = tolerateDuration ? (answer ? 20 : 120) : answer ? 40 : 240;
+  const maximum = tolerateDuration ? (answer ? 180 : 600) : answer ? 80 : 340;
+  if (words < minimum || words > maximum)
     throw new Error(
-      `Narration has ${words} words; expected ${answer ? "40–80" : "240–340"}`,
+      `Narration has ${words} words; expected ${minimum}–${maximum}`,
     );
   return { title, beats };
 }

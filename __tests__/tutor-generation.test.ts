@@ -135,6 +135,25 @@ describe("tutor validation", () => {
       }
     },
   );
+  it.each([381, 424, 484])(
+    "accepts a structurally valid %i-word lesson without a paid repair",
+    (count) => {
+      const source = lesson();
+      source.beats.forEach((b, i) => {
+        b.narration = Array(Math.floor(count / 16) + (i < count % 16 ? 1 : 0))
+          .fill("word")
+          .join(" ");
+      });
+      expect(prepareLesson(source).beats).toHaveLength(16);
+    },
+  );
+  it("retains hard narration limits even with duration tolerance", () => {
+    const source = lesson();
+    source.beats.forEach((b) => {
+      b.narration = Array(40).fill("word").join(" ");
+    });
+    expect(() => prepareLesson(source)).toThrow(/640 words/);
+  });
   it("accepts a small main-lesson word-count overrun without discarding useful content", () => {
     const source = lesson();
     source.beats[0].narration += " " + Array(29).fill("word").join(" ");

@@ -147,6 +147,18 @@ export default function Tutor() {
     state.status !== "paused_for_question" &&
     state.status !== "generating_answer";
   const current = active?.lesson.beats[active.position.beat];
+  const estimatedMinutes = main
+    ? Math.max(
+        1,
+        Math.round(
+          main.lesson.beats.reduce(
+            (sum, beat) => sum + beat.narration.split(/\s+/).length,
+            0,
+          ) /
+            (150 * state.rate),
+        ),
+      )
+    : 2;
   const sections = [...new Set(main?.lesson.beats.map((b) => b.section) ?? [])];
   const mainSection =
     main?.lesson.beats[
@@ -200,6 +212,10 @@ export default function Tutor() {
           <div>
             <span className="eyebrow">YOUR PHYSICS SESSION</span>
             <h1>{main?.lesson.title}</h1>
+            <small>
+              About {estimatedMinutes} min at this pace · browser voice timing
+              varies
+            </small>
           </div>
           <button
             type="button"
