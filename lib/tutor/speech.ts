@@ -1,4 +1,8 @@
-export type SpeechCheckpoint = { offset: number; progress: number };
+export type SpeechCheckpoint = {
+  offset: number;
+  progress: number;
+  seconds?: number;
+};
 export interface SpeechDriver {
   speak(
     text: string,
@@ -9,8 +13,16 @@ export interface SpeechDriver {
       end: () => void;
       error: (message: string) => void;
     },
+    seconds?: number,
+    identity?: { key: object; beat: number },
   ): void;
   stop(): void;
+  checkpoint?(): SpeechCheckpoint | undefined;
+  unlock?(): void;
+  prepare?(texts: string[], key?: object): void;
+  prefetch?(text: string): void;
+  clearCache?(): void;
+  dispose?(): void;
 }
 
 /** Replace this adapter to use timestamped audio without changing session state. */

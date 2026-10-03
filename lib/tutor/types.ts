@@ -24,7 +24,12 @@ export type GenerationRequest = {
   question?: string;
   context?: string;
 };
-export type Position = { beat: number; offset: number; progress: number };
+export type Position = {
+  beat: number;
+  offset: number;
+  progress: number;
+  seconds?: number;
+};
 export type Thread = { lesson: Lesson; position: Position };
 export type TutorStatus =
   | "ready"

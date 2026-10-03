@@ -7,6 +7,7 @@ class FakeSpeech implements SpeechDriver {
     text: string;
     offset: number;
     rate: number;
+    seconds?: number;
     callbacks: Parameters<SpeechDriver["speak"]>[3];
   }[] = [];
   stopped = 0;
@@ -15,8 +16,9 @@ class FakeSpeech implements SpeechDriver {
     offset: number,
     rate: number,
     callbacks: Parameters<SpeechDriver["speak"]>[3],
+    seconds?: number,
   ) {
-    this.calls.push({ text, offset, rate, callbacks });
+    this.calls.push({ text, offset, rate, callbacks, seconds });
   }
   stop() {
     this.stopped++;
@@ -49,6 +51,21 @@ function setup() {
   return { speech, session };
 }
 describe("tutor session", () => {
+  it("captures the exact audio time synchronously at interruption and restores it", () => {
+    const { session, speech } = setup();
+    const driver = speech as FakeSpeech & {
+      checkpoint: SpeechDriver["checkpoint"];
+    };
+    driver.checkpoint = () => ({ seconds: 1.234, offset: 4, progress: 0.25 });
+    session.beginQuestion();
+    driver.checkpoint = () => undefined;
+    expect(session.getSnapshot().stack[0].position.seconds).toBe(1.234);
+    session.generatingAnswer();
+    session.answer(lesson("Answer"));
+    speech.latest.callbacks.end();
+    speech.latest.callbacks.end();
+    expect(speech.latest.seconds).toBe(1.234);
+  });
   it("resumes a saved mid-beat checkpoint after the answer without replaying old beats", () => {
     const { speech, session } = setup();
     speech.latest.callbacks.end();

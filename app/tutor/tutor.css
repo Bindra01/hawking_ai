@@ -829,3 +829,44 @@
     font-size: 15px;
   }
 }
+.voice-question {
+  margin: 10px 0 6px;
+}
+.voice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.voice-button {
+  border: 1px solid #8baa86;
+  border-radius: 5px;
+  background: #fcfcf7;
+  color: var(--green);
+  padding: 10px 12px;
+  font-size: 11px !important;
+}
+.voice-cancel {
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  text-decoration: underline;
+  font-size: 10px !important;
+  padding: 6px;
+}
+.voice-question small {
+  margin-top: 8px;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.voice-question .voice-error {
+  font-size: 11px;
+  color: #9b452a;
+  margin: 8px 0 0;
+}
+.active-topic small {
+  display: block;
+  margin-top: 7px;
+  font-size: 10px;
+  color: var(--muted);
+}

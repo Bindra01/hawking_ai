@@ -1,5 +1,7 @@
 # Physics Studio prototype
 
+**Current voice implementation:** ElevenLabs replaces the original browser-speech prototype. See [ElevenLabs voice](elevenlabs-voice.md) for setup, tap-to-speak, privacy, limits, and playback behavior. Browser-speech notes below describe the earlier implementation and verification history.
+
 Open `/tutor` for the public, session-only physics tutor. Existing learning, login, and admin routes stay unchanged. The tutor needs no database or Supabase credentials.
 
 ## Run

@@ -2,16 +2,17 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { TutorSession } from "@/lib/tutor/session";
-import { BrowserSpeech } from "@/lib/tutor/speech";
+import { ElevenSpeech } from "@/lib/tutor/ElevenSpeech";
 import type { GenerationRequest, Lesson } from "@/lib/tutor/types";
 import { Whiteboard } from "./Whiteboard";
+import { VoiceQuestion } from "./VoiceQuestion";
 
 const subscribeSupport = () => () => {};
-const speechSupported = () => !!window.speechSynthesis;
+const speechSupported = () => typeof window.Audio !== "undefined";
 const serverSupport = () => true;
 
 export default function Tutor() {
-  const [session] = useState(() => new TutorSession(new BrowserSpeech()));
+  const [session] = useState(() => new TutorSession(new ElevenSpeech()));
   const state = useSyncExternalStore(
     session.subscribe,
     session.getSnapshot,
@@ -19,6 +20,8 @@ export default function Tutor() {
   );
   const [topic, setTopic] = useState("");
   const [lessonTopic, setLessonTopic] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceEpoch, setVoiceEpoch] = useState(0);
   const [question, setQuestion] = useState("");
   const [editingTopic, setEditingTopic] = useState(false);
   const [submittedQuestions, setSubmittedQuestions] = useState<string[]>([]);
@@ -32,8 +35,6 @@ export default function Tutor() {
   const request = useRef<AbortController | null>(null);
   const requestId = useRef(0);
   useEffect(() => {
-    // Populate the voice list early; some browsers load it asynchronously.
-    window.speechSynthesis?.getVoices();
     const onHide = () => {
       if (document.hidden) session.pause();
     };
@@ -76,6 +77,7 @@ export default function Tutor() {
   async function startLesson(value = topic) {
     if (!value.trim()) return;
     const id = ++requestId.current;
+    setVoiceEpoch((epoch) => epoch + 1);
     session.reset();
     setLoading(true);
     setError("");
@@ -101,7 +103,9 @@ export default function Tutor() {
     }
   }
   async function ask() {
-    if (!question.trim() || state.status !== "paused_for_question") return;
+    if (voiceBusy || !question.trim() || state.status !== "paused_for_question")
+      return;
+    session.unlock();
     const id = ++requestId.current;
     setSubmittedQuestions((previous) => [
       ...previous.slice(0, state.stack.length - 1),
@@ -134,6 +138,8 @@ export default function Tutor() {
     }
   }
   function returnToLesson() {
+    session.unlock();
+    setVoiceEpoch((epoch) => epoch + 1);
     requestId.current++;
     request.current?.abort();
     setQuestion("");
@@ -213,13 +219,13 @@ export default function Tutor() {
             <span className="eyebrow">YOUR PHYSICS SESSION</span>
             <h1>{main?.lesson.title}</h1>
             <small>
-              About {estimatedMinutes} min at this pace · browser voice timing
-              varies
+              About {estimatedMinutes} min at this pace · voice timing varies
             </small>
           </div>
           <button
             type="button"
             onClick={() => {
+              setVoiceEpoch((epoch) => epoch + 1);
               session.pause();
               setEditingTopic(!editingTopic);
             }}
@@ -278,7 +284,7 @@ export default function Tutor() {
         <div className="tutor-error" role="alert">
           {error ||
             state.error ||
-            "This browser does not support narration. Use Chrome, Edge, or Safari with a speech voice installed."}
+            "This browser does not support audio playback. Try a current Chrome, Edge, or Safari browser."}
         </div>
       )}
       <div className="studio-grid">
@@ -313,6 +319,7 @@ export default function Tutor() {
                 )
               }
               onClick={() => {
+                session.unlock();
                 if (state.status === "done" && active) {
                   session.load(active.lesson);
                   session.play();
@@ -363,8 +370,7 @@ export default function Tutor() {
             </label>
           </div>
           <div className="speech-note">
-            Browser voice · Word-synced when supported; estimated timing
-            otherwise.
+            ElevenLabs narration · Audio-timed whiteboard
           </div>
         </section>
         <aside className="tutor-sidebar">
@@ -404,16 +410,26 @@ export default function Tutor() {
                 maxLength={600}
                 placeholder="What doesn’t quite click?"
                 value={question}
-                disabled={!canAsk}
+                disabled={!canAsk || voiceBusy}
                 onChange={(e) => {
                   setQuestion(e.target.value);
                   if (e.target.value) session.beginQuestion();
                 }}
               />
+              <VoiceQuestion
+                key={voiceEpoch}
+                contextKey={`${lessonTopic}:${active?.lesson.title ?? "none"}`}
+                disabled={!canAsk}
+                onStart={() => session.beginQuestion()}
+                onTranscript={(text) => setQuestion(text)}
+                onBusy={setVoiceBusy}
+              />
               <button
                 className="ask-button"
                 disabled={
-                  !question.trim() || state.status !== "paused_for_question"
+                  voiceBusy ||
+                  !question.trim() ||
+                  state.status !== "paused_for_question"
                 }
               >
                 {state.status === "generating_answer"
@@ -467,7 +483,7 @@ export default function Tutor() {
       </div>
       <footer className="tutor-footer">
         <span>Made for understanding, not memorizing.</span>
-        <span>No account. No recording. Just learning.</span>
+        <span>No account. Microphone only when you choose.</span>
       </footer>
     </main>
   );

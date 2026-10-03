@@ -37,12 +37,29 @@ export class TutorSession {
     this.listeners.forEach((listener) => listener());
   }
   private stop() {
+    const checkpoint = this.speech.checkpoint?.();
+    const active = this.state.active;
+    if (checkpoint && active)
+      this.update({
+        active: {
+          ...active,
+          position: {
+            ...active.position,
+            ...checkpoint,
+            progress: Math.max(active.position.progress, checkpoint.progress),
+          },
+        },
+      });
     this.generation++;
     this.speech.stop();
   }
   load(lesson: Lesson) {
     this.autoPlay = true;
     this.stop();
+    this.speech.prepare?.(
+      lesson.beats.map((beat) => beat.narration),
+      lesson,
+    );
     this.update({
       active: thread(lesson),
       stack: [],
@@ -53,10 +70,15 @@ export class TutorSession {
   reset() {
     this.autoPlay = true;
     this.stop();
+    this.speech.clearCache?.();
     this.update({ ...initial(), rate: this.state.rate });
   }
   dispose() {
     this.stop();
+    this.speech.dispose?.();
+  }
+  unlock() {
+    this.speech.unlock?.();
   }
   setRate(rate: number) {
     if (![0.75, 0.9, 1, 1.15].includes(rate)) return;
@@ -111,6 +133,10 @@ export class TutorSession {
   }
   answer(lesson: Lesson) {
     if (this.state.status !== "generating_answer") return;
+    this.speech.prepare?.(
+      lesson.beats.map((beat) => beat.narration),
+      lesson,
+    );
     this.update({ active: thread(lesson), status: "paused" });
     if (this.autoPlay) this.play();
   }
@@ -139,38 +165,49 @@ export class TutorSession {
       return;
     }
     const generation = this.generation;
-    this.speech.speak(beat.narration, active.position.offset, this.state.rate, {
-      progress: (checkpoint) => {
-        if (generation !== this.generation) return;
-        this.update({
-          active: {
-            ...active,
-            position: {
-              ...active.position,
-              offset: checkpoint.offset,
-              progress: Math.max(active.position.progress, checkpoint.progress),
+    this.speech.speak(
+      beat.narration,
+      active.position.offset,
+      this.state.rate,
+      {
+        progress: (checkpoint) => {
+          if (generation !== this.generation) return;
+          this.update({
+            active: {
+              ...active,
+              position: {
+                ...active.position,
+                offset: checkpoint.offset,
+                seconds: checkpoint.seconds,
+                progress: Math.max(
+                  active.position.progress,
+                  checkpoint.progress,
+                ),
+              },
             },
-          },
-        });
-      },
-      end: () => {
-        if (generation !== this.generation) return;
-        this.update({
-          active: {
-            ...active,
-            position: {
-              beat: active.position.beat + 1,
-              offset: 0,
-              progress: 0,
+          });
+        },
+        end: () => {
+          if (generation !== this.generation) return;
+          this.update({
+            active: {
+              ...active,
+              position: {
+                beat: active.position.beat + 1,
+                offset: 0,
+                progress: 0,
+              },
             },
-          },
-        });
-        this.speakBeat();
+          });
+          this.speakBeat();
+        },
+        error: (message) => {
+          if (generation !== this.generation) return;
+          this.update({ status: "error", error: message });
+        },
       },
-      error: (message) => {
-        if (generation !== this.generation) return;
-        this.update({ status: "error", error: message });
-      },
-    });
+      active.position.seconds,
+      { key: active.lesson, beat: active.position.beat },
+    );
   }
 }
