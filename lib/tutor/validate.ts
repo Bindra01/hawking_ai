@@ -108,6 +108,52 @@ function visual(value: unknown): Visual {
   };
 }
 
+/** Split model-written equations into small visual beats without another paid call.
+ * Keep narration word order and board positions; never synthesize physics content. */
+export function expandEquationBeats(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const input = value as Record<string, unknown>;
+  if (!Array.isArray(input.beats)) return value;
+  return {
+    ...input,
+    beats: input.beats.flatMap((raw: unknown) => {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [raw];
+      const beat = raw as Record<string, unknown>;
+      const v = beat.visual as Record<string, unknown> | undefined;
+      if (
+        !v ||
+        !["write_text", "write_equation"].includes(String(v.type)) ||
+        typeof v.text !== "string" ||
+        typeof v.x !== "number" ||
+        typeof beat.narration !== "string" ||
+        !/[=≈≠≤≥<>]/.test(v.text) ||
+        /^[=≈≠≤≥<>]$/.test(v.text.trim())
+      )
+        return [raw];
+      const terms = v.text
+        .split(/([=≈≠≤≥<>]|[×÷+])/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      const words = beat.narration.trim().split(/\s+/);
+      if (terms.length < 2 || words.length < terms.length) return [raw];
+      const width = terms.reduce((sum, term) => sum + term.length * 18 + 8, 0);
+      if (v.x + width > 765) return [raw];
+      let x = v.x;
+      return terms.map((term, i) => {
+        const start = Math.floor((i * words.length) / terms.length);
+        const end = Math.floor(((i + 1) * words.length) / terms.length);
+        const result = {
+          ...beat,
+          narration: words.slice(start, end).join(" "),
+          visual: { ...v, type: "write_equation", text: term, x },
+        };
+        x += term.length * 18 + 8;
+        return result;
+      });
+    }),
+  };
+}
+
 export function validateLesson(value: unknown, answer = false): Lesson {
   const input = object(value);
   const title = text(input.title, 100);

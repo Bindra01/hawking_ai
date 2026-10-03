@@ -4,6 +4,7 @@ vi.mock("server-only", () => ({}));
 import { generateLesson, TUTOR_SYSTEM_PROMPT } from "@/lib/tutor/generate";
 import {
   readBoundedBody,
+  expandEquationBeats,
   validateLesson,
   validateRequest,
 } from "@/lib/tutor/validate";
@@ -133,6 +134,29 @@ describe("tutor validation", () => {
       }
     },
   );
+  it("normalizes complete equations without changing spoken words or term order", () => {
+    const source = lesson();
+    source.beats[0].visual = {
+      type: "write_equation",
+      text: "W = F × d",
+      x: 60,
+      y: 90,
+      color: "teal",
+    };
+    const result = validateLesson(expandEquationBeats(source));
+    expect(
+      result.beats
+        .slice(0, 5)
+        .map((b) => ("text" in b.visual ? b.visual.text : "")),
+    ).toEqual(["W", "=", "F", "×", "d"]);
+    expect(
+      result.beats
+        .slice(0, 5)
+        .map((b) => b.narration)
+        .join(" "),
+    ).toBe(source.beats[0].narration);
+    expect(result.beats.slice(0, 5).every((b) => b.visual.y === 90)).toBe(true);
+  });
   it("accepts equation terms and individual diagram primitives", () => {
     const value = lesson();
     value.beats[0].visual = {

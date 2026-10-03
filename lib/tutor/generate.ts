@@ -2,6 +2,7 @@ import "server-only";
 import type { Lesson } from "./types";
 import {
   readBoundedBody,
+  expandEquationBeats,
   TutorError,
   validateLesson,
   validateRequest,
@@ -105,19 +106,27 @@ export async function generateLesson(
         const json = output
           .trim()
           .replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, "$1");
-        return validateLesson(JSON.parse(json), Boolean(input.question));
+        return validateLesson(
+          expandEquationBeats(JSON.parse(json)),
+          Boolean(input.question),
+        );
       } catch (error) {
-        if (attempt === 1)
-          throw new TutorError(
-            502,
-            "The tutor could not prepare a clear lesson. Please try again.",
-          );
         const issue =
           error instanceof SyntaxError
             ? "Invalid JSON syntax"
             : error instanceof Error
               ? error.message
               : "Invalid lesson schema";
+        // Validator messages contain only authored constraints/counts, never model content.
+        console.warn("Tutor lesson validation failed", {
+          attempt: attempt + 1,
+          issue,
+        });
+        if (attempt === 1)
+          throw new TutorError(
+            502,
+            "The tutor could not prepare a clear lesson. Please try again.",
+          );
         messages.push({
           role: "assistant",
           content: output.slice(0, 32_000) || "{}",
