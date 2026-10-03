@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { boardFrame } from "@/lib/tutor/board";
 import { TEACHING_EXAMPLE } from "@/lib/tutor/teaching-example";
-import { prepareLesson } from "@/lib/tutor/validate";
+import { prepareLesson, validateLesson } from "@/lib/tutor/validate";
 import type { Lesson, Visual } from "@/lib/tutor/types";
 
 const frame = (lesson: Lesson, beat: number, progress = 0.5) =>
@@ -95,6 +95,36 @@ describe("sparse teaching actions", () => {
     };
     expect(() => prepareLesson(lesson)).toThrow(/bounds/);
   });
+  it("retains the final completed mark and expires terminal emphasis", () => {
+    const lesson = fixture(mark);
+    expect(frame(lesson, 1, 0)[0].progress).toBe(1);
+    const emphasized = fixture(mark, {
+      type: "highlight",
+      x: 100,
+      y: 100,
+      radius: 30,
+      color: "amber",
+    });
+    expect(frame(emphasized, 2, 0).map((b) => b.beat.visual)).toEqual([mark]);
+  });
+  it.each(["= F × d × cos θ", "= F + d", "= F·d", "= F*d"])(
+    "rejects multi-term increment %s in strict validation",
+    (text) => {
+      const lesson = structuredClone(TEACHING_EXAMPLE);
+      lesson.beats[7].visual = { ...mark, type: "write_equation", text };
+      expect(() => validateLesson(lesson)).toThrow(/term by term/);
+    },
+  );
+  it.each(["= 30 J", "= F", "= ΔE", "= 0", "= −2.5 N"])(
+    "accepts grouped single term %s",
+    (text) => {
+      const lesson = structuredClone(TEACHING_EXAMPLE);
+      lesson.beats[7].visual = { ...mark, type: "write_equation", text };
+      expect(prepareLesson(lesson).beats[7].visual).toEqual(
+        lesson.beats[7].visual,
+      );
+    },
+  );
   it("validates the new action types through preparation", () => {
     const lesson = structuredClone(TEACHING_EXAMPLE);
     lesson.beats[0].visual = { type: "clear" };

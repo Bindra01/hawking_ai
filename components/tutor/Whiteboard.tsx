@@ -95,26 +95,46 @@ export function Whiteboard({
   const frame = thread ? boardFrame(thread) : [];
   const cursor =
     current && position ? endpoint(current.visual, position.progress) : null;
-  const cursorX = cursor?.x ?? 0;
-  const cursorY = cursor?.y ?? 0;
+  // Emphasis has no writing pen, but must remain visible on a narrow board.
+  const highlight =
+    current?.visual.type === "highlight" &&
+    (position?.beat ?? 0) < (thread?.lesson.beats.length ?? 0)
+      ? current.visual
+      : null;
+  const focus = highlight ?? cursor;
+  const hasFocus = focus !== null;
+  const focusX = focus?.x ?? 0;
+  const focusY = focus?.y ?? 0;
+  const focusRadius = highlight?.radius ?? 0;
   useEffect(() => {
     const container = viewport.current;
     if (
       !container ||
       !writing ||
-      current?.visual.type === "hold" ||
-      current?.visual.type === "clear" ||
-      current?.visual.type === "highlight" ||
+      !hasFocus ||
       container.scrollWidth <= container.clientWidth
     )
       return;
     const scale = container.scrollWidth / 800;
+    if (
+      focusRadius &&
+      (focusX - focusRadius) * scale >= container.scrollLeft &&
+      (focusX + focusRadius) * scale <=
+        container.scrollLeft + container.clientWidth &&
+      (focusY - focusRadius) * scale >= container.scrollTop &&
+      (focusY + focusRadius) * scale <=
+        container.scrollTop + container.clientHeight
+    )
+      return;
     container.scrollTo({
-      left: Math.max(0, cursorX * scale - container.clientWidth * 0.65),
-      top: Math.max(0, cursorY * scale - container.clientHeight * 0.5),
+      left: Math.max(
+        0,
+        focusX * scale - container.clientWidth * (focusRadius ? 0.5 : 0.65),
+      ),
+      top: Math.max(0, focusY * scale - container.clientHeight * 0.5),
       behavior: "instant",
     });
-  }, [cursorX, cursorY, writing, current?.visual.type]);
+  }, [focusX, focusY, focusRadius, writing, hasFocus]);
   return (
     <div className="tutor-board">
       <div className="board-label">

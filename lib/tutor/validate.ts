@@ -57,6 +57,13 @@ export function validateRequest(value: unknown): GenerationRequest {
   }
 }
 
+// A relation may travel with one symbol or numeric value/unit, never a product.
+function isRelationTerm(label: string): boolean {
+  return /^[=≈≠≤≥<>]\s*(?:[-−]?\d+(?:\.\d+)?(?:\s*[A-Za-zΩµ°]+[²³]?)?|(?:Δ)?[A-Za-z\u0370-\u03ff][₀-₉²³]?)$/.test(
+    label.trim(),
+  );
+}
+
 function visual(value: unknown): Visual {
   const v = object(value);
   if (v.type === "hold" || v.type === "clear") return { type: v.type };
@@ -81,10 +88,10 @@ function visual(value: unknown): Visual {
     if (
       /[=≈≠≤≥<>]/.test(label) &&
       !/^[=≈≠≤≥<>]$/.test(label) &&
-      !(v.type === "write_equation" && /^[=≈≠≤≥<>]\s*[^=≈≠≤≥<>]+$/.test(label))
+      !(v.type === "write_equation" && isRelationTerm(label))
     ) {
       throw new Error(
-        "Build equations term by term: put each relation symbol in its own write_equation beat, never a complete equation in text",
+        "Build equations term by term: use a standalone relation or a leading relation with one symbol/value, never a complete equation in text",
       );
     }
     if (/[\r\n]/.test(label)) throw new Error("Use one visual line per beat");
@@ -144,8 +151,7 @@ export function expandEquationBeats(value: unknown): unknown {
         typeof beat.narration !== "string" ||
         !/[=≈≠≤≥<>]/.test(v.text) ||
         /^[=≈≠≤≥<>]$/.test(v.text.trim()) ||
-        (v.type === "write_equation" &&
-          /^[=≈≠≤≥<>]\s*[^=≈≠≤≥<>]+$/.test(v.text.trim()))
+        (v.type === "write_equation" && isRelationTerm(v.text))
       )
         return [raw];
       const terms = v.text
