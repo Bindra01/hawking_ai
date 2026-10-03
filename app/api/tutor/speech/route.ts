@@ -42,10 +42,10 @@ export async function POST(request: Request) {
       !input ||
       typeof input.text !== "string" ||
       !input.text.trim() ||
-      input.text.length > 16_000 ||
+      input.text.length > 12_000 ||
       /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(input.text)
     )
-      throw new TutorError(400, "Narration must contain 1–16000 characters.");
+      throw new TutorError(400, "Narration must contain 1–12000 characters.");
     const key = process.env.ELEVENLABS_API_KEY || process.env.Eleven_labs;
     if (!key)
       throw new TutorError(

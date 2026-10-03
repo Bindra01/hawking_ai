@@ -1,4 +1,5 @@
 "use client";
+import { recordingToWav } from "@/lib/tutor/pcm";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -130,10 +131,12 @@ export function VoiceQuestion({
           });
           if (blob.size < 100)
             throw new Error("The recording is too short. Please try again.");
+          const wav = await recordingToWav(blob);
+          if (id !== generation.current || abort.signal.aborted) return;
           const response = await fetch("/api/tutor/transcribe", {
             method: "POST",
-            headers: { "Content-Type": blob.type },
-            body: blob,
+            headers: { "Content-Type": "audio/wav" },
+            body: wav,
             signal: abort.signal,
           });
           const data = await response.json().catch(() => {
@@ -191,8 +194,10 @@ export function VoiceQuestion({
           className="voice-button"
           disabled={phase === "idle" ? disabled : phase !== "recording"}
           onClick={() => {
-            if (phase === "recording") recorder.current?.stop();
-            else void start();
+            if (phase === "recording") {
+              if (recorder.current?.state === "recording")
+                recorder.current.stop();
+            } else void start();
           }}
         >
           {phase === "recording"

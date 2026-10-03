@@ -1,27 +1,23 @@
 import "server-only";
+import { questionWavDuration } from "@/lib/tutor/pcm";
 import { readBoundedBody, TutorError } from "@/lib/tutor/validate";
 
 export const runtime = "nodejs";
 export const maxDuration = 35;
 const MAX_BYTES = 4 * 1024 * 1024;
 const headers = { "Cache-Control": "no-store" };
-const formats: Record<string, string> = {
-  "audio/webm": "webm",
-  "audio/ogg": "ogg",
-  "audio/mp4": "m4a",
-  "video/mp4": "mp4",
-  "audio/mpeg": "mp3",
-  "audio/wav": "wav",
-  "audio/x-wav": "wav",
-};
+const formats: Record<string, string> = { "audio/wav": "wav" };
 let active = 0;
 let started = 0;
 let count = 0;
 
-async function readAudio(request: Request): Promise<Uint8Array<ArrayBuffer>> {
+async function readAudio(
+  request: Request,
+  deadline: AbortSignal,
+): Promise<Uint8Array<ArrayBuffer>> {
   const reader = request.body?.getReader();
   if (!reader) throw new TutorError(400, "Record a question first.");
-  const signal = AbortSignal.any([request.signal, AbortSignal.timeout(10000)]);
+  const signal = AbortSignal.any([deadline, AbortSignal.timeout(10000)]);
   const abort = () => {
     void reader.cancel().catch(() => {});
   };
@@ -68,6 +64,10 @@ async function readAudio(request: Request): Promise<Uint8Array<ArrayBuffer>> {
 }
 
 export async function POST(request: Request) {
+  const deadline = AbortSignal.any([
+    request.signal,
+    AbortSignal.timeout(25000),
+  ]);
   const type = (request.headers.get("content-type") ?? "")
     .split(";")[0]
     .trim()
@@ -109,17 +109,22 @@ export async function POST(request: Request) {
   active++;
   count++;
   try {
-    const audio = await readAudio(request);
+    const audio = await readAudio(request, deadline);
+    try {
+      questionWavDuration(audio);
+    } catch (error) {
+      throw new TutorError(
+        400,
+        error instanceof Error ? error.message : "Invalid audio recording.",
+      );
+    }
     const form = new FormData();
     form.set("file", new Blob([audio], { type }), `question.${formats[type]}`);
     form.set("model_id", "scribe_v2");
     form.set("language_code", "en");
     form.set("tag_audio_events", "false");
     form.set("diarize", "false");
-    const signal = AbortSignal.any([
-      request.signal,
-      AbortSignal.timeout(24000),
-    ]);
+    const signal = deadline;
     const response = await fetch(
       "https://api.elevenlabs.io/v1/speech-to-text",
       {

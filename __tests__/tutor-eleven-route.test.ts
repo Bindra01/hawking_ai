@@ -43,6 +43,9 @@ describe("ElevenLabs speech proxy", () => {
     );
     expect(JSON.parse(init?.body as string).model_id).toBe("eleven_flash_v2_5");
   });
+  it("accepts its advertised maximum in a fresh rate window", async () => {
+    expect((await POST(request({ text: "x".repeat(12000) }))).status).toBe(200);
+  });
   it("accepts complete lesson audio beyond three minutes", async () => {
     vi.mocked(fetch).mockResolvedValue(
       Response.json({
@@ -61,7 +64,7 @@ describe("ElevenLabs speech proxy", () => {
     {},
     { text: "" },
     { text: 8 },
-    { text: "x".repeat(16001) },
+    { text: "x".repeat(12001) },
     { text: "a\u0000" },
   ])("rejects invalid input without spending", async (data) => {
     expect((await POST(request(data))).status).toBe(400);

@@ -1,3 +1,4 @@
+import { encodeQuestionWav } from "@/lib/tutor/pcm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 const mockFetch = vi.fn();
@@ -15,7 +16,10 @@ async function route() {
   vi.resetModules();
   return (await import("@/app/api/tutor/transcribe/route")).POST;
 }
-function request(type = "audio/webm", body: BodyInit = new Uint8Array(400)) {
+function request(
+  type = "audio/wav",
+  body: BodyInit = encodeQuestionWav(new Float32Array(16000)),
+) {
   return new Request("http://localhost/api/tutor/transcribe", {
     method: "POST",
     headers: { "Content-Type": type },
@@ -28,7 +32,7 @@ describe("voice question transcription", () => {
     mockFetch.mockResolvedValue(
       Response.json({ text: " Why does energy stay constant? " }),
     );
-    const response = await POST(request("audio/webm;codecs=opus"));
+    const response = await POST(request("audio/wav"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       text: "Why does energy stay constant?",
@@ -37,28 +41,53 @@ describe("voice question transcription", () => {
     expect(url).toBe("https://api.elevenlabs.io/v1/speech-to-text");
     expect(options.headers["xi-api-key"]).toBe("test-only-key");
     expect(options.body.get("model_id")).toBe("scribe_v2");
-    expect(options.body.get("file").size).toBe(400);
+    expect(options.body.get("file").size).toBe(32044);
     expect(response.headers.get("cache-control")).toBe("no-store");
   });
-  it.each(["audio/mp4", "audio/ogg", "audio/wav", "audio/mpeg"])(
-    "supports %s recordings",
-    async (type) => {
-      const POST = await route();
-      mockFetch.mockResolvedValue(Response.json({ text: "Why?" }));
-      expect((await POST(request(type))).status).toBe(200);
-    },
-  );
+  it.each(["audio/wav"])("supports %s recordings", async (type) => {
+    const POST = await route();
+    mockFetch.mockResolvedValue(Response.json({ text: "Why?" }));
+    expect((await POST(request(type))).status).toBe(200);
+  });
   it("rejects unsupported formats, empty recordings, and oversized bodies before provider use", async () => {
     const POST = await route();
     expect((await POST(request("text/plain"))).status).toBe(415);
-    expect((await POST(request("audio/webm", new Uint8Array(20)))).status).toBe(
+    expect((await POST(request("audio/wav", new Uint8Array(20)))).status).toBe(
       400,
     );
     expect(
-      (await POST(request("audio/webm", new Uint8Array(4 * 1024 * 1024 + 1))))
+      (await POST(request("audio/wav", new Uint8Array(4 * 1024 * 1024 + 1))))
         .status,
     ).toBe(413);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+  it("rejects recordings over 60 seconds before any provider call", async () => {
+    const POST = await route();
+    const bytes = new Uint8Array(44 + 16000 * 2 * 61);
+    bytes.set(encodeQuestionWav(new Float32Array(16000)).slice(0, 44));
+    const view = new DataView(bytes.buffer);
+    view.setUint32(4, bytes.length - 8, true);
+    view.setUint32(40, bytes.length - 44, true);
+    expect((await POST(request("audio/wav", bytes))).status).toBe(400);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+  it("shares the request deadline across upload and provider work", async () => {
+    const POST = await route();
+    const signals: AbortSignal[] = [];
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => {
+      const c = new AbortController();
+      signals.push(c.signal);
+      return c.signal;
+    });
+    try {
+      mockFetch.mockResolvedValue(Response.json({ text: "Why?" }));
+      await POST(request());
+      expect(timeout.mock.calls.map((call) => call[0])).toEqual([25000, 10000]);
+      const signal = mockFetch.mock.calls[0][1].signal as AbortSignal;
+      expect(signal.aborted).toBe(false);
+    } finally {
+      timeout.mockRestore();
+    }
   });
   it("handles absent credentials without leaking details", async () => {
     vi.stubEnv("Eleven_labs", "");
