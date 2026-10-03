@@ -52,12 +52,19 @@ export default function Tutor() {
     try {
       const response = await fetch("/api/tutor", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/x-tutor-stream+json",
+        },
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-      const data = await response.json();
-      if (!response.ok)
+      const data = await response.json().catch(() => {
+        throw new Error(
+          "The connection ended before your lesson was ready. Please try again.",
+        );
+      });
+      if (!response.ok || data.error)
         throw new Error(
           data.error || "Could not prepare your lesson. Please try again.",
         );
@@ -173,7 +180,7 @@ export default function Tutor() {
             : playing
               ? "Let’s work through it"
               : active
-                ? "Ready when you are"
+                ? "Your lesson is ready — press Play below"
                 : "Your own physics tutor";
   return (
     <main
@@ -272,7 +279,7 @@ export default function Tutor() {
           <Whiteboard thread={active} writing={playing} />
           <div className="narration-caption">
             {loading
-              ? "Building an explanation, one small teaching step at a time…"
+              ? "Preparing your lesson. This can take up to 80 seconds. Keep this page open…"
               : (current?.narration ??
                 (state.status === "done"
                   ? "That’s a wrap. Pick another topic to keep exploring."

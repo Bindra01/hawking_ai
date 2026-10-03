@@ -387,4 +387,70 @@ describe("POST /api/tutor", () => {
     mockFetch.mockResolvedValue(provider(lesson()));
     expect((await POST(request({ topic: "energy" }))).status).toBe(200);
   });
+  it("streams heartbeats while generation waits and returns parseable lesson JSON", async () => {
+    const POST = await route();
+    vi.useFakeTimers();
+    let resolve!: (response: Response) => void;
+    mockFetch.mockImplementation(
+      () =>
+        new Promise<Response>((r) => {
+          resolve = r;
+        }),
+    );
+    const response = await POST(
+      request(
+        { topic: "energy" },
+        { accept: "application/x-tutor-stream+json" },
+      ),
+    );
+    const reader = response.body!.getReader();
+    const first = await reader.read();
+    expect(new TextDecoder().decode(first.value)).toBe(" ");
+    await vi.advanceTimersByTimeAsync(5000);
+    const heartbeat = await reader.read();
+    expect(new TextDecoder().decode(heartbeat.value)).toBe(" ");
+    vi.useRealTimers();
+    resolve(provider(lesson()));
+    let output = "";
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      output += new TextDecoder().decode(chunk.value);
+    }
+    expect(JSON.parse(output)).toEqual(lesson());
+  });
+  it("returns safe error payloads after streaming headers and validates before streaming", async () => {
+    const POST = await route();
+    const headers = { accept: "application/x-tutor-stream+json" };
+    expect((await POST(request({ topic: "" }, headers))).status).toBe(400);
+    mockFetch.mockResolvedValue(
+      new Response("secret provider error", { status: 500 }),
+    );
+    const response = await POST(request({ topic: "energy" }, headers));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      error: "The tutor service is temporarily unavailable. Please try again.",
+    });
+  });
+  it("aborts generation when the stream consumer cancels", async () => {
+    const POST = await route();
+    let signal!: AbortSignal;
+    mockFetch.mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          signal = init!.signal!;
+          signal.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          );
+        }),
+    );
+    const response = await POST(
+      request(
+        { topic: "energy" },
+        { accept: "application/x-tutor-stream+json" },
+      ),
+    );
+    await response.body!.cancel();
+    expect(signal.aborted).toBe(true);
+  });
 });
