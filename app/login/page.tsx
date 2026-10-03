@@ -48,6 +48,10 @@ export default function LoginPage() {
           </p>
         </div>
 
+        <a href="/tutor" className="text-sm underline" style={{ color: "#ce82ff" }}>
+          Try the live physics tutor — no account needed
+        </a>
+
         {/* Google Sign In */}
         <button
           onClick={handleGoogleLogin}

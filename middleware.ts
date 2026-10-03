@@ -2,6 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // The standalone tutor is intentionally public and does not require Supabase.
+  if (
+    request.nextUrl.pathname === "/tutor" ||
+    ["/api/tutor", "/api/tutor/speech", "/api/tutor/transcribe"].includes(
+      request.nextUrl.pathname,
+    )
+  ) {
+    return NextResponse.next();
+  }
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -16,17 +25,17 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
+            request.cookies.set(name, value),
           );
           supabaseResponse = NextResponse.next({
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options),
           );
         },
       },
-    }
+    },
   );
 
   // Refresh the auth token — this is critical for server-side auth to work
