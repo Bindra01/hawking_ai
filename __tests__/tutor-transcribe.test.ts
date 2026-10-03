@@ -71,6 +71,33 @@ describe("voice question transcription", () => {
     expect((await POST(request("audio/wav", bytes))).status).toBe(400);
     expect(mockFetch).not.toHaveBeenCalled();
   });
+  it("cancels an unfinished upload at the shared deadline and releases the slot", async () => {
+    const POST = await route();
+    const expiry = new AbortController();
+    const timeout = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(expiry.signal);
+    const cancelled = vi.fn();
+    try {
+      const pending = POST(
+        new Request("http://localhost/api/tutor/transcribe", {
+          method: "POST",
+          headers: { "Content-Type": "audio/wav" },
+          body: new ReadableStream({ cancel: cancelled }),
+          duplex: "half",
+        } as RequestInit),
+      );
+      expiry.abort();
+      expect((await pending).status).toBe(408);
+      expect(cancelled).toHaveBeenCalledOnce();
+      expect(mockFetch).not.toHaveBeenCalled();
+      timeout.mockRestore();
+      mockFetch.mockResolvedValue(Response.json({ text: "Why?" }));
+      expect((await POST(request())).status).toBe(200);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
   it("shares the request deadline across upload and provider work", async () => {
     const POST = await route();
     const signals: AbortSignal[] = [];
