@@ -40,7 +40,7 @@ Lessons target about two minutes at the default 0.9× pace; actual duration depe
 
 ## Server limits
 
-`POST /api/tutor` accepts `{topic, question?, context?}` and returns `{title, beats}`. It validates request size, output schema, coordinate bounds, section continuity, and narration length. A malformed lesson gets one repair attempt within the same 80-second deadline. Responses and errors are not cached. Provider responses, prompts, and credentials are not logged.
+`POST /api/tutor` accepts `{topic, question?, context?}` and returns `{title, beats}`. It validates request size, output schema, coordinate bounds, section continuity, and narration length. A malformed lesson gets one repair attempt within the same 80-second deadline. Responses and errors are not cached. The browser requests `Accept: application/x-tutor-stream+json`: this mode flushes JSON whitespace immediately and every five seconds so preview proxies do not close an idle connection while Claude works. The final body contains the lesson or a safe `{error}` object; after headers are sent, errors use HTTP 200 and callers must check `error`. Requests without that Accept header retain ordinary JSON/status behavior. Provider responses, prompts, and credentials are not logged.
 
 The anonymous endpoint has an in-process guard of two concurrent requests and ten requests per minute. This is **not distributed abuse protection**: serverless instances have separate budgets. Before a broad public launch, add a shared limiter and configure a provider spend cap. Do not treat this prototype as an unlimited public service.
 
