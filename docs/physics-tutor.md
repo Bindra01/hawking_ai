@@ -57,3 +57,28 @@ Whole equations are normalized into adjacent term beats before rendering. The or
 ### Energy duration correction
 
 Duration targets must not act as exact schema limits. Generated lessons target 240–280 words, but production preparation accepts 120–600 words (answers: 20–180). Shape, layout, per-beat, response-byte, and original beat-count limits remain enforced. The active lesson displays an approximate duration based on narration length and selected pace. Lessons can exceed two minutes; actual voice timing varies.
+
+## Teaching style and sparse board actions
+
+The generation prompt includes a complete, schema-valid worked example rather
+than style adjectives alone. Main lessons start with 2–3 everyday intuition
+beats, then a plain explanation, incremental equation, one numerical example,
+one misconception, and a takeaway. The target remains about two minutes
+(240–280 words), not a guaranteed playback duration at every speech rate.
+
+Narration no longer requires new ink. `hold` preserves the board without a pen;
+`highlight` temporarily circles an existing region; `clear` removes current-page
+ink at the start of a spoken transition. All actions retain narration, so they
+use the existing continuous audio and interruption checkpoints. Highlights do
+not accumulate. The board derives its content from the checkpoint, including
+clears, so returning from an answer or replaying restores the correct scene.
+
+Equation increments may group a leading relation with its term (`= F`). This
+avoids a separate spoken “equals” fragment. Full equations still use the legacy
+normalizer; the prompt teaches adjacent new terms rather than repeating the
+entire growing equation. The supplied pedagogical example's inaccurate “work =
+force + movement” shorthand is not used. Work by one force is distinguished
+from net work, and the constant-force assumption is explicit.
+
+The demonstration is prompt context, not a canned user lesson. Pedagogy quality
+is a generation goal, not a claim that schema validation can prove learning.

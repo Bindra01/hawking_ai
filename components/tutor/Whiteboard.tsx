@@ -1,7 +1,10 @@
 import { useEffect, useRef } from "react";
+import { boardFrame } from "@/lib/tutor/board";
 import { INK, type Thread, type Visual } from "@/lib/tutor/types";
 
 function endpoint(v: Visual, progress: number) {
+  if (v.type === "hold" || v.type === "clear" || v.type === "highlight")
+    return null;
   if (v.type !== "draw_diagram")
     return {
       x:
@@ -18,7 +21,21 @@ function endpoint(v: Visual, progress: number) {
   return { x: v.x + (v.x2 - v.x) * progress, y: v.y + (v.y2 - v.y) * progress };
 }
 function Mark({ visual: v, progress }: { visual: Visual; progress: number }) {
+  if (v.type === "hold" || v.type === "clear") return null;
   const color = INK[v.color];
+  if (v.type === "highlight")
+    return (
+      <circle
+        cx={v.x}
+        cy={v.y}
+        r={v.radius}
+        fill={color}
+        fillOpacity=".08"
+        stroke={color}
+        strokeWidth="3"
+        strokeDasharray="6 5"
+      />
+    );
   if (v.type !== "draw_diagram") {
     return (
       <text
@@ -53,7 +70,7 @@ function Mark({ visual: v, progress }: { visual: Visual; progress: number }) {
   const angle = Math.atan2(v.y2 - v.y, v.x2 - v.x);
   return (
     <g stroke={color} strokeWidth="2.5" fill="none" strokeLinecap="round">
-      <line x1={v.x} y1={v.y} x2={end.x} y2={end.y} />
+      <line x1={v.x} y1={v.y} x2={end!.x} y2={end!.y} />
       {v.shape === "arrow" && progress > 0.92 && (
         <path
           d={`M ${v.x2 - 11 * Math.cos(angle - 0.45)} ${v.y2 - 11 * Math.sin(angle - 0.45)} L ${v.x2} ${v.y2} L ${v.x2 - 11 * Math.cos(angle + 0.45)} ${v.y2 - 11 * Math.sin(angle + 0.45)}`}
@@ -75,17 +92,7 @@ export function Whiteboard({
     thread?.lesson.beats[
       Math.min(position?.beat ?? 0, thread.lesson.beats.length - 1)
     ];
-  let start = position?.beat ?? 0;
-  if (thread) {
-    start = Math.min(start, thread.lesson.beats.length - 1);
-    while (
-      start > 0 &&
-      thread.lesson.beats[start - 1].section === current?.section
-    )
-      start--;
-  }
-  const visible =
-    thread?.lesson.beats.slice(start, (position?.beat ?? 0) + 1) ?? [];
+  const frame = thread ? boardFrame(thread) : [];
   const cursor =
     current && position ? endpoint(current.visual, position.progress) : null;
   const cursorX = cursor?.x ?? 0;
@@ -95,6 +102,9 @@ export function Whiteboard({
     if (
       !container ||
       !writing ||
+      current?.visual.type === "hold" ||
+      current?.visual.type === "clear" ||
+      current?.visual.type === "highlight" ||
       container.scrollWidth <= container.clientWidth
     )
       return;
@@ -104,7 +114,7 @@ export function Whiteboard({
       top: Math.max(0, cursorY * scale - container.clientHeight * 0.5),
       behavior: "instant",
     });
-  }, [cursorX, cursorY, writing]);
+  }, [cursorX, cursorY, writing, current?.visual.type]);
   return (
     <div className="tutor-board">
       <div className="board-label">
@@ -139,16 +149,8 @@ export function Whiteboard({
             role="img"
             aria-label={`Whiteboard: ${current?.section}`}
           >
-            {visible.map((beat, i) => (
-              <Mark
-                key={`${start + i}-${beat.narration}`}
-                visual={beat.visual}
-                progress={
-                  start + i < (position?.beat ?? 0)
-                    ? 1
-                    : (position?.progress ?? 0)
-                }
-              />
+            {frame.map(({ beat, index, progress }) => (
+              <Mark key={index} visual={beat.visual} progress={progress} />
             ))}
             {cursor && writing && (
               <g

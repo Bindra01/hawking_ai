@@ -197,7 +197,11 @@ describe("tutor validation", () => {
         .map((b) => b.narration)
         .join(" "),
     ).toBe(source.beats[0].narration);
-    expect(result.beats.slice(0, 5).every((b) => b.visual.y === 90)).toBe(true);
+    expect(
+      result.beats
+        .slice(0, 5)
+        .every((b) => "y" in b.visual && b.visual.y === 90),
+    ).toBe(true);
   });
   it("accepts equation terms and individual diagram primitives", () => {
     const value = lesson();

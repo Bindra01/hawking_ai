@@ -1,5 +1,8 @@
 export type Ink = "ink" | "teal" | "amber";
 export type Visual =
+  | { type: "hold" }
+  | { type: "clear" }
+  | { type: "highlight"; x: number; y: number; radius: number; color: Ink }
   | {
       type: "write_text" | "write_equation";
       text: string;

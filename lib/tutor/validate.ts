@@ -59,14 +59,30 @@ export function validateRequest(value: unknown): GenerationRequest {
 
 function visual(value: unknown): Visual {
   const v = object(value);
+  if (v.type === "hold" || v.type === "clear") return { type: v.type };
   const x = number(v.x, 35, 720);
   const y = number(v.y, 45, 410);
   if (v.color !== "ink" && v.color !== "teal" && v.color !== "amber")
     throw new Error("Unknown ink color");
   const color = v.color;
+  if (v.type === "highlight") {
+    const radius = number(v.radius, 5, 120);
+    if (
+      x - radius < 35 ||
+      x + radius > 720 ||
+      y - radius < 45 ||
+      y + radius > 410
+    )
+      throw new Error("Highlight outside safe bounds");
+    return { type: "highlight", x, y, radius, color };
+  }
   if (v.type === "write_text" || v.type === "write_equation") {
     const label = text(v.text, 45);
-    if (/[=≈≠≤≥<>]/.test(label) && !/^[=≈≠≤≥<>]$/.test(label)) {
+    if (
+      /[=≈≠≤≥<>]/.test(label) &&
+      !/^[=≈≠≤≥<>]$/.test(label) &&
+      !(v.type === "write_equation" && /^[=≈≠≤≥<>]\s*[^=≈≠≤≥<>]+$/.test(label))
+    ) {
       throw new Error(
         "Build equations term by term: put each relation symbol in its own write_equation beat, never a complete equation in text",
       );
@@ -127,7 +143,9 @@ export function expandEquationBeats(value: unknown): unknown {
         typeof v.x !== "number" ||
         typeof beat.narration !== "string" ||
         !/[=≈≠≤≥<>]/.test(v.text) ||
-        /^[=≈≠≤≥<>]$/.test(v.text.trim())
+        /^[=≈≠≤≥<>]$/.test(v.text.trim()) ||
+        (v.type === "write_equation" &&
+          /^[=≈≠≤≥<>]\s*[^=≈≠≤≥<>]+$/.test(v.text.trim()))
       )
         return [raw];
       const terms = v.text
