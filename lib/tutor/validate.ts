@@ -154,13 +154,28 @@ export function expandEquationBeats(value: unknown): unknown {
   };
 }
 
-export function validateLesson(value: unknown, answer = false): Lesson {
+export function prepareLesson(value: unknown, answer = false): Lesson {
+  const input = object(value);
+  if (
+    !Array.isArray(input.beats) ||
+    input.beats.length < (answer ? 3 : 12) ||
+    input.beats.length > (answer ? 12 : 36)
+  )
+    throw new Error("Invalid beat count: main 12–36, answer 3–12");
+  return validateLesson(expandEquationBeats(value), answer, true);
+}
+
+export function validateLesson(
+  value: unknown,
+  answer = false,
+  expanded = false,
+): Lesson {
   const input = object(value);
   const title = text(input.title, 100);
   if (
     !Array.isArray(input.beats) ||
     input.beats.length < (answer ? 3 : 12) ||
-    input.beats.length > (answer ? 12 : 36)
+    input.beats.length > (expanded ? (answer ? 80 : 280) : answer ? 12 : 36)
   )
     throw new Error("Invalid beat count: main 12–36, answer 3–12");
   const seen = new Set<string>();

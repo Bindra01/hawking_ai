@@ -5,6 +5,7 @@ import { generateLesson, TUTOR_SYSTEM_PROMPT } from "@/lib/tutor/generate";
 import {
   readBoundedBody,
   expandEquationBeats,
+  prepareLesson,
   validateLesson,
   validateRequest,
 } from "@/lib/tutor/validate";
@@ -134,6 +135,23 @@ describe("tutor validation", () => {
       }
     },
   );
+  it("budgets model beats before equation expansion, not after", () => {
+    const source = lesson();
+    source.beats = Array.from({ length: 36 }, () => ({
+      section: "Equation",
+      narration: "One two three four five six seven",
+      visual: {
+        type: "write_equation" as const,
+        text: "W = F × d",
+        x: 60,
+        y: 90,
+        color: "teal" as const,
+      },
+    }));
+    expect(prepareLesson(source).beats).toHaveLength(180);
+    source.beats.push(source.beats[0]);
+    expect(() => prepareLesson(source)).toThrow(/beat count/);
+  });
   it("normalizes complete equations without changing spoken words or term order", () => {
     const source = lesson();
     source.beats[0].visual = {

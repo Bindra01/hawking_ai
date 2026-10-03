@@ -2,9 +2,8 @@ import "server-only";
 import type { Lesson } from "./types";
 import {
   readBoundedBody,
-  expandEquationBeats,
+  prepareLesson,
   TutorError,
-  validateLesson,
   validateRequest,
 } from "./validate";
 
@@ -106,10 +105,7 @@ export async function generateLesson(
         const json = output
           .trim()
           .replace(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/, "$1");
-        return validateLesson(
-          expandEquationBeats(JSON.parse(json)),
-          Boolean(input.question),
-        );
+        return prepareLesson(JSON.parse(json), Boolean(input.question));
       } catch (error) {
         const issue =
           error instanceof SyntaxError
