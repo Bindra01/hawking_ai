@@ -4,6 +4,9 @@ import "./tutor.css";
 
 export const metadata: Metadata = {
   title: "Physics Studio · Hawking",
-  description: "A live physics tutor. Listen, watch ideas take shape, and ask questions as you go.",
+  description:
+    "A live physics tutor. Listen, watch ideas take shape, and ask questions as you go.",
 };
-export default function TutorPage() { return <Tutor />; }
+export default function TutorPage() {
+  return <Tutor />;
+}

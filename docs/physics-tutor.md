@@ -25,7 +25,8 @@ npm run build
 3. The speech adapter starts progressive SVG drawing only when speech starts. Word events anchor drawing timing. Elapsed-time estimates provide a fallback when the browser does not emit boundaries.
 4. Typing a question stops narration and freezes the lesson. The session stores its beat, speech offset, and visual progress.
 5. Submit the question. A separate answer board uses the same renderer and speech adapter. The main lesson checkpoint stays immutable.
-6. The answer ends and restores the main board and checkpoint automatically. Cancel, skip answer, retry, pause, rate changes, and new lessons invalidate old speech callbacks and requests.
+6. A question during an answer creates another saved checkpoint. Answers unwind in reverse order, then return to the main lesson.
+7. The answer ends and restores the main board and checkpoint automatically. Cancel, skip answer, retry, pause, rate changes, and new lessons invalidate old speech callbacks and requests.
 
 Changing sections creates a fresh board. Equation terms share a row, so the formula accumulates while each term is explained. Shapes are restricted primitives; model output never becomes raw HTML or SVG markup.
 
@@ -45,4 +46,4 @@ The anonymous endpoint has an in-process guard of two concurrent requests and te
 
 ## Verification scope
 
-Unit tests cover generation with mocked provider responses and playback with a fake speech driver. One real Claude generation verified Work and Energy (18 beats, 276 words). Other topic tests must use fixtures unless additional live calls are explicitly authorized. Browser speech testing requires an operating-system voice; mocked speech cannot establish perceived audio/visual synchronization.
+Unit tests cover generation with mocked provider responses and playback with a fake speech driver. One real Claude generation verified provider connectivity and returned Work and Energy (18 beats, 276 words). That response exposed complete equations inside text beats. The final validator now rejects these and requests a repair; the stricter final prompt and validator were tested with fixtures, not another paid call. Other topic tests must use fixtures unless additional live calls are explicitly authorized. Browser speech testing requires an operating-system voice; mocked speech cannot establish perceived audio/visual synchronization.
