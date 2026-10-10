@@ -1,4 +1,11 @@
 import PDFDocument from "pdfkit";
+import SVGtoPDF from "svg-to-pdfkit";
+import { mathjax } from "mathjax-full/js/mathjax.js";
+import { TeX } from "mathjax-full/js/input/tex.js";
+import { SVG } from "mathjax-full/js/output/svg.js";
+import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
+import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
+import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
 import { HAWKING_FOOTER, highPriority, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
 
 const C = {
@@ -8,24 +15,23 @@ const C = {
 };
 const MARGIN = 48;
 const CONTENT_WIDTH = 499;
+const adaptor = liteAdaptor();
+RegisterHTMLHandler(adaptor);
+const mathDocument = mathjax.document("", {
+  InputJax: new TeX({ packages: AllPackages }),
+  OutputJax: new SVG({ fontCache: "none" }),
+});
 
-function cleanMath(value: string): string {
-  return value
-    .replace(/\\text\{([^}]*)\}/g, "$1")
-    .replace(/\\boxed\{([^}]*)\}/g, "$1")
-    .replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "($1)/($2)")
-    .replace(/\\sqrt\{([^}]*)\}/g, "sqrt($1)")
-    .replace(/\\(quad|qquad|,|;|!)/g, " ")
-    .replace(/\\implies|\\Rightarrow/g, "=>")
-    .replace(/\\cdot|\\times/g, " x ")
-    .replace(/\\rho/g, "rho")
-    .replace(/\\theta/g, "theta")
-    .replace(/\\lambda/g, "lambda")
-    .replace(/\\alpha/g, "alpha")
-    .replace(/\\[a-zA-Z]+/g, "")
-    .replace(/[{}]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+function mathSvg(latex: string, color: string): string {
+  const markup = adaptor.outerHTML(mathDocument.convert(latex, { display: true }));
+  const svgStart = markup.indexOf("<svg");
+  const svgEnd = markup.lastIndexOf("</svg>");
+  if (svgStart < 0 || svgEnd < 0) throw new Error("MathJax did not return SVG output.");
+  return markup.slice(svgStart, svgEnd + 6).replaceAll("currentColor", color);
+}
+
+function drawMath(doc: PDFKit.PDFDocument, latex: string, x: number, y: number, width: number, color: string) {
+  SVGtoPDF(doc, mathSvg(latex, color), x, y, { width, preserveAspectRatio: "xMidYMid meet" });
 }
 
 function ensureSpace(doc: PDFKit.PDFDocument, height: number) {
@@ -121,15 +127,14 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
     } else if (block.type === "prose") {
       doc.moveDown(.3).font("Helvetica").fontSize(9.5).fillColor(C.dark).text(block.text, { width: CONTENT_WIDTH, lineGap: 2 });
     } else {
-      const math = cleanMath(block.latex);
-      const h = Math.max(42, doc.heightOfString(math, { width: CONTENT_WIDTH - 28 }) + (block.type === "equation" && block.annotation ? 30 : 18));
+      const h = block.type === "equation" && block.annotation ? 66 : 54;
       ensureSpace(doc, h + 8);
       const blockY = doc.y + 4;
       const bg = block.type === "boxed_result" ? "#F0FDF4" : "#F0F4FF";
       const border = block.type === "boxed_result" ? C.greenLight : C.blue;
       doc.rect(MARGIN, blockY, CONTENT_WIDTH, h).fill(bg).rect(MARGIN, blockY, 3, h).fill(border);
-      doc.font(block.type === "boxed_result" ? "Times-Bold" : "Times-Roman").fontSize(11).fillColor(block.type === "boxed_result" ? C.green : C.dark).text(math, MARGIN + 14, blockY + 10, { width: CONTENT_WIDTH - 28, align: "center" });
-      if (block.type === "equation" && block.annotation) doc.font("Times-Italic").fontSize(8).fillColor(C.gray).text(block.annotation, { width: CONTENT_WIDTH - 28, align: "center" });
+      drawMath(doc, block.latex, MARGIN + 20, blockY + 8, CONTENT_WIDTH - 40, block.type === "boxed_result" ? C.green : C.dark);
+      if (block.type === "equation" && block.annotation) doc.font("Times-Italic").fontSize(8).fillColor(C.gray).text(block.annotation, MARGIN + 14, blockY + h - 17, { width: CONTENT_WIDTH - 28, align: "center" });
       doc.y = blockY + h + 4;
     }
   }
@@ -139,8 +144,8 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
   ensureSpace(doc, finalH + 12);
   doc.roundedRect(MARGIN, finalY, CONTENT_WIDTH, finalH, 8).fillAndStroke("#F0FDF4", C.greenLight);
   doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
-  doc.font("Times-Bold").fontSize(15).text(cleanMath(solution.final_answer.latex), { align: "center" });
-  doc.font("Times-Bold").fontSize(12).text(solution.final_answer.display, { align: "center" });
+  drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + 26, CONTENT_WIDTH - 48, C.green);
+  doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + 56, { width: CONTENT_WIDTH - 30, align: "center" });
   doc.y = finalY + finalH + 6;
 
   const reality = format === "short" ? highPriority(solution.reality_checks, 2) : solution.reality_checks;

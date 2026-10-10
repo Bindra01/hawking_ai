@@ -55,5 +55,8 @@ export const HAWKING_FOOTER =
   "Please note: This solution is AI-based. But the solving method and technique is my input to the AI. I am building an app — an AI tutor called Hawking AI — which aims to solve hard physics problems in a step-by-step way. I am still working on this, so your feedback will be really helpful!";
 
 export function highPriority(items: PriorityItem[], limit: number): PriorityItem[] {
-  return items.filter((item) => item.priority === "high").slice(0, limit);
+  const preferred = items.filter((item) => item.priority === "high");
+  if (preferred.length >= limit) return preferred.slice(0, limit);
+  const fallback = items.filter((item) => item.priority !== "high");
+  return [...preferred, ...fallback].slice(0, limit);
 }
