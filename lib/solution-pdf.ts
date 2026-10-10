@@ -30,8 +30,8 @@ function mathSvg(latex: string, color: string): string {
   return markup.slice(svgStart, svgEnd + 6).replaceAll("currentColor", color);
 }
 
-function drawMath(doc: PDFKit.PDFDocument, latex: string, x: number, y: number, width: number, color: string) {
-  SVGtoPDF(doc, mathSvg(latex, color), x, y, { width, preserveAspectRatio: "xMidYMid meet" });
+function drawMath(doc: PDFKit.PDFDocument, latex: string, x: number, y: number, width: number, height: number, color: string) {
+  SVGtoPDF(doc, mathSvg(latex, color), x, y, { width, height, preserveAspectRatio: "xMidYMid meet" });
 }
 
 function ensureSpace(doc: PDFKit.PDFDocument, height: number) {
@@ -133,18 +133,18 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
       const bg = block.type === "boxed_result" ? "#F0FDF4" : "#F0F4FF";
       const border = block.type === "boxed_result" ? C.greenLight : C.blue;
       doc.rect(MARGIN, blockY, CONTENT_WIDTH, h).fill(bg).rect(MARGIN, blockY, 3, h).fill(border);
-      drawMath(doc, block.latex, MARGIN + 20, blockY + 8, CONTENT_WIDTH - 40, block.type === "boxed_result" ? C.green : C.dark);
+      drawMath(doc, block.latex, MARGIN + 20, blockY + 7, CONTENT_WIDTH - 40, block.type === "equation" && block.annotation ? h - 27 : h - 14, block.type === "boxed_result" ? C.green : C.dark);
       if (block.type === "equation" && block.annotation) doc.font("Times-Italic").fontSize(8).fillColor(C.gray).text(block.annotation, MARGIN + 14, blockY + h - 17, { width: CONTENT_WIDTH - 28, align: "center" });
       doc.y = blockY + h + 4;
     }
   }
 
-  const finalY = doc.y + 8;
   const finalH = 74;
   ensureSpace(doc, finalH + 12);
+  const finalY = doc.y + 8;
   doc.roundedRect(MARGIN, finalY, CONTENT_WIDTH, finalH, 8).fillAndStroke("#F0FDF4", C.greenLight);
   doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
-  drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + 26, CONTENT_WIDTH - 48, C.green);
+  drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + 24, CONTENT_WIDTH - 48, 30, C.green);
   doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + 56, { width: CONTENT_WIDTH - 30, align: "center" });
   doc.y = finalY + finalH + 6;
 

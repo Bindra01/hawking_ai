@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const slot = acquireSolveSlot(user.id);
+    const slot = await acquireSolveSlot(user.id);
     if (!slot.allowed) {
       return NextResponse.json(
         { error: slot.message },
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       const result = await generateSolution(content);
       return NextResponse.json(result);
     } finally {
-      slot.release();
+      await slot.release();
     }
   } catch (error) {
     console.error("Solve generation failed", error);
