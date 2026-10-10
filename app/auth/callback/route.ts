@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
-import { safeNextPath } from "@/lib/auth-redirect";
+import { publicRequestOrigin, safeNextPath } from "@/lib/auth-redirect";
 
 export async function GET(req: NextRequest) {
-  const { searchParams, origin } = new URL(req.url);
+  const { searchParams } = new URL(req.url);
+  const origin = publicRequestOrigin(req.url, req.headers);
   const code = searchParams.get("code");
   const next = safeNextPath(searchParams.get("next"), origin);
 
