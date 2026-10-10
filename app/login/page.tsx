@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-client";
+import { authNextCookieValue, safeNextPath } from "@/lib/auth-redirect";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -11,9 +12,17 @@ export default function LoginPage() {
   async function handleGoogleLogin() {
     setLoading(true);
     const supabase = createClient();
+    const next = safeNextPath(
+      new URLSearchParams(window.location.search).get("next"),
+      window.location.origin
+    );
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `hawking-auth-next=${authNextCookieValue(next)}; Path=/auth/callback; Max-Age=600; SameSite=Lax${secure}`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
   }
 

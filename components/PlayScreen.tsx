@@ -94,7 +94,7 @@ export default function PlayScreen({ problem }: PlayScreenProps) {
       {/* Header bar */}
       {phase !== "complete" && (
         <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3" style={{ background: "#131327" }}>
-          <Link href="/home" className="text-2xl" style={{ color: "#afafbf" }}>✕</Link>
+          <Link href="/practice" className="text-2xl" style={{ color: "#afafbf" }}>✕</Link>
           <div className="flex-1 h-4 rounded-full overflow-hidden" style={{ background: "#2a2a40" }}>
             <motion.div
               className="h-full rounded-full"

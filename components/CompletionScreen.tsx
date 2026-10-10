@@ -210,7 +210,7 @@ export default function CompletionScreen({
 
       {/* Continue */}
       <button
-        onClick={() => router.push("/home")}
+        onClick={() => router.push("/practice")}
         className="btn-press w-full py-4 rounded-2xl font-black text-sm uppercase"
         style={{
           background: "#7c3aed",
