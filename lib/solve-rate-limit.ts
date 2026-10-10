@@ -69,7 +69,7 @@ export async function acquireSolveSlot(userId: string, now = new Date()): Promis
       },
     });
     return { allowed: true as const };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
 
   if (!decision.allowed) return { ...decision, status: 429 };
 
