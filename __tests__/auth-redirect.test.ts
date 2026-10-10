@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { publicRequestOrigin, safeNextPath } from "@/lib/auth-redirect";
+import {
+  authNextCookieValue,
+  authNextFromCookie,
+  publicRequestOrigin,
+  safeNextPath,
+} from "@/lib/auth-redirect";
 
 const origin = "https://hawking.example";
 
@@ -45,5 +50,16 @@ describe("publicRequestOrigin", () => {
     expect(publicRequestOrigin("https://hawking.example/auth/callback", value)).toBe(
       "https://hawking.example"
     );
+  });
+});
+
+describe("OAuth next cookie", () => {
+  it("round-trips a path and query without changing the callback URL", () => {
+    const next = "/solve?format=long";
+    expect(authNextFromCookie(authNextCookieValue(next))).toBe(next);
+  });
+
+  it("rejects malformed encoded cookie values", () => {
+    expect(authNextFromCookie("%E0%A4%A")).toBeNull();
   });
 });

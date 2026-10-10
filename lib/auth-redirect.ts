@@ -10,6 +10,20 @@ export function safeNextPath(requestedNext: string | null, origin: string): stri
   }
 }
 
+export function authNextCookieValue(requestedNext: string): string {
+  return encodeURIComponent(requestedNext);
+}
+
+export function authNextFromCookie(value: string | undefined): string | null {
+  if (!value) return null;
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
 export function publicRequestOrigin(
   requestUrl: string,
   configuredOrigin?: string

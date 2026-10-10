@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
-import { publicRequestOrigin, safeNextPath } from "@/lib/auth-redirect";
+import {
+  authNextFromCookie,
+  publicRequestOrigin,
+  safeNextPath,
+} from "@/lib/auth-redirect";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -10,12 +14,19 @@ export async function GET(req: NextRequest) {
     process.env.AUTH_REDIRECT_ORIGIN
   );
   const code = searchParams.get("code");
-  const next = safeNextPath(searchParams.get("next"), origin);
+  const requestedNext =
+    searchParams.get("next") ??
+    authNextFromCookie(req.cookies.get("hawking-auth-next")?.value);
+  const next = safeNextPath(requestedNext, origin);
 
   const redirectUrl = new URL(next, origin).toString();
 
   if (code) {
     const response = NextResponse.redirect(redirectUrl);
+    response.cookies.set("hawking-auth-next", "", {
+      path: "/auth/callback",
+      maxAge: 0,
+    });
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -59,5 +70,10 @@ export async function GET(req: NextRequest) {
     return response;
   }
 
-  return NextResponse.redirect(redirectUrl);
+  const response = NextResponse.redirect(redirectUrl);
+  response.cookies.set("hawking-auth-next", "", {
+    path: "/auth/callback",
+    maxAge: 0,
+  });
+  return response;
 }
