@@ -5,7 +5,10 @@ import { publicRequestOrigin, safeNextPath } from "@/lib/auth-redirect";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const origin = publicRequestOrigin(req.url, req.headers);
+  const origin = publicRequestOrigin(
+    req.url,
+    process.env.AUTH_REDIRECT_ORIGIN
+  );
   const code = searchParams.get("code");
   const next = safeNextPath(searchParams.get("next"), origin);
 

@@ -20,36 +20,30 @@ describe("safeNextPath", () => {
 });
 
 describe("publicRequestOrigin", () => {
-  it("uses the public host and protocol supplied by a proxy", () => {
-    const headers = new Headers({
-      "x-forwarded-host": "preview.example.com",
-      "x-forwarded-proto": "https",
-    });
+  it("uses the configured public origin behind a proxy", () => {
+    expect(
+      publicRequestOrigin(
+        "http://0.0.0.0:3000/auth/callback",
+        "https://preview.example.com"
+      )
+    ).toBe("https://preview.example.com");
+  });
 
-    expect(publicRequestOrigin("http://0.0.0.0:3000/auth/callback", headers)).toBe(
-      "https://preview.example.com"
+  it("uses the request origin when no public origin is configured", () => {
+    expect(publicRequestOrigin("https://hawking.example/auth/callback")).toBe(
+      "https://hawking.example"
     );
   });
 
-  it("uses the first value from a forwarded header chain", () => {
-    const headers = new Headers({
-      "x-forwarded-host": "preview.example.com, internal.example",
-      "x-forwarded-proto": "https, http",
-    });
-
-    expect(publicRequestOrigin("http://0.0.0.0:3000/auth/callback", headers)).toBe(
-      "https://preview.example.com"
-    );
-  });
-
-  it("falls back to the request origin for malformed proxy values", () => {
-    const headers = new Headers({
-      "x-forwarded-host": "preview.example.com/path",
-      "x-forwarded-proto": "https",
-    });
-
-    expect(publicRequestOrigin("http://0.0.0.0:3000/auth/callback", headers)).toBe(
-      "http://0.0.0.0:3000"
+  it.each([
+    "https://preview.example.com/path",
+    "https://user:password@preview.example.com",
+    "https://preview.example.com?next=evil",
+    "javascript:alert(1)",
+    "not a URL",
+  ])("falls back to the request origin for an invalid configured origin: %s", (value) => {
+    expect(publicRequestOrigin("https://hawking.example/auth/callback", value)).toBe(
+      "https://hawking.example"
     );
   });
 });
