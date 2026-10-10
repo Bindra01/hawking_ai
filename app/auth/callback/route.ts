@@ -5,8 +5,13 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
+  const requestedNext = searchParams.get("next");
+  const requestedUrl = requestedNext ? new URL(requestedNext, origin) : null;
+  const next = requestedUrl?.origin === origin
+    ? `${requestedUrl.pathname}${requestedUrl.search}`
+    : "/home";
 
-  const redirectUrl = `${origin}/home`;
+  const redirectUrl = new URL(next, origin).toString();
 
   if (code) {
     const response = NextResponse.redirect(redirectUrl);
