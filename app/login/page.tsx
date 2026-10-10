@@ -4,6 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase-client";
+import { safeNextPath } from "@/lib/auth-redirect";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -11,11 +12,10 @@ export default function LoginPage() {
   async function handleGoogleLogin() {
     setLoading(true);
     const supabase = createClient();
-    const requestedNext = new URLSearchParams(window.location.search).get("next");
-    const requestedUrl = requestedNext ? new URL(requestedNext, window.location.origin) : null;
-    const next = requestedUrl?.origin === window.location.origin
-      ? `${requestedUrl.pathname}${requestedUrl.search}`
-      : "/home";
+    const next = safeNextPath(
+      new URLSearchParams(window.location.search).get("next"),
+      window.location.origin
+    );
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

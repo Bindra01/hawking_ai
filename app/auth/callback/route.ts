@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { prisma } from "@/lib/prisma";
+import { safeNextPath } from "@/lib/auth-redirect";
 
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url);
   const code = searchParams.get("code");
-  const requestedNext = searchParams.get("next");
-  const requestedUrl = requestedNext ? new URL(requestedNext, origin) : null;
-  const next = requestedUrl?.origin === origin
-    ? `${requestedUrl.pathname}${requestedUrl.search}`
-    : "/home";
+  const next = safeNextPath(searchParams.get("next"), origin);
 
   const redirectUrl = new URL(next, origin).toString();
 
