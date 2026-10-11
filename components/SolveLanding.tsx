@@ -51,7 +51,7 @@ export default function SolveLanding() {
     try {
       const response = await fetch("/api/solve", { method: "POST", body });
       const data = await response.json().catch(() => ({}));
-      if (isUnauthorizedSolveResponse(response.status, data.error ?? data.code)) {
+      if (isUnauthorizedSolveResponse(response.status, data)) {
         setError("");
         window.location.replace("/login?next=/home&reason=session-expired");
         return;

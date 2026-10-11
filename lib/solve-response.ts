@@ -1,3 +1,6 @@
-export function isUnauthorizedSolveResponse(status: number, error: unknown): boolean {
-  return status === 401 || error === "Unauthorized" || error === "SESSION_EXPIRED";
+export function isUnauthorizedSolveResponse(
+  status: number,
+  payload: { code?: unknown; error?: unknown } | null | undefined
+): boolean {
+  return status === 401 || payload?.code === "SESSION_EXPIRED" || payload?.error === "Unauthorized";
 }
