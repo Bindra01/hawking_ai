@@ -2,15 +2,16 @@ import { describe, expect, it } from "vitest";
 import { parseSolveGenerationResult } from "@/lib/generate-solution";
 
 describe("parseSolveGenerationResult", () => {
+  const longTeaching = "This teaching detail explains the physical meaning and connects each equation to the next step. ".repeat(20);
   const validSolution = {
     title: "Constant acceleration",
     tags: ["Mechanics"],
     problem_statement: "Find the speed.",
     problem_options: [],
     framing_line: "Use Newton's second law.",
-    step1: { label: "Recall", answer: "F = ma", explanation: "Force causes acceleration.", tip: null, warning: null },
-    step2: { label: "Inputs", answer: "m = 2 kg", explanation: "Use SI units.", tip: null, warning: null },
-    step3: { label: "Plan", answer: "Find a, then v", explanation: "Apply constant acceleration.", tip: null, warning: null },
+    step1: { label: "Recall", answer: "F = ma", explanation: longTeaching, tip: null, warning: null },
+    step2: { label: "Inputs", answer: "m = 2 kg", explanation: longTeaching, tip: null, warning: null },
+    step3: { label: "Plan", answer: "Find a, then v", explanation: longTeaching, tip: null, warning: null },
     derivation: { label: "Derivation", blocks: [{ type: "equation", latex: "a=F/m", annotation: "Acceleration" }] },
     final_answer: { latex: "v=20\\,m/s", display: "20 m/s", option: "" },
     reality_checks: [

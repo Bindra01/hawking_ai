@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { highPriority, type PriorityItem } from "@/lib/solve-types";
+import { highPriority, showCallout, type PriorityItem } from "@/lib/solve-types";
 
 describe("highPriority", () => {
   it("keeps only high-priority items and applies the format limit", () => {
@@ -24,5 +24,17 @@ describe("highPriority", () => {
     ];
 
     expect(highPriority(items, 2).map((item) => item.text)).toEqual(["high one"]);
+  });
+});
+
+describe("showCallout", () => {
+  it("keeps every high-priority callout in Short regardless of its step", () => {
+    expect(showCallout({ text: "High-priority warning", priority: "high" }, "short")).toBe(true);
+  });
+
+  it("filters low-priority callouts from Short and retains them in Long", () => {
+    const callout = { text: "Low-priority tip", priority: "low" } as const;
+    expect(showCallout(callout, "short")).toBe(false);
+    expect(showCallout(callout, "long")).toBe(true);
   });
 });

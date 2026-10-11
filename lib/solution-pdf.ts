@@ -6,7 +6,8 @@ import { SVG } from "mathjax-full/js/output/svg.js";
 import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
 import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
 import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
-import { HAWKING_FOOTER, highPriority, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import { HAWKING_FOOTER, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import { projectSolution } from "@/lib/solution-format";
 
 const C = {
   green: "#2E7D32", greenLight: "#58CC02", blue: "#1565C0", purple: "#6A1B9A",
@@ -54,7 +55,7 @@ function callout(doc: PDFKit.PDFDocument, label: string, text: string, border: s
   doc.y = y + h + 5;
 }
 
-function step(doc: PDFKit.PDFDocument, number: number, data: SolveStep, color: string, format: SolveFormat) {
+function step(doc: PDFKit.PDFDocument, number: number, data: SolveStep, color: string) {
   ensureSpace(doc, 130);
   doc.moveDown(.8);
   const y = doc.y;
@@ -63,10 +64,9 @@ function step(doc: PDFKit.PDFDocument, number: number, data: SolveStep, color: s
   doc.font("Helvetica-Bold").fontSize(12).fillColor(color).text(data.label, MARGIN + 62, y + 2, { width: CONTENT_WIDTH - 62 });
   doc.y = y + 27;
   callout(doc, "ANSWER", data.answer, C.greenLight, "#F0FDF4");
-  const explanation = format === "long" ? data.explanation : "";
-  if (explanation) doc.font("Helvetica").fontSize(9.5).fillColor(C.dark).text(explanation, MARGIN, doc.y + 4, { width: CONTENT_WIDTH, lineGap: 3 });
-  if (data.tip && (format === "long" || data.tip.priority === "high")) callout(doc, "TIP", data.tip.text, C.gold, "#FFFBEB");
-  if (data.warning && (format === "long" || (number === 2 && data.warning.priority === "high"))) callout(doc, "WARNING", data.warning.text, C.red, "#FFF5F5");
+  if (data.explanation) doc.font("Helvetica").fontSize(9.5).fillColor(C.dark).text(data.explanation, MARGIN, doc.y + 4, { width: CONTENT_WIDTH, lineGap: 3 });
+  if (data.tip) callout(doc, "TIP", data.tip.text, C.gold, "#FFFBEB");
+  if (data.warning) callout(doc, "WARNING", data.warning.text, C.red, "#FFF5F5");
 }
 
 function bullet(doc: PDFKit.PDFDocument, marker: string, text: string, markerColor: string, boldPrefix = "") {
@@ -81,6 +81,7 @@ function bullet(doc: PDFKit.PDFDocument, marker: string, text: string, markerCol
 }
 
 export async function renderSolutionPdf(solution: SolveSolution, format: SolveFormat): Promise<Buffer> {
+  const projected = projectSolution(solution, format);
   const doc = new PDFDocument({ size: "A4", margins: { top: MARGIN, bottom: 48, left: MARGIN, right: MARGIN }, info: { Title: `${solution.title} - Hawking ${format} solution`, Author: "Hawking AI" }, autoFirstPage: false, bufferPages: true });
   const chunks: Buffer[] = [];
   doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -106,13 +107,13 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
     doc.moveDown(.45);
     solution.problem_options.forEach((option) => doc.text(option, { width: CONTENT_WIDTH }));
   }
-  if (format === "long") {
-    doc.moveDown(.55).font("Times-Italic").fontSize(10).fillColor(C.gray).text(solution.framing_line, { width: CONTENT_WIDTH, lineGap: 2 });
+  if (projected.framingLine) {
+    doc.moveDown(.55).font("Times-Italic").fontSize(10).fillColor(C.gray).text(projected.framingLine, { width: CONTENT_WIDTH, lineGap: 2 });
   }
 
-  step(doc, 1, solution.step1, C.purple, format);
-  step(doc, 2, solution.step2, C.orange, format);
-  step(doc, 3, solution.step3, C.teal, format);
+  step(doc, 1, projected.steps[0], C.purple);
+  step(doc, 2, projected.steps[1], C.orange);
+  step(doc, 3, projected.steps[2], C.teal);
 
   ensureSpace(doc, 80);
   doc.moveDown(1);
@@ -141,24 +142,22 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
     }
   }
 
-  const finalH = 74;
+  const finalH = solution.final_answer.option ? 88 : 74;
   ensureSpace(doc, finalH + 12);
   const finalY = doc.y + 8;
   doc.roundedRect(MARGIN, finalY, CONTENT_WIDTH, finalH, 8).fillAndStroke("#F0FDF4", C.greenLight);
   doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
   drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + 24, CONTENT_WIDTH - 48, 30, C.green);
   doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + 56, { width: CONTENT_WIDTH - 30, align: "center" });
+  if (solution.final_answer.option) doc.font("Helvetica").fontSize(8).fillColor(C.green).text(solution.final_answer.option, MARGIN + 15, finalY + 71, { width: CONTENT_WIDTH - 30, align: "center" });
   doc.y = finalY + finalH + 6;
 
-  const reality = format === "short" ? highPriority(solution.reality_checks, 2) : solution.reality_checks;
-  const errors = format === "short" ? highPriority(solution.common_errors, 2) : solution.common_errors;
-  const takeaways = format === "short" ? highPriority(solution.takeaways, 3) : solution.takeaways;
   heading(doc, "REALITY CHECK");
-  reality.forEach((item) => bullet(doc, "✓", item.text, C.greenLight, item.heading));
+  projected.realityChecks.forEach((item) => bullet(doc, "✓", item.text, C.greenLight, [item.heading, item.title].filter(Boolean).join(" — ")));
   heading(doc, "WHERE STUDENTS GO WRONG", C.red);
-  errors.forEach((item, index) => bullet(doc, `${index + 1}.`, item.text, C.red, item.title));
+  projected.commonErrors.forEach((item, index) => bullet(doc, `${index + 1}.`, item.text, C.red, [item.heading, item.title].filter(Boolean).join(" — ")));
   heading(doc, "TAKE THESE INTO YOUR NEXT PROBLEM");
-  takeaways.forEach((item) => bullet(doc, "•", item.text, C.green));
+  projected.takeaways.forEach((item) => bullet(doc, "•", item.text, C.green, [item.heading, item.title].filter(Boolean).join(" — ")));
 
   ensureSpace(doc, 95);
   doc.moveDown(.8).strokeColor(C.border).lineWidth(1).moveTo(MARGIN, doc.y).lineTo(MARGIN + CONTENT_WIDTH, doc.y).stroke();

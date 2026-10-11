@@ -51,6 +51,10 @@ export interface SolveSolution {
 
 export type SolveFormat = "short" | "long";
 
+export function showCallout(callout: SolveCallout | null | undefined, format: SolveFormat): boolean {
+  return Boolean(callout && (format === "long" || callout.priority === "high"));
+}
+
 export const HAWKING_FOOTER =
   "Please note: This solution is AI-based. But the solving method and technique is my input to the AI. I am building an app — an AI tutor called Hawking AI — which aims to solve hard physics problems in a step-by-step way. I am still working on this, so your feedback will be really helpful!";
 
