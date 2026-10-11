@@ -146,35 +146,58 @@ export type SolveGenerationResult =
   | { needs_clarification: false; clarification_question: ""; solution: SolveSolution };
 
 export async function generateSolution(content: ResponseInputContent[]): Promise<SolveGenerationResult> {
-  const response = await getClient().responses.create({
-    model: process.env.OPENAI_SOLVE_MODEL || "gpt-4.1",
-    instructions: SYSTEM_PROMPT,
-    input: [{ role: "user", content }],
-    max_output_tokens: 12_000,
-    text: {
-      verbosity: "medium",
-      format: {
-        type: "json_schema",
-        name: "hawking_solution",
-        strict: true,
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          required: ["needs_clarification", "clarification_question", "solution"],
-          properties: {
-            needs_clarification: { type: "boolean" },
-            clarification_question: { type: "string" },
-            solution: { anyOf: [{ type: "null" }, solutionSchema] },
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await getClient().responses.create({
+      model: process.env.OPENAI_SOLVE_MODEL || "gpt-4.1",
+      instructions: attempt === 0
+        ? SYSTEM_PROMPT
+        : `${SYSTEM_PROMPT}\n\nThe previous provider output was unusable. Return complete valid JSON and finish every required field.`,
+      input: [{ role: "user", content }],
+      max_output_tokens: 12_000,
+      text: {
+        verbosity: "medium",
+        format: {
+          type: "json_schema",
+          name: "hawking_solution",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["needs_clarification", "clarification_question", "solution"],
+            properties: {
+              needs_clarification: { type: "boolean" },
+              clarification_question: { type: "string" },
+              solution: { anyOf: [{ type: "null" }, solutionSchema] },
+            },
           },
         },
       },
-    },
-  });
+    });
 
-  if (!response.output_text) {
-    throw new Error(`The model returned no text. Response status: ${response.status}.`);
+    if (!response.output_text) {
+      lastError = new Error(`The model returned no text. Response status: ${response.status}.`);
+      continue;
+    }
+    try {
+      return parseSolveGenerationResult(response.output_text, { enforceFormatRatio: false });
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableProviderOutputError(error)) throw error;
+      console.warn(`Retrying unusable Solve output after attempt ${attempt + 1}.`, error);
+    }
   }
-  return parseSolveGenerationResult(response.output_text, { enforceFormatRatio: false });
+  throw lastError instanceof Error ? lastError : new Error("The model returned unusable output.");
+}
+
+function isRetryableProviderOutputError(error: unknown): boolean {
+  return error instanceof SyntaxError || (
+    error instanceof Error && (
+      error.message.includes("invalid solution envelope") ||
+      error.message.includes("invalid structured solution") ||
+      error.message.includes("no text")
+    )
+  );
 }
 
 export function parseSolveGenerationResult(

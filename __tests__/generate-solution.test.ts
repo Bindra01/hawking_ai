@@ -105,6 +105,33 @@ describe("parseSolveGenerationResult", () => {
     expect(warning).toHaveBeenCalledWith(expect.stringMatching(/insufficient Long-format depth/));
   });
 
+  it("retries once when the provider returns malformed JSON", async () => {
+    const create = vi.spyOn(OpenAI.Responses.prototype, "create")
+      .mockResolvedValueOnce({ output_text: '{"broken":', status: "completed" } as never)
+      .mockResolvedValueOnce({
+        output_text: JSON.stringify({ needs_clarification: false, clarification_question: "", solution: validSolution }),
+        status: "completed",
+      } as never);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(generateSolution([{ type: "input_text", text: "Solve this." }])).resolves.toMatchObject({
+      needs_clarification: false,
+      solution: validSolution,
+    });
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops after one bounded retry for invalid structured output", async () => {
+    const invalidPriorities = { ...validSolution, reality_checks: validSolution.reality_checks.map((item) => ({ ...item, priority: "high" })) };
+    const create = vi.spyOn(OpenAI.Responses.prototype, "create").mockResolvedValue({
+      output_text: JSON.stringify({ needs_clarification: false, clarification_question: "", solution: invalidPriorities }),
+      status: "completed",
+    } as never);
+
+    await expect(generateSolution([{ type: "input_text", text: "Solve this." }])).rejects.toThrow(/invalid structured solution/);
+    expect(create).toHaveBeenCalledTimes(2);
+  });
+
   it("normalizes provider annotation length and appends the exact final equation", () => {
     const providerSolution = {
       ...validSolution,
