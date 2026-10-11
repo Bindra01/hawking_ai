@@ -17,7 +17,10 @@ describe("parseSolveGenerationResult", () => {
     step1: { label: "Recall", answer: "F = ma", explanation: longTeaching, tip: null, warning: null },
     step2: { label: "Inputs", answer: "m = 2 kg", explanation: longTeaching, tip: null, warning: null },
     step3: { label: "Plan", answer: "Find a, then v", explanation: longTeaching, tip: null, warning: null },
-    derivation: { label: "Derivation", blocks: [{ type: "equation", latex: "a=F/m", annotation: "Acceleration" }] },
+    derivation: { label: "Derivation", blocks: [
+      { type: "equation", latex: "a=F/m", annotation: "solve for the acceleration" },
+      { type: "equation", latex: "v=u+at", annotation: "apply constant acceleration kinematics" },
+    ] },
     final_answer: { latex: "v=20\\,m/s", display: "20 m/s", option: "" },
     reality_checks: [
       { heading: "Units", title: "Dimensions", text: "The units are speed.", priority: "high" },
@@ -57,7 +60,7 @@ describe("parseSolveGenerationResult", () => {
       step3: { ...validSolution.step3, explanation: "Brief explanation." },
       derivation: {
         ...validSolution.derivation,
-        blocks: [{ type: "equation", latex: "x=1", annotation: "shared derivation content ".repeat(150) }],
+        blocks: Array.from({ length: 150 }, (_, index) => ({ type: "equation", latex: `x_${index}=1`, annotation: "shared derivation step" })),
       },
     };
     const output = JSON.stringify({
@@ -81,7 +84,7 @@ describe("parseSolveGenerationResult", () => {
       step3: { ...validSolution.step3, explanation: "Brief explanation." },
       derivation: {
         ...validSolution.derivation,
-        blocks: [{ type: "equation", latex: "x=1", annotation: "shared derivation content ".repeat(150) }],
+        blocks: Array.from({ length: 150 }, (_, index) => ({ type: "equation", latex: `x_${index}=1`, annotation: "shared derivation step" })),
       },
     };
     const output = JSON.stringify({
@@ -126,6 +129,11 @@ describe("parseSolveGenerationResult", () => {
   it.each([
     { ...validSolution, derivation: { label: "Derivation", blocks: [null] } },
     { ...validSolution, derivation: { label: "Derivation", blocks: [{ type: "unknown" }] } },
+    { ...validSolution, derivation: { label: "Derivation", blocks: [{ type: "equation", latex: "x=1", annotation: "too short" }] } },
+    { ...validSolution, derivation: { label: "Derivation", blocks: [
+      { type: "equation", latex: "x=1", annotation: "this annotation contains far too many words for short format" },
+      { type: "equation", latex: "y=2", annotation: "second valid equation note" },
+    ] } },
     { ...validSolution, step1: { ...validSolution.step1, tip: { text: {}, priority: "high" } } },
     { ...validSolution, reality_checks: [{ heading: {}, text: "Check", priority: "high" }] },
     { ...validSolution, reality_checks: validSolution.reality_checks.map((item) => ({ ...item, priority: "high" })) },

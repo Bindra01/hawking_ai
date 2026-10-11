@@ -129,8 +129,8 @@ Follow these rules strictly:
 - Any quantity not provided, such as a radius, must cancel unless the answer legitimately depends on it.
 - Return exactly four reality checks and four common errors. Mark exactly two in each list high priority and two low priority.
 - Return exactly five takeaways. Mark exactly three high priority and two low priority.
-- Do not tag everything high. Low-priority teaching material is required so Short can collapse to a lean subset of Long.
-- Keep each high-priority list item concise at 15–30 words because it appears in both formats. Make each low-priority list item a detailed explanation of at least 100 words because it appears only in Long.
+- Do not tag everything high. Keep priority meaningful inside the Long teaching document.
+- Keep each high-priority list item concise at 15–30 words. Make each low-priority list item a detailed explanation of at least 100 words.
 - Tips and warnings are Long-only teaching content.
 - Every low-priority callout must contain at least 100 words. Do not pad with repetition.
 - Use empty strings for unused derivation block fields. Use null for absent tip or warning.
@@ -219,7 +219,8 @@ function isSolveSolution(value: unknown): value is SolveSolution {
     !isRecord(value.derivation) ||
     typeof value.derivation.label !== "string" ||
     !Array.isArray(value.derivation.blocks) ||
-    !value.derivation.blocks.every(isDerivationBlock)
+    !value.derivation.blocks.every(isDerivationBlock) ||
+    value.derivation.blocks.filter(isEquationBlock).length < 2
   ) return false;
   if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return false;
   if (value.final_answer.option !== undefined && typeof value.final_answer.option !== "string") return false;
@@ -248,12 +249,18 @@ function isDerivationBlock(value: unknown): boolean {
   if (!isRecord(value) || typeof value.type !== "string") return false;
   if (value.type === "subsection") return typeof value.title === "string";
   if (value.type === "equation") {
-    return typeof value.latex === "string" &&
-      (value.annotation === undefined || typeof value.annotation === "string");
+    return isEquationBlock(value);
   }
   if (value.type === "prose") return typeof value.text === "string";
   if (value.type === "boxed_result") return typeof value.latex === "string";
   return false;
+}
+
+function isEquationBlock(value: unknown): boolean {
+  if (!isRecord(value) || value.type !== "equation" || typeof value.latex !== "string" || !value.latex.trim()) return false;
+  if (typeof value.annotation !== "string") return false;
+  const annotationWords = value.annotation.trim().split(/\s+/).filter(Boolean).length;
+  return annotationWords >= 3 && annotationWords <= 8;
 }
 
 function isPriorityItemArray(value: unknown): boolean {

@@ -103,7 +103,7 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
               return <div className="equation-block" key={index}><MathBlock latex={block.latex} />{block.annotation && <em>{block.annotation}</em>}</div>;
             })}
           </div>
-          <div className="final-answer">{projected.showTeaching && <small>FINAL ANSWER</small>}<MathBlock latex={solution.final_answer.latex} />{projected.showTeaching && <strong>{solution.final_answer.display}</strong>}{projected.showTeaching && solution.final_answer.option && <span>{solution.final_answer.option}</span>}</div>
+          <div className="final-answer">{projected.showTeaching && <small>FINAL ANSWER</small>}<MathBlock latex={solution.final_answer.latex} /><strong>{solution.final_answer.display}</strong>{solution.final_answer.option && <span>{solution.final_answer.option}</span>}</div>
         </section>
 
         {projected.showTeaching && <><section className="solution-section check-section">

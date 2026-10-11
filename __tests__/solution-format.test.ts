@@ -12,7 +12,7 @@ const solution: SolveSolution = {
   step1: { label: "One", answer: "Answer", explanation: "Long explanation ".repeat(20), tip: { text: "High tip", priority: "high" }, warning: { text: "High warning", priority: "high" } },
   step2: { label: "Two", answer: "Answer", explanation: "Long explanation ".repeat(20), tip: { text: "Low tip", priority: "low" }, warning: null },
   step3: { label: "Three", answer: "Answer", explanation: "Long explanation ".repeat(20), tip: null, warning: null },
-  derivation: { label: "Derive", blocks: [{ type: "subsection", title: "Long heading" }, { type: "prose", text: "Long derivation explanation" }, { type: "equation", latex: "F=ma", annotation: "apply Newton's law" }] },
+  derivation: { label: "Derive", blocks: [{ type: "subsection", title: "Long heading" }, { type: "prose", text: "Long derivation explanation" }, { type: "equation", latex: "F=ma", annotation: "apply Newton's second law" }, { type: "equation", latex: "a=F/m", annotation: "solve for acceleration" }] },
   final_answer: { latex: "v=20", display: "20 m/s", option: "Option A" },
   reality_checks: [item("R1", "high"), item("R2", "high"), item("R3 long detail ".repeat(12), "low"), item("R4 long detail ".repeat(12), "low")],
   common_errors: [item("E1", "high"), item("E2", "high"), item("E3 long detail ".repeat(12), "low"), item("E4 long detail ".repeat(12), "low")],
@@ -24,7 +24,10 @@ describe("solution format projection", () => {
     const short = projectSolution(solution, "short");
     expect(short.showTeaching).toBe(false);
     expect(short.setupLine).toBe(solution.framing_line);
-    expect(short.derivationBlocks).toEqual([{ type: "equation", latex: "F=ma", annotation: "apply Newton's law" }]);
+    expect(short.derivationBlocks).toEqual([
+      { type: "equation", latex: "F=ma", annotation: "apply Newton's second law" },
+      { type: "equation", latex: "a=F/m", annotation: "solve for acceleration" },
+    ]);
     expect(short.realityChecks).toEqual([]);
     expect(short.commonErrors).toEqual([]);
     expect(short.takeaways).toEqual([]);

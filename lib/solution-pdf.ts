@@ -165,8 +165,8 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
   doc.roundedRect(MARGIN, finalY, CONTENT_WIDTH, finalH, 8).fillAndStroke("#F0FDF4", C.greenLight);
   if (projected.showTeaching) doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
   drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + (projected.showTeaching ? 24 : 15), CONTENT_WIDTH - 48, 30, C.green);
-  if (projected.showTeaching) doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + 56, { width: CONTENT_WIDTH - 30, align: "center" });
-  if (projected.showTeaching && solution.final_answer.option) doc.font("Helvetica").fontSize(8).fillColor(C.green).text(solution.final_answer.option, MARGIN + 15, finalY + 71, { width: CONTENT_WIDTH - 30, align: "center" });
+  doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + (projected.showTeaching ? 56 : 43), { width: CONTENT_WIDTH - 30, align: "center" });
+  if (solution.final_answer.option) doc.font("Helvetica").fontSize(8).fillColor(C.green).text(solution.final_answer.option, MARGIN + 15, finalY + (projected.showTeaching ? 71 : 55), { width: CONTENT_WIDTH - 30, align: "center" });
   doc.y = finalY + finalH + 6;
 
   if (projected.showTeaching) {
