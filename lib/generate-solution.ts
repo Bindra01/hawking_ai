@@ -237,16 +237,19 @@ function normalizeGeneratedSolution(value: unknown): unknown {
   if (!isRecord(value) || !isRecord(value.derivation) || !Array.isArray(value.derivation.blocks)) return value;
   const blocks = value.derivation.blocks.map((block) => {
     if (!isRecord(block) || block.type !== "equation") return block;
+    if (typeof block.annotation !== "string") return block;
     return { ...block, annotation: normalizeAnnotation(block.annotation) };
   });
   const equations = blocks.filter((block) => isRecord(block) && block.type === "equation");
   const finalLatex = isRecord(value.final_answer) && typeof value.final_answer.latex === "string"
     ? value.final_answer.latex.trim()
     : "";
+  const terminalLatex = String(equations.at(-1)?.latex ?? "");
   if (
     equations.length >= 2 &&
     finalLatex &&
-    normalizeLatex(String(equations.at(-1)?.latex ?? "")) !== normalizeLatex(finalLatex)
+    normalizeLatex(terminalLatex) !== normalizeLatex(finalLatex) &&
+    latexLeftSide(terminalLatex) !== latexLeftSide(finalLatex)
   ) {
     blocks.push({
       type: "equation",
@@ -323,6 +326,10 @@ function isEquationBlock(value: unknown): boolean {
 
 function normalizeLatex(value: string): string {
   return value.replace(/\s+/g, "").trim();
+}
+
+function latexLeftSide(value: string): string {
+  return normalizeLatex(value).split("=")[0] ?? "";
 }
 
 function isPriorityItemArray(value: unknown): boolean {

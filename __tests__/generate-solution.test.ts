@@ -139,7 +139,7 @@ describe("parseSolveGenerationResult", () => {
         ...validSolution.derivation,
         blocks: [
           { type: "equation", latex: "a=F/m", annotation: "Acceleration" },
-          { type: "equation", latex: "v=u+at", annotation: "substitute all known values into the constant acceleration relation now" },
+          { type: "equation", latex: "at=20\\,m/s", annotation: "substitute all known values into the constant acceleration relation now" },
         ],
       },
     };
@@ -154,6 +154,42 @@ describe("parseSolveGenerationResult", () => {
       expect.objectContaining({ annotation: "substitute all known values into the constant acceleration" }),
       expect.objectContaining({ latex: validSolution.final_answer.latex, annotation: "state the final calculated answer" }),
     ]);
+  });
+
+  it("rejects a contradictory terminal equation for the final quantity", () => {
+    const contradictory = {
+      ...validSolution,
+      derivation: {
+        ...validSolution.derivation,
+        blocks: validSolution.derivation.blocks.map((block, index) =>
+          index === validSolution.derivation.blocks.length - 1 ? { ...block, latex: "v=999" } : block
+        ),
+      },
+    };
+
+    expect(() => parseSolveGenerationResult(JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: contradictory,
+    }))).toThrow(/invalid structured solution/);
+  });
+
+  it.each([undefined, null, { prose: "not an annotation" }])("rejects a non-string equation annotation", (annotation) => {
+    const invalid = {
+      ...validSolution,
+      derivation: {
+        ...validSolution.derivation,
+        blocks: validSolution.derivation.blocks.map((block, index) =>
+          index === 0 ? { ...block, annotation } : block
+        ),
+      },
+    };
+
+    expect(() => parseSolveGenerationResult(JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: invalid,
+    }))).toThrow(/invalid structured solution/);
   });
 
   it("accepts a clarification response", () => {
