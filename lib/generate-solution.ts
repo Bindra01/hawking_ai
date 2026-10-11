@@ -184,7 +184,7 @@ export async function generateSolution(content: ResponseInputContent[]): Promise
     } catch (error) {
       lastError = error;
       if (!isRetryableProviderOutputError(error)) throw error;
-      console.warn(`Retrying unusable Solve output after attempt ${attempt + 1}.`, error);
+      if (attempt === 0) console.warn("Retrying unusable Solve output after attempt 1.", error);
     }
   }
   throw lastError instanceof Error ? lastError : new Error("The model returned unusable output.");
