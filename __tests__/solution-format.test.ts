@@ -12,7 +12,7 @@ const solution: SolveSolution = {
   step1: { label: "One", answer: "Answer", explanation: "Long explanation ".repeat(20), tip: { text: "High tip", priority: "high" }, warning: { text: "High warning", priority: "high" } },
   step2: { label: "Two", answer: "Answer", explanation: "Long explanation ".repeat(20), tip: { text: "Low tip", priority: "low" }, warning: null },
   step3: { label: "Three", answer: "Answer", explanation: "Long explanation ".repeat(20), tip: null, warning: null },
-  derivation: { label: "Derive", blocks: [{ type: "equation", latex: "F=ma", annotation: "Same math" }] },
+  derivation: { label: "Derive", blocks: [{ type: "subsection", title: "Long heading" }, { type: "prose", text: "Long derivation explanation" }, { type: "equation", latex: "F=ma", annotation: "apply Newton's law" }] },
   final_answer: { latex: "v=20", display: "20 m/s", option: "Option A" },
   reality_checks: [item("R1", "high"), item("R2", "high"), item("R3 long detail ".repeat(12), "low"), item("R4 long detail ".repeat(12), "low")],
   common_errors: [item("E1", "high"), item("E2", "high"), item("E3 long detail ".repeat(12), "low"), item("E4 long detail ".repeat(12), "low")],
@@ -20,36 +20,27 @@ const solution: SolveSolution = {
 };
 
 describe("solution format projection", () => {
-  it("makes Short a strict filtered subset with no tips and one critical warning", () => {
+  it("makes Short a bare worked derivation", () => {
     const short = projectSolution(solution, "short");
-    expect(short.framingLine).toBe("");
-    expect(short.steps[0].explanation).toBe("");
-    expect(short.steps[0].tip).toBeNull();
-    expect(short.steps[0].warning?.text).toBe("High warning");
-    expect(short.steps[1].tip).toBeNull();
-    expect(short.realityChecks).toHaveLength(2);
-    expect(short.commonErrors).toHaveLength(2);
-    expect(short.takeaways).toHaveLength(3);
-  });
-
-  it("prefers the step 2 warning when several warnings are high priority", () => {
-    const withWarnings = {
-      ...solution,
-      step2: { ...solution.step2, warning: { text: "Main warning", priority: "high" as const } },
-      step3: { ...solution.step3, warning: { text: "Third warning", priority: "high" as const } },
-    };
-    const short = projectSolution(withWarnings, "short");
-    expect(short.steps.map((step) => step.warning?.text ?? null)).toEqual([null, "Main warning", null]);
+    expect(short.showTeaching).toBe(false);
+    expect(short.setupLine).toBe(solution.framing_line);
+    expect(short.derivationBlocks).toEqual([{ type: "equation", latex: "F=ma", annotation: "apply Newton's law" }]);
+    expect(short.realityChecks).toEqual([]);
+    expect(short.commonErrors).toEqual([]);
+    expect(short.takeaways).toEqual([]);
+    expect(short.steps.every((step) => step.tip === null && step.warning === null && step.explanation === "")).toBe(true);
   });
 
   it("keeps every teaching field in Long", () => {
     const long = projectSolution(solution, "long");
-    expect(long.framingLine).toBe(solution.framing_line);
+    expect(long.showTeaching).toBe(true);
+    expect(long.setupLine).toBe(solution.framing_line);
     expect(long.steps[0].explanation).toBe(solution.step1.explanation);
     expect(long.steps[1].tip?.text).toBe("Low tip");
     expect(long.realityChecks).toHaveLength(4);
     expect(long.commonErrors).toHaveLength(4);
     expect(long.takeaways).toHaveLength(5);
+    expect(long.derivationBlocks).toEqual(solution.derivation.blocks);
   });
 
   it("calculates the rendered format ratio", () => {

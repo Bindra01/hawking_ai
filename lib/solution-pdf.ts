@@ -96,68 +96,87 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
   });
   doc.addPage();
 
-  doc.font("Helvetica-Bold").fontSize(format === "short" ? 11 : 14).fillColor(C.greenLight).text("HAWKING · THINK THROUGH PHYSICS", { characterSpacing: 1.2 });
-  doc.moveDown(format === "short" ? .55 : 1.2).font("Times-Bold").fontSize(format === "short" ? 19 : 25).fillColor(C.dark).text(solution.title.toUpperCase(), { width: CONTENT_WIDTH });
-  doc.moveDown(.25).font("Helvetica").fontSize(9).fillColor(C.gray).text(solution.tags.join(" · "));
+  if (projected.showTeaching) {
+    doc.font("Helvetica-Bold").fontSize(14).fillColor(C.greenLight).text("HAWKING · THINK THROUGH PHYSICS", { characterSpacing: 1.2 });
+    doc.moveDown(1.2);
+  }
+  doc.font("Times-Bold").fontSize(format === "short" ? 19 : 25).fillColor(C.dark).text(solution.title.toUpperCase(), { width: CONTENT_WIDTH });
+  if (projected.showTeaching) doc.moveDown(.25).font("Helvetica").fontSize(9).fillColor(C.gray).text(solution.tags.join(" · "));
   doc.moveDown(format === "short" ? .4 : .8).strokeColor(C.greenLight).lineWidth(2).moveTo(MARGIN, doc.y).lineTo(MARGIN + CONTENT_WIDTH, doc.y).stroke();
 
-  heading(doc, "THE PROBLEM");
+  if (projected.showTeaching) heading(doc, "THE PROBLEM");
   doc.font("Helvetica").fontSize(10).fillColor(C.dark).text(solution.problem_statement, { width: CONTENT_WIDTH, lineGap: 3 });
-  if (solution.problem_options.length) {
+  if (projected.showTeaching && solution.problem_options.length) {
     doc.moveDown(.45);
     solution.problem_options.forEach((option) => doc.text(option, { width: CONTENT_WIDTH }));
   }
-  if (projected.framingLine) {
-    doc.moveDown(.55).font("Times-Italic").fontSize(10).fillColor(C.gray).text(projected.framingLine, { width: CONTENT_WIDTH, lineGap: 2 });
+  if (projected.setupLine) {
+    doc.moveDown(.55).font("Times-Italic").fontSize(10).fillColor(C.gray).text(projected.setupLine, { width: CONTENT_WIDTH, lineGap: 2 });
   }
 
-  step(doc, 1, projected.steps[0], C.purple);
-  step(doc, 2, projected.steps[1], C.orange);
-  step(doc, 3, projected.steps[2], C.teal);
+  if (projected.showTeaching) {
+    step(doc, 1, projected.steps[0], C.purple);
+    step(doc, 2, projected.steps[1], C.orange);
+    step(doc, 3, projected.steps[2], C.teal);
+  }
 
   ensureSpace(doc, 80);
   doc.moveDown(1);
-  const y = doc.y;
-  doc.roundedRect(MARGIN, y, 66, 17, 8).fill(C.dark);
-  doc.font("Helvetica-Bold").fontSize(7).fillColor("#FFFFFF").text("STEPS 4-6", MARGIN + 8, y + 5);
-  doc.font("Helvetica-Bold").fontSize(12).fillColor(C.blue).text(solution.derivation.label, MARGIN + 77, y + 2, { width: CONTENT_WIDTH - 77 });
-  doc.y = y + 28;
+  if (projected.showTeaching) {
+    const y = doc.y;
+    doc.roundedRect(MARGIN, y, 66, 17, 8).fill(C.dark);
+    doc.font("Helvetica-Bold").fontSize(7).fillColor("#FFFFFF").text("STEPS 4-6", MARGIN + 8, y + 5);
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(C.blue).text(solution.derivation.label, MARGIN + 77, y + 2, { width: CONTENT_WIDTH - 77 });
+    doc.y = y + 28;
+  }
 
-  for (const block of solution.derivation.blocks) {
+  for (const block of projected.derivationBlocks) {
     if (block.type === "subsection") {
       ensureSpace(doc, 28);
       doc.moveDown(.5).font("Helvetica-Bold").fontSize(10.5).fillColor(C.blue).text(block.title, { width: CONTENT_WIDTH });
     } else if (block.type === "prose") {
       doc.moveDown(.3).font("Helvetica").fontSize(9.5).fillColor(C.dark).text(block.text, { width: CONTENT_WIDTH, lineGap: 2 });
     } else {
-      const h = block.type === "equation" && block.annotation ? 66 : 54;
+      const h = format === "short" ? 44 : (block.type === "equation" && block.annotation ? 66 : 54);
       ensureSpace(doc, h + 8);
       const blockY = doc.y + 4;
-      const bg = block.type === "boxed_result" ? "#F0FDF4" : "#F0F4FF";
-      const border = block.type === "boxed_result" ? C.greenLight : C.blue;
-      doc.rect(MARGIN, blockY, CONTENT_WIDTH, h).fill(bg).rect(MARGIN, blockY, 3, h).fill(border);
-      drawMath(doc, block.latex, MARGIN + 20, blockY + 7, CONTENT_WIDTH - 40, block.type === "equation" && block.annotation ? h - 27 : h - 14, block.type === "boxed_result" ? C.green : C.dark);
-      if (block.type === "equation" && block.annotation) doc.font("Times-Italic").fontSize(8).fillColor(C.gray).text(block.annotation, MARGIN + 14, blockY + h - 17, { width: CONTENT_WIDTH - 28, align: "center" });
+      if (format === "long") {
+        const bg = block.type === "boxed_result" ? "#F0FDF4" : "#F0F4FF";
+        const border = block.type === "boxed_result" ? C.greenLight : C.blue;
+        doc.rect(MARGIN, blockY, CONTENT_WIDTH, h).fill(bg).rect(MARGIN, blockY, 3, h).fill(border);
+      }
+      const mathWidth = format === "short" && block.type === "equation" && block.annotation ? 330 : CONTENT_WIDTH - 40;
+      drawMath(doc, block.latex, MARGIN + (format === "short" ? 0 : 20), blockY + 7, mathWidth, h - 14, block.type === "boxed_result" ? C.green : C.dark);
+      if (block.type === "equation" && block.annotation) {
+        doc.font("Times-Italic").fontSize(8).fillColor(C.gray).text(
+          block.annotation,
+          format === "short" ? MARGIN + 345 : MARGIN + 14,
+          format === "short" ? blockY + 17 : blockY + h - 17,
+          { width: format === "short" ? CONTENT_WIDTH - 345 : CONTENT_WIDTH - 28, align: format === "short" ? "left" : "center" }
+        );
+      }
       doc.y = blockY + h + 4;
     }
   }
 
-  const finalH = solution.final_answer.option ? 88 : 74;
+  const finalH = projected.showTeaching ? (solution.final_answer.option ? 88 : 74) : 60;
   ensureSpace(doc, finalH + 12);
   const finalY = doc.y + 8;
   doc.roundedRect(MARGIN, finalY, CONTENT_WIDTH, finalH, 8).fillAndStroke("#F0FDF4", C.greenLight);
-  doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
-  drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + 24, CONTENT_WIDTH - 48, 30, C.green);
-  doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + 56, { width: CONTENT_WIDTH - 30, align: "center" });
-  if (solution.final_answer.option) doc.font("Helvetica").fontSize(8).fillColor(C.green).text(solution.final_answer.option, MARGIN + 15, finalY + 71, { width: CONTENT_WIDTH - 30, align: "center" });
+  if (projected.showTeaching) doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
+  drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + (projected.showTeaching ? 24 : 15), CONTENT_WIDTH - 48, 30, C.green);
+  if (projected.showTeaching) doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + 56, { width: CONTENT_WIDTH - 30, align: "center" });
+  if (projected.showTeaching && solution.final_answer.option) doc.font("Helvetica").fontSize(8).fillColor(C.green).text(solution.final_answer.option, MARGIN + 15, finalY + 71, { width: CONTENT_WIDTH - 30, align: "center" });
   doc.y = finalY + finalH + 6;
 
-  heading(doc, "REALITY CHECK");
-  projected.realityChecks.forEach((item) => bullet(doc, "✓", item.text, C.greenLight, [item.heading, item.title].filter(Boolean).join(" — ")));
-  heading(doc, "WHERE STUDENTS GO WRONG", C.red);
-  projected.commonErrors.forEach((item, index) => bullet(doc, `${index + 1}.`, item.text, C.red, [item.heading, item.title].filter(Boolean).join(" — ")));
-  heading(doc, "TAKE THESE INTO YOUR NEXT PROBLEM");
-  projected.takeaways.forEach((item) => bullet(doc, "•", item.text, C.green, [item.heading, item.title].filter(Boolean).join(" — ")));
+  if (projected.showTeaching) {
+    heading(doc, "REALITY CHECK");
+    projected.realityChecks.forEach((item) => bullet(doc, "✓", item.text, C.greenLight, [item.heading, item.title].filter(Boolean).join(" — ")));
+    heading(doc, "WHERE STUDENTS GO WRONG", C.red);
+    projected.commonErrors.forEach((item, index) => bullet(doc, `${index + 1}.`, item.text, C.red, [item.heading, item.title].filter(Boolean).join(" — ")));
+    heading(doc, "TAKE THESE INTO YOUR NEXT PROBLEM");
+    projected.takeaways.forEach((item) => bullet(doc, "•", item.text, C.green, [item.heading, item.title].filter(Boolean).join(" — ")));
+  }
 
   ensureSpace(doc, 95);
   doc.moveDown(.8).strokeColor(C.border).lineWidth(1).moveTo(MARGIN, doc.y).lineTo(MARGIN + CONTENT_WIDTH, doc.y).stroke();

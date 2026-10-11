@@ -55,6 +55,10 @@ describe("parseSolveGenerationResult", () => {
       step1: { ...validSolution.step1, explanation: "Brief explanation." },
       step2: { ...validSolution.step2, explanation: "Brief explanation." },
       step3: { ...validSolution.step3, explanation: "Brief explanation." },
+      derivation: {
+        ...validSolution.derivation,
+        blocks: [{ type: "equation", latex: "x=1", annotation: "shared derivation content ".repeat(150) }],
+      },
     };
     const output = JSON.stringify({
       needs_clarification: false,
@@ -75,6 +79,10 @@ describe("parseSolveGenerationResult", () => {
       step1: { ...validSolution.step1, explanation: "Brief explanation." },
       step2: { ...validSolution.step2, explanation: "Brief explanation." },
       step3: { ...validSolution.step3, explanation: "Brief explanation." },
+      derivation: {
+        ...validSolution.derivation,
+        blocks: [{ type: "equation", latex: "x=1", annotation: "shared derivation content ".repeat(150) }],
+      },
     };
     const output = JSON.stringify({
       needs_clarification: false,

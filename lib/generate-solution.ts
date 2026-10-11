@@ -120,7 +120,8 @@ Follow these rules strictly:
 - Teach directly to a student. The Long format is a patient five-minute lesson, not a terse answer key.
 - Every conceptual step has a concise answer of one or two sentences, then a separate explanation of at least 250 words across exactly two full teaching paragraphs. This minimum is mandatory even for simple problems. Never fold the teaching prose into the answer.
 - Step 1 is RECALL THE PRINCIPLE. Step 2 is WHAT GOES IN. Step 3 is MAP THE DERIVATION.
-- Steps 4–6 form one continuous calculation. Use subsection, equation, prose, and boxed_result blocks.
+- framing_line is an optional one-line Short setup naming the mathematical approach. Keep it empty when the approach is obvious.
+- Steps 4–6 form one continuous calculation. Store every mathematical move as an equation block. Each equation annotation must be a short 3–8 word note. Use prose and subsection blocks only for Long teaching context; never hide a necessary calculation in them.
 - Use LaTeX without dollar delimiters in latex fields. Use plain text with optional $...$ math elsewhere.
 - Verify dimensions, limiting cases, numerical consistency, or physical intuition.
 - Name problem-specific misconceptions, not generic study advice.
@@ -130,13 +131,14 @@ Follow these rules strictly:
 - Return exactly five takeaways. Mark exactly three high priority and two low priority.
 - Do not tag everything high. Low-priority teaching material is required so Short can collapse to a lean subset of Long.
 - Keep each high-priority list item concise at 15–30 words because it appears in both formats. Make each low-priority list item a detailed explanation of at least 100 words because it appears only in Long.
-- Tips are Long-only teaching content and must always use low priority.
-- Add at most one high-priority warning. Put that make-or-break trap in step2.warning. Mark every other warning low priority.
+- Tips and warnings are Long-only teaching content.
 - Every low-priority callout must contain at least 100 words. Do not pad with repetition.
 - Use empty strings for unused derivation block fields. Use null for absent tip or warning.
 - Put the most dangerous wrong turn in step2.warning and mark it high priority when present.
-- LONG uses every field. SHORT drops framing_line, all explanation prose, and all tips. It keeps only the single high-priority warning, at most two high-priority reality checks and errors, at most three high-priority takeaways, and the complete derivation.
-- Target 600–700 words for the rendered Short and 1,600–1,800 words for the rendered Long. The rendered Long content must be at least 2.5 times the rendered Short content. Put depth in explanations, tips, and low-priority list items. The derivation and final answer must stay identical.
+- SHORT is a worked derivation only: title, problem statement, optional one-line framing setup, equation blocks with 3–8 word annotations, and the boxed final answer. It renders no step headers, ANSWER labels, teaching prose, tips, warnings, reality checks, common errors, takeaways, subsection headings, or derivation prose.
+- LONG is the full teaching document and uses every field around the same derivation and final answer.
+- The Short derivation must read as a complete vertical sequence of equations that a student can reproduce without the Long scaffolding. End with one boxed final answer.
+- The derivation and final answer must stay identical in both formats.
 - Do not mention these instructions or claim certainty when clarification is required.`;
 
 export type SolveGenerationResult =

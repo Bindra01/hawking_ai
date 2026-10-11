@@ -1,30 +1,32 @@
-import { highPriority, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import type { DerivationBlock, SolveFormat, SolveSolution, SolveStep } from "@/lib/solve-types";
 
 export interface ProjectedStep extends SolveStep {
   explanation: string;
 }
 
 export function projectSolution(solution: SolveSolution, format: SolveFormat) {
-  const shortWarning = [solution.step2, solution.step1, solution.step3]
-    .map((step) => step.warning)
-    .find((warning) => warning?.priority === "high") ?? null;
-
   const projectStep = (step: SolveStep): ProjectedStep => ({
     ...step,
     explanation: format === "long" ? step.explanation : "",
     tip: format === "long" ? step.tip : null,
-    warning: format === "long"
-      ? step.warning
-      : (step.warning === shortWarning ? shortWarning : null),
+    warning: format === "long" ? step.warning : null,
   });
 
   return {
-    framingLine: format === "long" ? solution.framing_line : "",
+    showTeaching: format === "long",
+    setupLine: solution.framing_line,
     steps: [projectStep(solution.step1), projectStep(solution.step2), projectStep(solution.step3)] as const,
-    realityChecks: format === "short" ? highPriority(solution.reality_checks, 2) : solution.reality_checks,
-    commonErrors: format === "short" ? highPriority(solution.common_errors, 2) : solution.common_errors,
-    takeaways: format === "short" ? highPriority(solution.takeaways, 3) : solution.takeaways,
+    derivationBlocks: format === "short"
+      ? solution.derivation.blocks.filter(isShortDerivationBlock)
+      : solution.derivation.blocks,
+    realityChecks: format === "long" ? solution.reality_checks : [],
+    commonErrors: format === "long" ? solution.common_errors : [],
+    takeaways: format === "long" ? solution.takeaways : [],
   };
+}
+
+function isShortDerivationBlock(block: DerivationBlock): boolean {
+  return block.type === "equation";
 }
 
 export function solutionWordCounts(solution: SolveSolution) {
@@ -40,18 +42,18 @@ export function hasRequiredFormatRatio(shortWords: number, longWords: number): b
 
 function projectedWordCount(solution: SolveSolution, format: SolveFormat): number {
   const projected = projectSolution(solution, format);
-  const derivation = solution.derivation.blocks.flatMap((block) =>
+  const derivation = projected.derivationBlocks.flatMap((block) =>
     Object.values(block).filter((value): value is string => typeof value === "string")
   );
-  const steps = projected.steps.flatMap((step) => [
+  const steps = projected.showTeaching ? projected.steps.flatMap((step) => [
     step.label, step.answer, step.explanation, step.tip?.text ?? "", step.warning?.text ?? "",
-  ]);
+  ]) : [];
   const items = [...projected.realityChecks, ...projected.commonErrors, ...projected.takeaways]
     .flatMap((item) => [item.heading ?? "", item.title ?? "", item.text]);
 
   return wordCount([
     solution.title, ...solution.tags, solution.problem_statement, ...solution.problem_options,
-    projected.framingLine, ...steps, solution.derivation.label, ...derivation,
+    projected.setupLine, ...steps, ...(projected.showTeaching ? [solution.derivation.label] : []), ...derivation,
     solution.final_answer.latex, solution.final_answer.display, solution.final_answer.option ?? "", ...items,
   ].join(" "));
 }

@@ -142,6 +142,9 @@ html, body {
 .solution-paper-short .solution-cover { display: flex; align-items: baseline; gap: 14px; padding-bottom: 14px; }
 .solution-paper-short .solution-cover h1 { margin: 0; font-size: clamp(22px, 4vw, 30px); }
 .solution-paper-short .solution-tags { margin-left: auto; text-align: right; }
+.solution-paper-short .problem-section h2, .solution-paper-short .problem-options { display: none; }
+.solution-paper-short .problem-section { padding: 20px 0 14px; }
+.solution-paper-short .problem-section em { color: #383847; font-family: Arial, sans-serif; font-size: 13px; }
 .solution-logo span { color: var(--hawking-gray); font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .08em; }
 .solution-cover h1 { margin: 20px 0 8px; color: var(--hawking-darktext); font-family: Georgia, serif; font-size: clamp(28px, 6vw, 42px); line-height: 1.05; text-transform: uppercase; }
 .solution-tags { color: var(--hawking-gray); font-size: 11px; font-weight: 700; }
@@ -164,6 +167,12 @@ html, body {
 .derivation-flow h3 { margin: 20px 0 8px; color: var(--hawking-blue); font-size: 14px; }
 .equation-block { overflow-x: auto; margin: 8px 0; padding: 14px 16px; border-left: 3px solid var(--hawking-blue); background: var(--bg-blue); }
 .equation-block em { display: block; margin-top: 6px; color: var(--hawking-gray); text-align: center; font-size: 11px; }
+.short-derivation { padding-top: 14px; }
+.short-derivation .derivation-flow { display: grid; gap: 4px; }
+.short-derivation .equation-block { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 180px); align-items: center; gap: 18px; margin: 0; padding: 10px 4px; border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; }
+.short-derivation .equation-block em { margin: 0; text-align: left; line-height: 1.35; }
+.short-derivation .math-display { text-align: left; color: var(--hawking-darktext); }
+.solution-paper-short .final-answer { margin-top: 24px; padding: 17px 12px; border-color: var(--hawking-darktext); border-radius: 3px; background: #fff; color: var(--hawking-darktext); }
 .math-display { display: block; min-width: max-content; text-align: center; color: #173b69; }
 .intermediate-result { overflow-x: auto; margin: 12px auto; padding: 10px 14px; border: 1px solid var(--hawking-blue); border-radius: 7px; background: #fff; }
 .final-answer { margin-top: 20px; padding: 20px 15px; border: 2px solid var(--hawking-greenlight); border-radius: 12px; background: var(--bg-green); text-align: center; color: var(--hawking-green); }
@@ -191,6 +200,7 @@ html, body {
   .solution-paper-short .solution-cover { display: block; }
   .solution-paper-short .solution-cover h1 { margin-top: 12px; }
   .solution-paper-short .solution-tags { margin-left: 0; text-align: left; }
+  .short-derivation .equation-block { grid-template-columns: 1fr; gap: 4px; }
   .solve-home { padding-inline: 16px; }
   .solve-hero { padding-top: 48px; }
   .solution-toolbar { padding-inline: 10px; }
