@@ -5,6 +5,7 @@ import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AppNav from "@/components/AppNav";
 import type { SolveSolution } from "@/lib/solve-types";
+import { isUnauthorizedSolveResponse } from "@/lib/solve-response";
 
 type UploadKind = "photo" | "pdf";
 
@@ -49,9 +50,10 @@ export default function SolveLanding() {
 
     try {
       const response = await fetch("/api/solve", { method: "POST", body });
-      const data = await response.json();
-      if (response.status === 401) {
-        router.replace("/login?next=/home");
+      const data = await response.json().catch(() => ({}));
+      if (isUnauthorizedSolveResponse(response.status, data.error ?? data.code)) {
+        setError("");
+        window.location.replace("/login?next=/home&reason=session-expired");
         return;
       }
       if (!response.ok) throw new Error(data.error || "The solution could not be generated. Please try again.");

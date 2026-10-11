@@ -15,7 +15,12 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Your session expired. Sign in again to solve this problem.", code: "SESSION_EXPIRED" },
+        { status: 401, headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
     const slot = await acquireSolveSlot(user.id);
     if (!slot.allowed) {

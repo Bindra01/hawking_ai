@@ -2,12 +2,15 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase-client";
 import { authNextCookieValue, safeNextPath } from "@/lib/auth-redirect";
 
-export default function LoginPage() {
+function LoginContent() {
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const sessionExpired = searchParams.get("reason") === "session-expired";
 
   async function handleGoogleLogin() {
     setLoading(true);
@@ -57,6 +60,12 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {sessionExpired && (
+          <div role="status" className="w-full rounded-xl border px-4 py-3 text-center text-sm" style={{ borderColor: "#f87171", color: "#fecaca", background: "#3b1f2a" }}>
+            Your session expired. Sign in again to solve your problem.
+          </div>
+        )}
+
         {/* Google Sign In */}
         <button
           onClick={handleGoogleLogin}
@@ -93,5 +102,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" style={{ background: "#131327" }} />}>
+      <LoginContent />
+    </Suspense>
   );
 }
