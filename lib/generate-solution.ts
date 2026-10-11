@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import type { SolveSolution } from "@/lib/solve-types";
-import { solutionWordCounts } from "@/lib/solution-format";
+import { hasRequiredFormatRatio, solutionWordCounts } from "@/lib/solution-format";
 
 let client: OpenAI | null = null;
 
@@ -194,7 +194,7 @@ export function parseSolveGenerationResult(outputText: string): SolveGenerationR
     throw new Error("The model returned an invalid structured solution.");
   }
   const counts = solutionWordCounts(parsed.solution);
-  if (counts.short === 0 || counts.long / counts.short < 2.5) {
+  if (!hasRequiredFormatRatio(counts.short, counts.long)) {
     throw new Error(`The model returned insufficient Long-format depth (${counts.long}/${counts.short} words).`);
   }
   return { needs_clarification: false, clarification_question: "", solution: parsed.solution };

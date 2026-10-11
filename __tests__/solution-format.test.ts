@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { projectSolution, solutionWordCounts } from "@/lib/solution-format";
+import { hasRequiredFormatRatio, projectSolution, solutionWordCounts } from "@/lib/solution-format";
 import type { SolveSolution } from "@/lib/solve-types";
 
 const item = (text: string, priority: "high" | "low") => ({ heading: text, title: text, text, priority });
@@ -45,5 +45,10 @@ describe("solution format projection", () => {
   it("calculates the rendered format ratio", () => {
     const counts = solutionWordCounts(solution);
     expect(counts.long).toBeGreaterThan(counts.short);
+  });
+
+  it("enforces the exact 2.5 ratio boundary", () => {
+    expect(hasRequiredFormatRatio(100, 249)).toBe(false);
+    expect(hasRequiredFormatRatio(100, 250)).toBe(true);
   });
 });

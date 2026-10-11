@@ -28,6 +28,10 @@ export function solutionWordCounts(solution: SolveSolution) {
   };
 }
 
+export function hasRequiredFormatRatio(shortWords: number, longWords: number): boolean {
+  return shortWords > 0 && longWords / shortWords >= 2.5;
+}
+
 function projectedWordCount(solution: SolveSolution, format: SolveFormat): number {
   const projected = projectSolution(solution, format);
   const derivation = solution.derivation.blocks.flatMap((block) =>
