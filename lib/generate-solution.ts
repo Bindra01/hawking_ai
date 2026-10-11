@@ -133,38 +133,55 @@ export type SolveGenerationResult =
   | { needs_clarification: false; clarification_question: ""; solution: SolveSolution };
 
 export async function generateSolution(content: ResponseInputContent[]): Promise<SolveGenerationResult> {
-  const response = await getClient().responses.create({
-    model: process.env.OPENAI_SOLVE_MODEL || "gpt-4o",
-    instructions: SYSTEM_PROMPT,
-    input: [{ role: "user", content }],
-    text: {
-      verbosity: "medium",
-      format: {
-        type: "json_schema",
-        name: "hawking_solution",
-        strict: true,
-        schema: {
-          type: "object",
-          additionalProperties: false,
-          required: ["needs_clarification", "clarification_question", "solution"],
-          properties: {
-            needs_clarification: { type: "boolean" },
-            clarification_question: { type: "string" },
-            solution: { anyOf: [{ type: "null" }, solutionSchema] },
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await getClient().responses.create({
+      model: process.env.OPENAI_SOLVE_MODEL || "gpt-4o",
+      instructions: SYSTEM_PROMPT,
+      input: [{ role: "user", content }],
+      max_output_tokens: 12_000,
+      text: {
+        verbosity: "medium",
+        format: {
+          type: "json_schema",
+          name: "hawking_solution",
+          strict: true,
+          schema: {
+            type: "object",
+            additionalProperties: false,
+            required: ["needs_clarification", "clarification_question", "solution"],
+            properties: {
+              needs_clarification: { type: "boolean" },
+              clarification_question: { type: "string" },
+              solution: { anyOf: [{ type: "null" }, solutionSchema] },
+            },
           },
         },
       },
-    },
-  });
+    });
 
-  if (!response.output_text) throw new Error("The model returned an empty response.");
-  const parsed = JSON.parse(response.output_text) as SolveGenerationResult;
-  if (parsed.needs_clarification || !parsed.solution) {
-    return {
-      needs_clarification: true,
-      clarification_question: parsed.clarification_question || "Please provide a clearer problem statement.",
-      solution: null,
-    };
+    if (!response.output_text) {
+      lastError = new Error(`The model returned no text. Response status: ${response.status}.`);
+      continue;
+    }
+
+    try {
+      const parsed = JSON.parse(response.output_text) as SolveGenerationResult;
+      if (parsed.needs_clarification || !parsed.solution) {
+        return {
+          needs_clarification: true,
+          clarification_question: parsed.clarification_question || "Please provide a clearer problem statement.",
+          solution: null,
+        };
+      }
+      return { needs_clarification: false, clarification_question: "", solution: parsed.solution };
+    } catch (error) {
+      lastError = error;
+    }
   }
-  return { needs_clarification: false, clarification_question: "", solution: parsed.solution };
+
+  throw new Error("The model returned an invalid structured solution after two attempts.", {
+    cause: lastError,
+  });
 }
