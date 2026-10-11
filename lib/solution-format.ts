@@ -5,11 +5,17 @@ export interface ProjectedStep extends SolveStep {
 }
 
 export function projectSolution(solution: SolveSolution, format: SolveFormat) {
+  const shortWarning = [solution.step2, solution.step1, solution.step3]
+    .map((step) => step.warning)
+    .find((warning) => warning?.priority === "high") ?? null;
+
   const projectStep = (step: SolveStep): ProjectedStep => ({
     ...step,
     explanation: format === "long" ? step.explanation : "",
-    tip: showCallout(step.tip, format) ? step.tip : null,
-    warning: showCallout(step.warning, format) ? step.warning : null,
+    tip: format === "long" && showCallout(step.tip, format) ? step.tip : null,
+    warning: format === "long"
+      ? (showCallout(step.warning, format) ? step.warning : null)
+      : (step.warning === shortWarning ? shortWarning : null),
   });
 
   return {

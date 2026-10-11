@@ -44,6 +44,26 @@ describe("parseSolveGenerationResult", () => {
     expect(result.needs_clarification).toBe(false);
   });
 
+  it("can return a valid solution when only the format ratio misses the quality target", () => {
+    const thinLongSolution = {
+      ...validSolution,
+      step1: { ...validSolution.step1, explanation: "Brief explanation." },
+      step2: { ...validSolution.step2, explanation: "Brief explanation." },
+      step3: { ...validSolution.step3, explanation: "Brief explanation." },
+    };
+    const output = JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: thinLongSolution,
+    });
+
+    expect(() => parseSolveGenerationResult(output)).toThrow(/insufficient Long-format depth/);
+    expect(parseSolveGenerationResult(output, { enforceFormatRatio: false })).toMatchObject({
+      needs_clarification: false,
+      solution: thinLongSolution,
+    });
+  });
+
   it("accepts a clarification response", () => {
     expect(parseSolveGenerationResult(JSON.stringify({
       needs_clarification: true,

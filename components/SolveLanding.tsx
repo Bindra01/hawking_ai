@@ -49,12 +49,12 @@ export default function SolveLanding() {
 
     try {
       const response = await fetch("/api/solve", { method: "POST", body });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (response.status === 401) {
         router.replace("/login?next=/home");
         return;
       }
-      if (!response.ok) throw new Error(data.error || "The solution could not be generated.");
+      if (!response.ok) throw new Error(data.error || "The solution could not be generated. Please try again.");
       if (data.needs_clarification) {
         setClarification(data.clarification_question);
         return;

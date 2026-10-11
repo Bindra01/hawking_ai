@@ -20,16 +20,26 @@ const solution: SolveSolution = {
 };
 
 describe("solution format projection", () => {
-  it("makes Short a strict filtered subset while preserving high callouts", () => {
+  it("makes Short a strict filtered subset with no tips and one critical warning", () => {
     const short = projectSolution(solution, "short");
     expect(short.framingLine).toBe("");
     expect(short.steps[0].explanation).toBe("");
-    expect(short.steps[0].tip?.text).toBe("High tip");
+    expect(short.steps[0].tip).toBeNull();
     expect(short.steps[0].warning?.text).toBe("High warning");
     expect(short.steps[1].tip).toBeNull();
     expect(short.realityChecks).toHaveLength(2);
     expect(short.commonErrors).toHaveLength(2);
     expect(short.takeaways).toHaveLength(3);
+  });
+
+  it("prefers the step 2 warning when several warnings are high priority", () => {
+    const withWarnings = {
+      ...solution,
+      step2: { ...solution.step2, warning: { text: "Main warning", priority: "high" as const } },
+      step3: { ...solution.step3, warning: { text: "Third warning", priority: "high" as const } },
+    };
+    const short = projectSolution(withWarnings, "short");
+    expect(short.steps.map((step) => step.warning?.text ?? null)).toEqual([null, "Main warning", null]);
   });
 
   it("keeps every teaching field in Long", () => {

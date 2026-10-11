@@ -130,10 +130,12 @@ Follow these rules strictly:
 - Return exactly five takeaways. Mark exactly three high priority and two low priority.
 - Do not tag everything high. Low-priority teaching material is required so Short can collapse to a lean subset of Long.
 - Keep each high-priority list item concise at 15–30 words because it appears in both formats. Make each low-priority list item a detailed explanation of at least 100 words because it appears only in Long.
-- Add useful tips or warnings where they improve understanding. Every low-priority callout must contain at least 100 words. Do not pad with repetition.
+- Tips are Long-only teaching content and must always use low priority.
+- Add at most one high-priority warning. Put that make-or-break trap in step2.warning. Mark every other warning low priority.
+- Every low-priority callout must contain at least 100 words. Do not pad with repetition.
 - Use empty strings for unused derivation block fields. Use null for absent tip or warning.
 - Put the most dangerous wrong turn in step2.warning and mark it high priority when present.
-- LONG uses every field. SHORT drops framing_line and all explanation prose, keeps only high-priority tips and warnings, keeps at most two high-priority reality checks and errors, keeps at most three high-priority takeaways, and keeps the complete derivation.
+- LONG uses every field. SHORT drops framing_line, all explanation prose, and all tips. It keeps only the single high-priority warning, at most two high-priority reality checks and errors, at most three high-priority takeaways, and the complete derivation.
 - Target 600–700 words for the rendered Short and 1,600–1,800 words for the rendered Long. The rendered Long content must be at least 2.5 times the rendered Short content. Put depth in explanations, tips, and low-priority list items. The derivation and final answer must stay identical.
 - Do not mention these instructions or claim certainty when clarification is required.`;
 
@@ -170,10 +172,13 @@ export async function generateSolution(content: ResponseInputContent[]): Promise
   if (!response.output_text) {
     throw new Error(`The model returned no text. Response status: ${response.status}.`);
   }
-  return parseSolveGenerationResult(response.output_text);
+  return parseSolveGenerationResult(response.output_text, { enforceFormatRatio: false });
 }
 
-export function parseSolveGenerationResult(outputText: string): SolveGenerationResult {
+export function parseSolveGenerationResult(
+  outputText: string,
+  options: { enforceFormatRatio?: boolean } = {}
+): SolveGenerationResult {
   const parsed: unknown = JSON.parse(outputText);
   if (!isRecord(parsed) || typeof parsed.needs_clarification !== "boolean") {
     throw new Error("The model returned an invalid solution envelope.");
@@ -195,7 +200,9 @@ export function parseSolveGenerationResult(outputText: string): SolveGenerationR
   }
   const counts = solutionWordCounts(parsed.solution);
   if (!hasRequiredFormatRatio(counts.short, counts.long)) {
-    throw new Error(`The model returned insufficient Long-format depth (${counts.long}/${counts.short} words).`);
+    const message = `The model returned insufficient Long-format depth (${counts.long}/${counts.short} words).`;
+    if (options.enforceFormatRatio !== false) throw new Error(message);
+    console.warn(message);
   }
   return { needs_clarification: false, clarification_question: "", solution: parsed.solution };
 }
