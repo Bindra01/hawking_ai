@@ -16,16 +16,13 @@ describe("highPriority", () => {
     ]);
   });
 
-  it("fills short sections when the model returns too few high-priority items", () => {
+  it("does not fill short sections with low-priority items", () => {
     const items: PriorityItem[] = [
       { text: "high one", priority: "high" },
       { text: "fallback one", priority: "low" },
       { text: "fallback two", priority: "low" },
     ];
 
-    expect(highPriority(items, 2).map((item) => item.text)).toEqual([
-      "high one",
-      "fallback one",
-    ]);
+    expect(highPriority(items, 2).map((item) => item.text)).toEqual(["high one"]);
   });
 });

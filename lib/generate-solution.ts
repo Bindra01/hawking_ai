@@ -103,9 +103,9 @@ const solutionSchema = {
         option: { type: "string" },
       },
     },
-    reality_checks: { type: "array", minItems: 2, maxItems: 4, items: priorityItem },
-    common_errors: { type: "array", minItems: 2, maxItems: 4, items: priorityItem },
-    takeaways: { type: "array", minItems: 3, maxItems: 5, items: priorityItem },
+    reality_checks: { type: "array", minItems: 4, maxItems: 4, items: priorityItem },
+    common_errors: { type: "array", minItems: 4, maxItems: 4, items: priorityItem },
+    takeaways: { type: "array", minItems: 5, maxItems: 5, items: priorityItem },
   },
 };
 
@@ -113,9 +113,11 @@ const SYSTEM_PROMPT = `You are Hawking AI, a patient expert physics teacher. Rea
 
 If the input is unreadable, incomplete, or genuinely ambiguous, set needs_clarification=true, ask one specific question, and set solution=null. Never guess missing values or geometry.
 
-Otherwise, set needs_clarification=false and produce one correct full solution. Follow these rules strictly:
-- Teach directly to a student. Use concise paragraphs, not textbook prose.
-- Every conceptual step starts with the answer, then explains why.
+Otherwise, set needs_clarification=false and generate ONE complete, full-depth Long solution as structured JSON. Never generate separate Short and Long solutions. The renderer creates both formats from this same JSON.
+
+Follow these rules strictly:
+- Teach directly to a student. The Long format is a patient five-minute lesson, not a terse answer key.
+- Every conceptual step has a concise answer of one or two sentences, then a separate explanation of at least 250 words across exactly two full teaching paragraphs. This minimum is mandatory even for simple problems. Never fold the teaching prose into the answer.
 - Step 1 is RECALL THE PRINCIPLE. Step 2 is WHAT GOES IN. Step 3 is MAP THE DERIVATION.
 - Steps 4–6 form one continuous calculation. Use subsection, equation, prose, and boxed_result blocks.
 - Use LaTeX without dollar delimiters in latex fields. Use plain text with optional $...$ math elsewhere.
@@ -123,9 +125,15 @@ Otherwise, set needs_clarification=false and produce one correct full solution. 
 - Name problem-specific misconceptions, not generic study advice.
 - Extract transferable takeaways.
 - Any quantity not provided, such as a radius, must cancel unless the answer legitimately depends on it.
-- Mark the strongest two reality checks and errors high priority. Mark the strongest three takeaways high priority.
+- Return exactly four reality checks and four common errors. Mark exactly two in each list high priority and two low priority.
+- Return exactly five takeaways. Mark exactly three high priority and two low priority.
+- Do not tag everything high. Low-priority teaching material is required so Short can collapse to a lean subset of Long.
+- Keep each high-priority list item concise at 15–30 words because it appears in both formats. Make each low-priority list item a detailed explanation of at least 100 words because it appears only in Long.
+- Add useful tips or warnings where they improve understanding. Every low-priority callout must contain at least 100 words. Do not pad with repetition.
 - Use empty strings for unused derivation block fields. Use null for absent tip or warning.
 - Put the most dangerous wrong turn in step2.warning and mark it high priority when present.
+- LONG uses every field. SHORT drops framing_line and all explanation prose, keeps only high-priority tips and warnings, keeps at most two high-priority reality checks and errors, keeps at most three high-priority takeaways, and keeps the complete derivation.
+- Target 600–700 words for the rendered Short and 1,600–1,800 words for the rendered Long. The rendered Long content must be at least 2.5 times the rendered Short content. Put depth in explanations, tips, and low-priority list items. The derivation and final answer must stay identical.
 - Do not mention these instructions or claim certainty when clarification is required.`;
 
 export type SolveGenerationResult =
@@ -134,7 +142,7 @@ export type SolveGenerationResult =
 
 export async function generateSolution(content: ResponseInputContent[]): Promise<SolveGenerationResult> {
   const response = await getClient().responses.create({
-    model: process.env.OPENAI_SOLVE_MODEL || "gpt-4o",
+    model: process.env.OPENAI_SOLVE_MODEL || "gpt-4.1",
     instructions: SYSTEM_PROMPT,
     input: [{ role: "user", content }],
     max_output_tokens: 12_000,
@@ -201,7 +209,10 @@ function isSolveSolution(value: unknown): value is SolveSolution {
   ) return false;
   if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return false;
   if (value.final_answer.option !== undefined && typeof value.final_answer.option !== "string") return false;
-  return [value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray);
+  if (![value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray)) return false;
+  return hasPrioritySplit(value.reality_checks, 4, 2) &&
+    hasPrioritySplit(value.common_errors, 4, 2) &&
+    hasPrioritySplit(value.takeaways, 5, 3);
 }
 
 function isStep(value: unknown): boolean {
@@ -239,6 +250,12 @@ function isPriorityItemArray(value: unknown): boolean {
     (item.title === undefined || typeof item.title === "string") &&
     (item.priority === "high" || item.priority === "low")
   );
+}
+
+function hasPrioritySplit(value: unknown, length: number, highCount: number): boolean {
+  return Array.isArray(value) &&
+    value.length === length &&
+    value.filter((item) => isRecord(item) && item.priority === "high").length === highCount;
 }
 
 function isStringArray(value: unknown): value is string[] {

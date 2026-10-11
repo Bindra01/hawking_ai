@@ -139,6 +139,9 @@ html, body {
 .download-popover button:hover { background: #f4f6f3; }
 .solution-paper { width: min(calc(100% - 24px), 780px); margin: 18px auto 0; padding: clamp(25px, 6vw, 58px); border: 1px solid #dfe2dd; border-radius: 8px; background: var(--bg-page); box-shadow: 0 12px 40px #24302618; }
 .solution-cover { padding-bottom: 26px; border-bottom: 2px solid var(--hawking-greenlight); }
+.solution-paper-short .solution-cover { display: flex; align-items: baseline; gap: 14px; padding-bottom: 14px; }
+.solution-paper-short .solution-cover h1 { margin: 0; font-size: clamp(22px, 4vw, 30px); }
+.solution-paper-short .solution-tags { margin-left: auto; text-align: right; }
 .solution-logo span { color: var(--hawking-gray); font-family: Arial, sans-serif; font-size: 9px; letter-spacing: .08em; }
 .solution-cover h1 { margin: 20px 0 8px; color: var(--hawking-darktext); font-family: Georgia, serif; font-size: clamp(28px, 6vw, 42px); line-height: 1.05; text-transform: uppercase; }
 .solution-tags { color: var(--hawking-gray); font-size: 11px; font-weight: 700; }
@@ -185,6 +188,9 @@ html, body {
 .solution-empty a { padding: 11px 18px; border-radius: 12px; background: var(--hawking-greenlight); color: #183008; font-weight: 900; }
 
 @media (max-width: 520px) {
+  .solution-paper-short .solution-cover { display: block; }
+  .solution-paper-short .solution-cover h1 { margin-top: 12px; }
+  .solution-paper-short .solution-tags { margin-left: 0; text-align: left; }
   .solve-home { padding-inline: 16px; }
   .solve-hero { padding-top: 48px; }
   .solution-toolbar { padding-inline: 10px; }

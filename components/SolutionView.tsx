@@ -10,13 +10,9 @@ function MathBlock({ latex, inline = false }: { latex: string; inline?: boolean 
   return <span className={inline ? "math-inline" : "math-display"} dangerouslySetInnerHTML={{ __html: katex.renderToString(latex, { displayMode: !inline, throwOnError: false, output: "html", trust: false }) }} />;
 }
 
-function firstLine(text: string) {
-  return text.split(/(?<=[.!?])\s+/)[0] || text;
-}
-
 function StepSection({ number, step, color, format }: { number: number; step: SolveStep; color: string; format: SolveFormat }) {
   const tipVisible = step.tip && (format === "long" || step.tip.priority === "high");
-  const warningVisible = step.warning && (format === "long" || step.warning.priority === "high");
+  const warningVisible = step.warning && (format === "long" || (number === 2 && step.warning.priority === "high"));
   return (
     <section className="solution-section">
       <div className="step-heading">
@@ -24,7 +20,7 @@ function StepSection({ number, step, color, format }: { number: number; step: So
         <h2 style={{ color }}>{step.label}</h2>
       </div>
       <div className="answer-box"><strong>ANSWER</strong><p>{step.answer}</p></div>
-      {step.explanation && <p className="solution-explanation">{format === "short" ? firstLine(step.explanation) : step.explanation}</p>}
+      {format === "long" && step.explanation && <p className="solution-explanation">{step.explanation}</p>}
       {tipVisible && <div className="tip-box"><strong>TIP</strong><span>{step.tip?.text}</span></div>}
       {warningVisible && <div className="warning-box"><strong>WARNING</strong><span>{step.warning?.text}</span></div>}
     </section>
@@ -80,7 +76,7 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
         </div>
       </header>
 
-      <article className="solution-paper">
+      <article className={`solution-paper solution-paper-${format}`}>
         <div className="solution-cover">
           <div className="solution-logo">HAWKING <span>· Think Through Physics</span></div>
           <h1>{solution.title}</h1>
@@ -91,7 +87,7 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
           <h2>THE PROBLEM</h2>
           <p>{solution.problem_statement}</p>
           {solution.problem_options.length > 0 && <div className="problem-options">{solution.problem_options.map((option) => <span key={option}>{option}</span>)}</div>}
-          <em>{solution.framing_line}</em>
+          {format === "long" && <em>{solution.framing_line}</em>}
         </section>
 
         <StepSection number={1} step={solution.step1} color="var(--hawking-purple)" format={format} />

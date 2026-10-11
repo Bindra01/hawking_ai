@@ -63,10 +63,10 @@ function step(doc: PDFKit.PDFDocument, number: number, data: SolveStep, color: s
   doc.font("Helvetica-Bold").fontSize(12).fillColor(color).text(data.label, MARGIN + 62, y + 2, { width: CONTENT_WIDTH - 62 });
   doc.y = y + 27;
   callout(doc, "ANSWER", data.answer, C.greenLight, "#F0FDF4");
-  const explanation = format === "short" ? data.explanation.split(/(?<=[.!?])\s+/)[0] : data.explanation;
+  const explanation = format === "long" ? data.explanation : "";
   if (explanation) doc.font("Helvetica").fontSize(9.5).fillColor(C.dark).text(explanation, MARGIN, doc.y + 4, { width: CONTENT_WIDTH, lineGap: 3 });
   if (data.tip && (format === "long" || data.tip.priority === "high")) callout(doc, "TIP", data.tip.text, C.gold, "#FFFBEB");
-  if (data.warning && (format === "long" || data.warning.priority === "high")) callout(doc, "WARNING", data.warning.text, C.red, "#FFF5F5");
+  if (data.warning && (format === "long" || (number === 2 && data.warning.priority === "high"))) callout(doc, "WARNING", data.warning.text, C.red, "#FFF5F5");
 }
 
 function bullet(doc: PDFKit.PDFDocument, marker: string, text: string, markerColor: string, boldPrefix = "") {
@@ -95,10 +95,10 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
   });
   doc.addPage();
 
-  doc.font("Helvetica-Bold").fontSize(14).fillColor(C.greenLight).text("HAWKING · THINK THROUGH PHYSICS", { characterSpacing: 1.2 });
-  doc.moveDown(1.2).font("Times-Bold").fontSize(25).fillColor(C.dark).text(solution.title.toUpperCase(), { width: CONTENT_WIDTH });
-  doc.moveDown(.35).font("Helvetica").fontSize(9).fillColor(C.gray).text(solution.tags.join(" · "));
-  doc.moveDown(.8).strokeColor(C.greenLight).lineWidth(2).moveTo(MARGIN, doc.y).lineTo(MARGIN + CONTENT_WIDTH, doc.y).stroke();
+  doc.font("Helvetica-Bold").fontSize(format === "short" ? 11 : 14).fillColor(C.greenLight).text("HAWKING · THINK THROUGH PHYSICS", { characterSpacing: 1.2 });
+  doc.moveDown(format === "short" ? .55 : 1.2).font("Times-Bold").fontSize(format === "short" ? 19 : 25).fillColor(C.dark).text(solution.title.toUpperCase(), { width: CONTENT_WIDTH });
+  doc.moveDown(.25).font("Helvetica").fontSize(9).fillColor(C.gray).text(solution.tags.join(" · "));
+  doc.moveDown(format === "short" ? .4 : .8).strokeColor(C.greenLight).lineWidth(2).moveTo(MARGIN, doc.y).lineTo(MARGIN + CONTENT_WIDTH, doc.y).stroke();
 
   heading(doc, "THE PROBLEM");
   doc.font("Helvetica").fontSize(10).fillColor(C.dark).text(solution.problem_statement, { width: CONTENT_WIDTH, lineGap: 3 });
@@ -106,7 +106,9 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
     doc.moveDown(.45);
     solution.problem_options.forEach((option) => doc.text(option, { width: CONTENT_WIDTH }));
   }
-  doc.moveDown(.55).font("Times-Italic").fontSize(10).fillColor(C.gray).text(solution.framing_line, { width: CONTENT_WIDTH, lineGap: 2 });
+  if (format === "long") {
+    doc.moveDown(.55).font("Times-Italic").fontSize(10).fillColor(C.gray).text(solution.framing_line, { width: CONTENT_WIDTH, lineGap: 2 });
+  }
 
   step(doc, 1, solution.step1, C.purple, format);
   step(doc, 2, solution.step2, C.orange, format);

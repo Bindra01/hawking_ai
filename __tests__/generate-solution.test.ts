@@ -13,9 +13,25 @@ describe("parseSolveGenerationResult", () => {
     step3: { label: "Plan", answer: "Find a, then v", explanation: "Apply constant acceleration.", tip: null, warning: null },
     derivation: { label: "Derivation", blocks: [{ type: "equation", latex: "a=F/m", annotation: "Acceleration" }] },
     final_answer: { latex: "v=20\\,m/s", display: "20 m/s", option: "" },
-    reality_checks: [{ heading: "Units", title: "Dimensions", text: "The units are speed.", priority: "high" }],
-    common_errors: [{ heading: "Force", title: "Mass", text: "Do not omit mass.", priority: "high" }],
-    takeaways: [{ heading: "Method", title: "Sequence", text: "Find acceleration first.", priority: "high" }],
+    reality_checks: [
+      { heading: "Units", title: "Dimensions", text: "The units are speed.", priority: "high" },
+      { heading: "Direction", title: "Sign", text: "The speed is positive.", priority: "high" },
+      { heading: "Limit", title: "Time", text: "Zero time gives zero speed.", priority: "low" },
+      { heading: "Scale", title: "Force", text: "More force gives more speed.", priority: "low" },
+    ],
+    common_errors: [
+      { heading: "Force", title: "Mass", text: "Do not omit mass.", priority: "high" },
+      { heading: "Initial", title: "Velocity", text: "Include initial speed.", priority: "high" },
+      { heading: "Units", title: "Seconds", text: "Use seconds.", priority: "low" },
+      { heading: "Vector", title: "Direction", text: "Track direction.", priority: "low" },
+    ],
+    takeaways: [
+      { heading: "Method", title: "Sequence", text: "Find acceleration first.", priority: "high" },
+      { heading: "Dynamics", title: "Newton", text: "Use F = ma.", priority: "high" },
+      { heading: "Kinematics", title: "Speed", text: "Then use v = u + at.", priority: "high" },
+      { heading: "Units", title: "SI", text: "Keep SI units.", priority: "low" },
+      { heading: "Check", title: "Scale", text: "Check proportionality.", priority: "low" },
+    ],
   };
 
   it("accepts a complete structured solution", () => {
@@ -53,6 +69,7 @@ describe("parseSolveGenerationResult", () => {
     { ...validSolution, derivation: { label: "Derivation", blocks: [{ type: "unknown" }] } },
     { ...validSolution, step1: { ...validSolution.step1, tip: { text: {}, priority: "high" } } },
     { ...validSolution, reality_checks: [{ heading: {}, text: "Check", priority: "high" }] },
+    { ...validSolution, reality_checks: validSolution.reality_checks.map((item) => ({ ...item, priority: "high" })) },
   ])("rejects malformed nested solution data", (solution) => {
     expect(() => parseSolveGenerationResult(JSON.stringify({
       needs_clarification: false,
