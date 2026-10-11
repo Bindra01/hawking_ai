@@ -133,55 +133,85 @@ export type SolveGenerationResult =
   | { needs_clarification: false; clarification_question: ""; solution: SolveSolution };
 
 export async function generateSolution(content: ResponseInputContent[]): Promise<SolveGenerationResult> {
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const response = await getClient().responses.create({
-      model: process.env.OPENAI_SOLVE_MODEL || "gpt-4o",
-      instructions: SYSTEM_PROMPT,
-      input: [{ role: "user", content }],
-      max_output_tokens: 12_000,
-      text: {
-        verbosity: "medium",
-        format: {
-          type: "json_schema",
-          name: "hawking_solution",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            required: ["needs_clarification", "clarification_question", "solution"],
-            properties: {
-              needs_clarification: { type: "boolean" },
-              clarification_question: { type: "string" },
-              solution: { anyOf: [{ type: "null" }, solutionSchema] },
-            },
+  const response = await getClient().responses.create({
+    model: process.env.OPENAI_SOLVE_MODEL || "gpt-4o",
+    instructions: SYSTEM_PROMPT,
+    input: [{ role: "user", content }],
+    max_output_tokens: 12_000,
+    text: {
+      verbosity: "medium",
+      format: {
+        type: "json_schema",
+        name: "hawking_solution",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["needs_clarification", "clarification_question", "solution"],
+          properties: {
+            needs_clarification: { type: "boolean" },
+            clarification_question: { type: "string" },
+            solution: { anyOf: [{ type: "null" }, solutionSchema] },
           },
         },
       },
-    });
+    },
+  });
 
-    if (!response.output_text) {
-      lastError = new Error(`The model returned no text. Response status: ${response.status}.`);
-      continue;
-    }
+  if (!response.output_text) {
+    throw new Error(`The model returned no text. Response status: ${response.status}.`);
+  }
+  return parseSolveGenerationResult(response.output_text);
+}
 
-    try {
-      const parsed = JSON.parse(response.output_text) as SolveGenerationResult;
-      if (parsed.needs_clarification || !parsed.solution) {
-        return {
-          needs_clarification: true,
-          clarification_question: parsed.clarification_question || "Please provide a clearer problem statement.",
-          solution: null,
-        };
-      }
-      return { needs_clarification: false, clarification_question: "", solution: parsed.solution };
-    } catch (error) {
-      lastError = error;
-    }
+export function parseSolveGenerationResult(outputText: string): SolveGenerationResult {
+  const parsed: unknown = JSON.parse(outputText);
+  if (!isRecord(parsed) || typeof parsed.needs_clarification !== "boolean") {
+    throw new Error("The model returned an invalid solution envelope.");
   }
 
-  throw new Error("The model returned an invalid structured solution after two attempts.", {
-    cause: lastError,
-  });
+  if (parsed.needs_clarification) {
+    if (typeof parsed.clarification_question !== "string" || !parsed.clarification_question.trim()) {
+      throw new Error("The model returned an invalid clarification response.");
+    }
+    return {
+      needs_clarification: true,
+      clarification_question: parsed.clarification_question,
+      solution: null,
+    };
+  }
+
+  if (!isSolveSolution(parsed.solution)) {
+    throw new Error("The model returned an invalid structured solution.");
+  }
+  return { needs_clarification: false, clarification_question: "", solution: parsed.solution };
+}
+
+function isSolveSolution(value: unknown): value is SolveSolution {
+  if (!isRecord(value)) return false;
+  const stringFields = ["title", "problem_statement", "framing_line"];
+  if (!stringFields.every((field) => typeof value[field] === "string")) return false;
+  if (!isStringArray(value.tags) || !isStringArray(value.problem_options)) return false;
+  if (![value.step1, value.step2, value.step3].every(isStep)) return false;
+  if (!isRecord(value.derivation) || typeof value.derivation.label !== "string" || !Array.isArray(value.derivation.blocks)) return false;
+  if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return false;
+  return [value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray);
+}
+
+function isStep(value: unknown): boolean {
+  return isRecord(value) && ["label", "answer", "explanation"].every((field) => typeof value[field] === "string");
+}
+
+function isPriorityItemArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every((item) =>
+    isRecord(item) && typeof item.text === "string" && (item.priority === "high" || item.priority === "low")
+  );
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
