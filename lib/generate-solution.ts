@@ -193,18 +193,51 @@ function isSolveSolution(value: unknown): value is SolveSolution {
   if (!stringFields.every((field) => typeof value[field] === "string")) return false;
   if (!isStringArray(value.tags) || !isStringArray(value.problem_options)) return false;
   if (![value.step1, value.step2, value.step3].every(isStep)) return false;
-  if (!isRecord(value.derivation) || typeof value.derivation.label !== "string" || !Array.isArray(value.derivation.blocks)) return false;
+  if (
+    !isRecord(value.derivation) ||
+    typeof value.derivation.label !== "string" ||
+    !Array.isArray(value.derivation.blocks) ||
+    !value.derivation.blocks.every(isDerivationBlock)
+  ) return false;
   if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return false;
+  if (value.final_answer.option !== undefined && typeof value.final_answer.option !== "string") return false;
   return [value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray);
 }
 
 function isStep(value: unknown): boolean {
-  return isRecord(value) && ["label", "answer", "explanation"].every((field) => typeof value[field] === "string");
+  return isRecord(value) &&
+    ["label", "answer", "explanation"].every((field) => typeof value[field] === "string") &&
+    isCallout(value.tip) &&
+    isCallout(value.warning);
+}
+
+function isCallout(value: unknown): boolean {
+  return value === undefined || value === null || (
+    isRecord(value) &&
+    typeof value.text === "string" &&
+    (value.priority === "high" || value.priority === "low")
+  );
+}
+
+function isDerivationBlock(value: unknown): boolean {
+  if (!isRecord(value) || typeof value.type !== "string") return false;
+  if (value.type === "subsection") return typeof value.title === "string";
+  if (value.type === "equation") {
+    return typeof value.latex === "string" &&
+      (value.annotation === undefined || typeof value.annotation === "string");
+  }
+  if (value.type === "prose") return typeof value.text === "string";
+  if (value.type === "boxed_result") return typeof value.latex === "string";
+  return false;
 }
 
 function isPriorityItemArray(value: unknown): boolean {
   return Array.isArray(value) && value.every((item) =>
-    isRecord(item) && typeof item.text === "string" && (item.priority === "high" || item.priority === "low")
+    isRecord(item) &&
+    typeof item.text === "string" &&
+    (item.heading === undefined || typeof item.heading === "string") &&
+    (item.title === undefined || typeof item.title === "string") &&
+    (item.priority === "high" || item.priority === "low")
   );
 }
 
