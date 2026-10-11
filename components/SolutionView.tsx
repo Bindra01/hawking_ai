@@ -6,6 +6,7 @@ import katex from "katex";
 import AppNav from "@/components/AppNav";
 import { HAWKING_FOOTER, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
 import { projectSolution } from "@/lib/solution-format";
+import { isUnauthorizedSolveResponse } from "@/lib/solve-response";
 
 function MathBlock({ latex, inline = false }: { latex: string; inline?: boolean }) {
   return <span className={inline ? "math-inline" : "math-display"} dangerouslySetInnerHTML={{ __html: katex.renderToString(latex, { displayMode: !inline, throwOnError: false, output: "html", trust: false }) }} />;
@@ -30,18 +31,27 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
   const [format, setFormat] = useState<SolveFormat>("short");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [downloading, setDownloading] = useState<SolveFormat | null>(null);
+  const [downloadError, setDownloadError] = useState("");
   const projected = projectSolution(solution, format);
 
   async function downloadPdf(pdfFormat: SolveFormat) {
     setDownloading(pdfFormat);
     setDownloadOpen(false);
+    setDownloadError("");
     try {
       const response = await fetch("/api/solve/pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ solution, format: pdfFormat }),
       });
-      if (!response.ok) throw new Error("PDF generation failed.");
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        if (isUnauthorizedSolveResponse(response.status, data)) {
+          window.location.replace("/login?next=/solve&reason=session-expired");
+          return;
+        }
+        throw new Error(data.error || "PDF generation failed.");
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
@@ -49,6 +59,8 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
       anchor.download = `${solution.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${pdfFormat}.pdf`;
       anchor.click();
       URL.revokeObjectURL(url);
+    } catch (error) {
+      setDownloadError(error instanceof Error ? error.message : "PDF generation failed.");
     } finally {
       setDownloading(null);
     }
@@ -72,6 +84,7 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
           </div>}
         </div>
       </header>
+      {downloadError && <div className="solve-error" role="alert">{downloadError}</div>}
 
       <article className={`solution-paper solution-paper-${format}`}>
         <div className="solution-cover">

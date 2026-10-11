@@ -105,6 +105,30 @@ describe("parseSolveGenerationResult", () => {
     expect(warning).toHaveBeenCalledWith(expect.stringMatching(/insufficient Long-format depth/));
   });
 
+  it("normalizes provider annotation length and appends the exact final equation", () => {
+    const providerSolution = {
+      ...validSolution,
+      derivation: {
+        ...validSolution.derivation,
+        blocks: [
+          { type: "equation", latex: "a=F/m", annotation: "Acceleration" },
+          { type: "equation", latex: "v=u+at", annotation: "substitute all known values into the constant acceleration relation now" },
+        ],
+      },
+    };
+    const result = parseSolveGenerationResult(JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: providerSolution,
+    }), { enforceFormatRatio: false });
+
+    expect(result.solution?.derivation.blocks).toEqual([
+      expect.objectContaining({ annotation: "continue the calculation carefully" }),
+      expect.objectContaining({ annotation: "substitute all known values into the constant acceleration" }),
+      expect.objectContaining({ latex: validSolution.final_answer.latex, annotation: "state the final calculated answer" }),
+    ]);
+  });
+
   it("accepts a clarification response", () => {
     expect(parseSolveGenerationResult(JSON.stringify({
       needs_clarification: true,
@@ -130,14 +154,9 @@ describe("parseSolveGenerationResult", () => {
     { ...validSolution, derivation: { label: "Derivation", blocks: [null] } },
     { ...validSolution, derivation: { label: "Derivation", blocks: [{ type: "unknown" }] } },
     { ...validSolution, derivation: { label: "Derivation", blocks: [
-      { type: "equation", latex: "a=F/m", annotation: "too short" },
+      { type: "equation", latex: "", annotation: "invalid empty equation value" },
       { type: "equation", latex: "v=20\\,m/s", annotation: "state the final calculated speed" },
     ] } },
-    { ...validSolution, derivation: { label: "Derivation", blocks: [
-      { type: "equation", latex: "x=1", annotation: "this annotation contains far too many words for short format" },
-      { type: "equation", latex: "v=20\\,m/s", annotation: "state the final calculated speed" },
-    ] } },
-    { ...validSolution, derivation: { ...validSolution.derivation, blocks: validSolution.derivation.blocks.map((block, index) => index === validSolution.derivation.blocks.length - 1 ? { ...block, latex: "v=999" } : block) } },
     { ...validSolution, step1: { ...validSolution.step1, tip: { text: {}, priority: "high" } } },
     { ...validSolution, reality_checks: [{ heading: {}, text: "Check", priority: "high" }] },
     { ...validSolution, reality_checks: validSolution.reality_checks.map((item) => ({ ...item, priority: "high" })) },

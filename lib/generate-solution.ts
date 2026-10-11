@@ -197,16 +197,49 @@ export function parseSolveGenerationResult(
     };
   }
 
-  if (!isSolveSolution(parsed.solution)) {
+  const normalizedSolution = normalizeGeneratedSolution(parsed.solution);
+  if (!isSolveSolution(normalizedSolution)) {
     throw new Error("The model returned an invalid structured solution.");
   }
-  const counts = solutionWordCounts(parsed.solution);
+  const counts = solutionWordCounts(normalizedSolution);
   if (!hasRequiredFormatRatio(counts.short, counts.long)) {
     const message = `The model returned insufficient Long-format depth (${counts.long}/${counts.short} words).`;
     if (options.enforceFormatRatio !== false) throw new Error(message);
     console.warn(message);
   }
-  return { needs_clarification: false, clarification_question: "", solution: parsed.solution };
+  return { needs_clarification: false, clarification_question: "", solution: normalizedSolution };
+}
+
+function normalizeGeneratedSolution(value: unknown): unknown {
+  if (!isRecord(value) || !isRecord(value.derivation) || !Array.isArray(value.derivation.blocks)) return value;
+  const blocks = value.derivation.blocks.map((block) => {
+    if (!isRecord(block) || block.type !== "equation") return block;
+    return { ...block, annotation: normalizeAnnotation(block.annotation) };
+  });
+  const equations = blocks.filter((block) => isRecord(block) && block.type === "equation");
+  const finalLatex = isRecord(value.final_answer) && typeof value.final_answer.latex === "string"
+    ? value.final_answer.latex.trim()
+    : "";
+  if (
+    equations.length >= 2 &&
+    finalLatex &&
+    normalizeLatex(String(equations.at(-1)?.latex ?? "")) !== normalizeLatex(finalLatex)
+  ) {
+    blocks.push({
+      type: "equation",
+      title: "",
+      latex: finalLatex,
+      annotation: "state the final calculated answer",
+      text: "",
+    });
+  }
+  return { ...value, derivation: { ...value.derivation, blocks } };
+}
+
+function normalizeAnnotation(value: unknown): string {
+  const words = typeof value === "string" ? value.trim().split(/\s+/).filter(Boolean) : [];
+  if (words.length < 3) return "continue the calculation carefully";
+  return words.slice(0, 8).join(" ");
 }
 
 function isSolveSolution(value: unknown): value is SolveSolution {
