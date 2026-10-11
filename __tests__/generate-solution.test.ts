@@ -19,7 +19,7 @@ describe("parseSolveGenerationResult", () => {
     step3: { label: "Plan", answer: "Find a, then v", explanation: longTeaching, tip: null, warning: null },
     derivation: { label: "Derivation", blocks: [
       { type: "equation", latex: "a=F/m", annotation: "solve for the acceleration" },
-      { type: "equation", latex: "v=u+at", annotation: "apply constant acceleration kinematics" },
+      { type: "equation", latex: "v=20\\,m/s", annotation: "substitute values and calculate speed" },
     ] },
     final_answer: { latex: "v=20\\,m/s", display: "20 m/s", option: "" },
     reality_checks: [
@@ -60,7 +60,7 @@ describe("parseSolveGenerationResult", () => {
       step3: { ...validSolution.step3, explanation: "Brief explanation." },
       derivation: {
         ...validSolution.derivation,
-        blocks: Array.from({ length: 150 }, (_, index) => ({ type: "equation", latex: `x_${index}=1`, annotation: "shared derivation step" })),
+        blocks: [...Array.from({ length: 149 }, (_, index) => ({ type: "equation", latex: `x_${index}=1`, annotation: "shared derivation step" })), { type: "equation", latex: "v=20\\,m/s", annotation: "state the final calculated speed" }],
       },
     };
     const output = JSON.stringify({
@@ -84,7 +84,7 @@ describe("parseSolveGenerationResult", () => {
       step3: { ...validSolution.step3, explanation: "Brief explanation." },
       derivation: {
         ...validSolution.derivation,
-        blocks: Array.from({ length: 150 }, (_, index) => ({ type: "equation", latex: `x_${index}=1`, annotation: "shared derivation step" })),
+        blocks: [...Array.from({ length: 149 }, (_, index) => ({ type: "equation", latex: `x_${index}=1`, annotation: "shared derivation step" })), { type: "equation", latex: "v=20\\,m/s", annotation: "state the final calculated speed" }],
       },
     };
     const output = JSON.stringify({
@@ -134,6 +134,7 @@ describe("parseSolveGenerationResult", () => {
       { type: "equation", latex: "x=1", annotation: "this annotation contains far too many words for short format" },
       { type: "equation", latex: "y=2", annotation: "second valid equation note" },
     ] } },
+    { ...validSolution, derivation: { ...validSolution.derivation, blocks: validSolution.derivation.blocks.map((block, index) => index === validSolution.derivation.blocks.length - 1 ? { ...block, latex: "v=999" } : block) } },
     { ...validSolution, step1: { ...validSolution.step1, tip: { text: {}, priority: "high" } } },
     { ...validSolution, reality_checks: [{ heading: {}, text: "Check", priority: "high" }] },
     { ...validSolution, reality_checks: validSolution.reality_checks.map((item) => ({ ...item, priority: "high" })) },

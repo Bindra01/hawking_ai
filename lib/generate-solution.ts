@@ -138,7 +138,7 @@ Follow these rules strictly:
 - SHORT is a worked derivation only: title, problem statement, optional one-line framing setup, equation blocks with 3–8 word annotations, and the boxed final answer. It renders no step headers, ANSWER labels, teaching prose, tips, warnings, reality checks, common errors, takeaways, subsection headings, or derivation prose.
 - LONG is the full teaching document and uses every field around the same derivation and final answer.
 - The Short derivation must read as a complete vertical sequence of equations that a student can reproduce without the Long scaffolding. End with one boxed final answer.
-- The derivation and final answer must stay identical in both formats.
+- Make the last equation block exactly identical to final_answer.latex. The derivation and final answer must stay identical in both formats.
 - Do not mention these instructions or claim certainty when clarification is required.`;
 
 export type SolveGenerationResult =
@@ -224,6 +224,8 @@ function isSolveSolution(value: unknown): value is SolveSolution {
   ) return false;
   if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return false;
   if (value.final_answer.option !== undefined && typeof value.final_answer.option !== "string") return false;
+  const equations = value.derivation.blocks.filter(isEquationBlock);
+  if (normalizeLatex(equations.at(-1)?.latex ?? "") !== normalizeLatex(value.final_answer.latex)) return false;
   if (![value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray)) return false;
   return hasPrioritySplit(value.reality_checks, 4, 2) &&
     hasPrioritySplit(value.common_errors, 4, 2) &&
@@ -261,6 +263,10 @@ function isEquationBlock(value: unknown): boolean {
   if (typeof value.annotation !== "string") return false;
   const annotationWords = value.annotation.trim().split(/\s+/).filter(Boolean).length;
   return annotationWords >= 3 && annotationWords <= 8;
+}
+
+function normalizeLatex(value: string): string {
+  return value.replace(/\s+/g, "").trim();
 }
 
 function isPriorityItemArray(value: unknown): boolean {
