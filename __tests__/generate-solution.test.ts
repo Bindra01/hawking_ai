@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { parseSolveGenerationResult } from "@/lib/generate-solution";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import OpenAI from "openai";
+import { generateSolution, parseSolveGenerationResult } from "@/lib/generate-solution";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("parseSolveGenerationResult", () => {
   const longTeaching = "This teaching detail explains the physical meaning and connects each equation to the next step. ".repeat(20);
@@ -62,6 +67,31 @@ describe("parseSolveGenerationResult", () => {
       needs_clarification: false,
       solution: thinLongSolution,
     });
+  });
+
+  it("returns and logs a below-target solution through generateSolution", async () => {
+    const thinLongSolution = {
+      ...validSolution,
+      step1: { ...validSolution.step1, explanation: "Brief explanation." },
+      step2: { ...validSolution.step2, explanation: "Brief explanation." },
+      step3: { ...validSolution.step3, explanation: "Brief explanation." },
+    };
+    const output = JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: thinLongSolution,
+    });
+    vi.spyOn(OpenAI.Responses.prototype, "create").mockResolvedValue({
+      output_text: output,
+      status: "completed",
+    } as never);
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(generateSolution([{ type: "input_text", text: "Solve this." }])).resolves.toMatchObject({
+      needs_clarification: false,
+      solution: thinLongSolution,
+    });
+    expect(warning).toHaveBeenCalledWith(expect.stringMatching(/insufficient Long-format depth/));
   });
 
   it("accepts a clarification response", () => {

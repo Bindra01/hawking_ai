@@ -1,4 +1,4 @@
-import { highPriority, showCallout, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import { highPriority, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
 
 export interface ProjectedStep extends SolveStep {
   explanation: string;
@@ -12,9 +12,9 @@ export function projectSolution(solution: SolveSolution, format: SolveFormat) {
   const projectStep = (step: SolveStep): ProjectedStep => ({
     ...step,
     explanation: format === "long" ? step.explanation : "",
-    tip: format === "long" && showCallout(step.tip, format) ? step.tip : null,
+    tip: format === "long" ? step.tip : null,
     warning: format === "long"
-      ? (showCallout(step.warning, format) ? step.warning : null)
+      ? step.warning
       : (step.warning === shortWarning ? shortWarning : null),
   });
 

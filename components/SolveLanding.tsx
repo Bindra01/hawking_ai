@@ -49,15 +49,21 @@ export default function SolveLanding() {
 
     try {
       const response = await fetch("/api/solve", { method: "POST", body });
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json();
       if (response.status === 401) {
         router.replace("/login?next=/home");
         return;
       }
       if (!response.ok) throw new Error(data.error || "The solution could not be generated. Please try again.");
       if (data.needs_clarification) {
+        if (typeof data.clarification_question !== "string" || !data.clarification_question.trim()) {
+          throw new Error("Hawking returned an incomplete clarification. Please try again.");
+        }
         setClarification(data.clarification_question);
         return;
+      }
+      if (!data.solution || typeof data.solution !== "object") {
+        throw new Error("Hawking returned an incomplete solution. Please try again.");
       }
       sessionStorage.setItem("hawking-solution", JSON.stringify(data.solution as SolveSolution));
       router.push("/solve");
