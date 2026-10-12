@@ -16,13 +16,13 @@ vi.mock("@/lib/prisma", () => ({
 const { acquireSolveSlot, SolveLimitTimeoutError } = await import("@/lib/solve-rate-limit");
 
 describe("final composed Prisma quota budgets", () => {
-  it("reserves bounded maxWait and rollback headroom from a normal transaction budget", async () => {
-    await expect(acquireSolveSlot("user-a", new Date("2026-10-12T10:00:00Z"), { timeoutMs: 5_000 })).resolves.toMatchObject({ allowed: false, status: 429 });
-    expect(state.calls.at(-1)?.[0]).toMatchObject({ isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, maxWait: 1_000, timeout: 3_750 });
+  it("allows a slow database pool to provide a connection within the quota budget", async () => {
+    await expect(acquireSolveSlot("user-a", new Date("2026-10-12T10:00:00Z"), { timeoutMs: 8_000 })).resolves.toMatchObject({ allowed: false, status: 429 });
+    expect(state.calls.at(-1)?.[0]).toMatchObject({ isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, maxWait: 3_000, timeout: 4_750 });
   });
   it("scales maxWait and timeout for a short remaining request budget", async () => {
     await acquireSolveSlot("user-b", new Date("2026-10-12T10:00:00Z"), { timeoutMs: 500 });
-    expect(state.calls.at(-1)?.[0]).toMatchObject({ maxWait: 100, timeout: 150 });
+    expect(state.calls.at(-1)?.[0]).toMatchObject({ maxWait: 187, timeout: 63 });
   });
   it.each(["P2024", "P2028"] as const)("translates Prisma %s into SolveLimitTimeoutError", async (code) => {
     state.behavior = code;

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const quotaBudgetMs = responseDeadlineAt - Date.now();
+    const quotaBudgetMs = Math.min(8_000, responseDeadlineAt - Date.now());
     if (quotaBudgetMs <= 0) throw new SolveUpstreamTimeoutError();
     const slot = await withinDeadline(
       acquireSolveSlot(user.id, new Date(), { timeoutMs: quotaBudgetMs }),
@@ -95,7 +95,13 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("Solve generation failed", { elapsedMs: Date.now() - requestStartedAt, error });
-    if (error instanceof SolveUpstreamTimeoutError || error instanceof SolveLimitTimeoutError) {
+    if (error instanceof SolveLimitTimeoutError) {
+      return NextResponse.json(
+        { error: "Hawking could not reserve a solve slot. Please try again.", code: "SOLVE_QUOTA_TIMEOUT" },
+        { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "2" } }
+      );
+    }
+    if (error instanceof SolveUpstreamTimeoutError) {
       return NextResponse.json(
         { error: "Hawking took too long to read this problem. Try a clearer crop or typed text.", code: "SOLVE_UPSTREAM_TIMEOUT" },
         { status: 504, headers: { "Cache-Control": "no-store" } }

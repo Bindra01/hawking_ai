@@ -28,7 +28,7 @@ export async function acquireSolveSlot(
   const token = randomUUID();
 
   const transactionBudgetMs = Math.max(2, options.timeoutMs ?? 5_000);
-  const maxWait = Math.min(1_000, Math.max(1, Math.floor(transactionBudgetMs * 0.2)));
+  const maxWait = Math.min(3_000, Math.max(1, Math.floor(transactionBudgetMs * 0.375)));
   const timeout = Math.max(1, transactionBudgetMs - maxWait - 250);
 
   let decision;
