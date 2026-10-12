@@ -169,6 +169,9 @@ export async function generateSolution(
 ): Promise<SolveGenerationResult> {
   let lastError: unknown;
   const model = options.model || process.env.OPENAI_SOLVE_MODEL || "gpt-4.1";
+  const modality = content.some((item) => item.type === "input_image")
+    ? "image"
+    : content.some((item) => item.type === "input_file") ? "pdf" : "text";
   const deadline = Date.now() + (options.timeoutMs ?? 55_000);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const remainingMs = deadline - Date.now();
@@ -207,7 +210,7 @@ export async function generateSolution(
         attempt: attempt + 1,
         elapsedMs: Date.now() - startedAt,
         model,
-        includesImage: content.some((item) => item.type === "input_image"),
+        modality,
         error,
       });
       if (isAbortError(error) || Date.now() >= deadline) throw new SolveUpstreamTimeoutError();
@@ -217,7 +220,7 @@ export async function generateSolution(
       attempt: attempt + 1,
       elapsedMs: Date.now() - startedAt,
       model,
-      includesImage: content.some((item) => item.type === "input_image"),
+      modality,
     });
 
     if (!response.output_text) {

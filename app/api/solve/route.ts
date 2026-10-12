@@ -15,8 +15,8 @@ export async function POST(request: Request) {
   const requestStartedAt = Date.now();
   const responseDeadlineAt = requestStartedAt + 26_000;
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await withinDeadline(createClient(), responseDeadlineAt);
+    const { data: { user } } = await withinDeadline(supabase.auth.getUser(), responseDeadlineAt);
     if (!user) {
       return NextResponse.json(
         { error: "Your session expired. Sign in again to solve this problem.", code: "SESSION_EXPIRED" },
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const slot = await acquireSolveSlot(user.id);
+    const slot = await withinDeadline(acquireSolveSlot(user.id), responseDeadlineAt);
     if (!slot.allowed) {
       return NextResponse.json(
         { error: slot.message },
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const formData = await request.formData();
+      const formData = await withinDeadline(request.formData(), responseDeadlineAt);
       const problemText = String(formData.get("problem") || "").trim();
       const upload = formData.get("file");
       const content: ResponseInputContent[] = [];
@@ -86,13 +86,7 @@ export async function POST(request: Request) {
       });
       return NextResponse.json(result);
     } finally {
-      await Promise.race([
-        slot.release(),
-        new Promise<void>((resolve) => setTimeout(() => {
-          console.warn("Solve lease release exceeded response budget.");
-          resolve();
-        }, 1_000)),
-      ]);
+      await releaseWithinBudget(slot.release());
     }
   } catch (error) {
     console.error("Solve generation failed", { elapsedMs: Date.now() - requestStartedAt, error });
@@ -113,4 +107,32 @@ export async function POST(request: Request) {
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
+}
+
+async function withinDeadline<T>(promise: Promise<T>, deadlineAt: number): Promise<T> {
+  const remainingMs = deadlineAt - Date.now();
+  if (remainingMs <= 0) throw new SolveUpstreamTimeoutError();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new SolveUpstreamTimeoutError()), remainingMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function releaseWithinBudget(release: Promise<void>): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = await Promise.race([
+    release.then(() => false),
+    new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(true), 1_000);
+    }),
+  ]);
+  if (timer) clearTimeout(timer);
+  if (timedOut) console.warn("Solve lease release exceeded response budget.");
 }
