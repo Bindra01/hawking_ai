@@ -10,6 +10,13 @@ export type SolveLimitResult =
   | { allowed: true; release: () => Promise<void> }
   | { allowed: false; status: 429; message: string; retryAfterSeconds: number };
 
+export class SolveLimitTimeoutError extends Error {
+  constructor() {
+    super("The Solve quota transaction exceeded its time budget.");
+    this.name = "SolveLimitTimeoutError";
+  }
+}
+
 export async function acquireSolveSlot(
   userId: string,
   now = new Date(),
@@ -20,7 +27,13 @@ export async function acquireSolveSlot(
   minuteFloor.setUTCSeconds(0, 0);
   const token = randomUUID();
 
-  const decision = await prisma.$transaction(async (tx) => {
+  const transactionBudgetMs = Math.max(2, options.timeoutMs ?? 5_000);
+  const maxWait = Math.min(1_000, Math.max(1, Math.floor(transactionBudgetMs * 0.2)));
+  const timeout = Math.max(1, transactionBudgetMs - maxWait - 250);
+
+  let decision;
+  try {
+    decision = await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`;
     const existing = await tx.solve_usage.findUnique({ where: { user_id: userId } });
     const sameDay = existing?.day.getTime() === day.getTime();
@@ -73,11 +86,17 @@ export async function acquireSolveSlot(
       },
     });
     return { allowed: true as const };
-  }, {
-    isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
-    maxWait: Math.max(1, options.timeoutMs ?? 5_000),
-    timeout: Math.max(1, options.timeoutMs ?? 5_000),
-  });
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      maxWait,
+      timeout,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2028" || error.code === "P2024")) {
+      throw new SolveLimitTimeoutError();
+    }
+    throw error;
+  }
 
   if (!decision.allowed) return { ...decision, status: 429 };
 

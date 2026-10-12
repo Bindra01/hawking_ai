@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { createClient } from "@/lib/supabase-server";
 import { generateSolution, isSolveUpstreamOutputError, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
-import { acquireSolveSlot } from "@/lib/solve-rate-limit";
+import { acquireSolveSlot, SolveLimitTimeoutError } from "@/lib/solve-rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     console.error("Solve generation failed", { elapsedMs: Date.now() - requestStartedAt, error });
-    if (error instanceof SolveUpstreamTimeoutError) {
+    if (error instanceof SolveUpstreamTimeoutError || error instanceof SolveLimitTimeoutError) {
       return NextResponse.json(
         { error: "Hawking took too long to read this problem. Try a clearer crop or typed text.", code: "SOLVE_UPSTREAM_TIMEOUT" },
         { status: 504, headers: { "Cache-Control": "no-store" } }
