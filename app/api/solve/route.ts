@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { createClient } from "@/lib/supabase-server";
-import { generateSolution } from "@/lib/generate-solution";
+import { generateSolution, isSolveUpstreamOutputError, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
 import { acquireSolveSlot } from "@/lib/solve-rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 12_000;
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
         if (IMAGE_TYPES.has(upload.type)) {
           content.push({
             type: "input_image",
-            detail: "high",
+            detail: "low",
             image_url: `data:${upload.type};base64,${base64}`,
           });
         } else if (upload.type === "application/pdf" || upload.name.toLowerCase().endsWith(".pdf")) {
@@ -73,16 +73,28 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Type a problem or attach a file." }, { status: 400 });
       }
 
-      const result = await generateSolution(content);
+      const result = await generateSolution(content, { timeoutMs: 24_000 });
       return NextResponse.json(result);
     } finally {
       await slot.release();
     }
   } catch (error) {
     console.error("Solve generation failed", error);
+    if (error instanceof SolveUpstreamTimeoutError) {
+      return NextResponse.json(
+        { error: "Hawking took too long to read this problem. Try a clearer crop or typed text.", code: "SOLVE_UPSTREAM_TIMEOUT" },
+        { status: 504, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (isSolveUpstreamOutputError(error)) {
+      return NextResponse.json(
+        { error: "Hawking could not read a complete solution from the model. Please try again.", code: "SOLVE_UPSTREAM_OUTPUT" },
+        { status: 502, headers: { "Cache-Control": "no-store" } }
+      );
+    }
     return NextResponse.json(
-      { error: "Hawking could not generate this solution. Please try again." },
-      { status: 500 }
+      { error: "Hawking could not generate this solution. Please try again.", code: "SOLVE_INTERNAL_ERROR" },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

@@ -118,7 +118,7 @@ Otherwise, set needs_clarification=false and generate ONE complete, full-depth L
 
 Follow these rules strictly:
 - Teach directly to a student. The Long format is a patient five-minute lesson, not a terse answer key.
-- Every conceptual step has a concise answer of one or two sentences, then a separate explanation of at least 250 words across exactly two full teaching paragraphs. This minimum is mandatory even for simple problems. Never fold the teaching prose into the answer.
+- Every conceptual step has a concise answer of one or two sentences, then a separate focused explanation of 80–140 words. Never fold the teaching prose into the answer.
 - Step 1 is RECALL THE PRINCIPLE. Step 2 is WHAT GOES IN. Step 3 is MAP THE DERIVATION.
 - framing_line is an optional one-line Short setup naming the mathematical approach. Keep it empty when the approach is obvious.
 - Steps 4–6 form one continuous calculation. Store every mathematical move as an equation block. Each equation annotation must be a short 3–8 word note. Use prose and subsection blocks only for Long teaching context; never hide a necessary calculation in them.
@@ -130,9 +130,9 @@ Follow these rules strictly:
 - Return exactly four reality checks and four common errors. Mark exactly two in each list high priority and two low priority.
 - Return exactly five takeaways. Mark exactly three high priority and two low priority.
 - Do not tag everything high. Keep priority meaningful inside the Long teaching document.
-- Keep each high-priority list item concise at 15–30 words. Make each low-priority list item a detailed explanation of at least 100 words.
+- Keep each high-priority list item concise at 15–30 words. Keep each low-priority list item useful but concise at 40–70 words.
 - Tips and warnings are Long-only teaching content.
-- Every low-priority callout must contain at least 100 words. Do not pad with repetition.
+- Keep low-priority callouts to 40–70 words. Do not pad with repetition.
 - Use empty strings for unused derivation block fields. Use null for absent tip or warning.
 - Put the most dangerous wrong turn in step2.warning and mark it high priority when present.
 - SHORT is a worked derivation only: title, problem statement, optional one-line framing setup, equation blocks with 3–8 word annotations, and the boxed final answer. It renders no step headers, ANSWER labels, teaching prose, tips, warnings, reality checks, common errors, takeaways, subsection headings, or derivation prose.
@@ -145,34 +145,72 @@ export type SolveGenerationResult =
   | { needs_clarification: true; clarification_question: string; solution: null }
   | { needs_clarification: false; clarification_question: ""; solution: SolveSolution };
 
-export async function generateSolution(content: ResponseInputContent[]): Promise<SolveGenerationResult> {
+export class SolveUpstreamTimeoutError extends Error {
+  constructor() {
+    super("The Solve model call exceeded its time budget.");
+    this.name = "SolveUpstreamTimeoutError";
+  }
+}
+
+export function isSolveUpstreamOutputError(error: unknown): boolean {
+  return error instanceof SyntaxError || (
+    error instanceof Error && (
+      error.message.includes("invalid solution envelope") ||
+      error.message.includes("invalid structured solution") ||
+      error.message.includes("no text") ||
+      error.message.includes("unusable output")
+    )
+  );
+}
+
+export async function generateSolution(
+  content: ResponseInputContent[],
+  options: { timeoutMs?: number } = {}
+): Promise<SolveGenerationResult> {
   let lastError: unknown;
+  const model = process.env.OPENAI_SOLVE_MODEL || "gpt-4.1-mini";
+  const deadline = Date.now() + (options.timeoutMs ?? 55_000);
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const response = await getClient().responses.create({
-      model: process.env.OPENAI_SOLVE_MODEL || "gpt-4.1",
-      instructions: attempt === 0
-        ? SYSTEM_PROMPT
-        : `${SYSTEM_PROMPT}\n\nThe previous provider output was unusable. Return complete valid JSON and finish every required field.`,
-      input: [{ role: "user", content }],
-      max_output_tokens: 12_000,
-      text: {
-        verbosity: "medium",
-        format: {
-          type: "json_schema",
-          name: "hawking_solution",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            required: ["needs_clarification", "clarification_question", "solution"],
-            properties: {
-              needs_clarification: { type: "boolean" },
-              clarification_question: { type: "string" },
-              solution: { anyOf: [{ type: "null" }, solutionSchema] },
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) throw new SolveUpstreamTimeoutError();
+    const startedAt = Date.now();
+    let response;
+    try {
+      response = await getClient().responses.create({
+        model,
+        instructions: attempt === 0
+          ? SYSTEM_PROMPT
+          : `${SYSTEM_PROMPT}\n\nThe previous provider output was unusable. Return complete valid JSON and finish every required field.`,
+        input: [{ role: "user", content }],
+        max_output_tokens: 6_000,
+        text: {
+          verbosity: "medium",
+          format: {
+            type: "json_schema",
+            name: "hawking_solution",
+            strict: true,
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              required: ["needs_clarification", "clarification_question", "solution"],
+              properties: {
+                needs_clarification: { type: "boolean" },
+                clarification_question: { type: "string" },
+                solution: { anyOf: [{ type: "null" }, solutionSchema] },
+              },
             },
           },
         },
-      },
+      }, { signal: AbortSignal.timeout(remainingMs) });
+    } catch (error) {
+      if (isAbortError(error) || Date.now() >= deadline) throw new SolveUpstreamTimeoutError();
+      throw error;
+    }
+    console.info("Solve model call completed", {
+      attempt: attempt + 1,
+      elapsedMs: Date.now() - startedAt,
+      model,
+      includesImage: content.some((item) => item.type === "input_image"),
     });
 
     if (!response.output_text) {
@@ -191,12 +229,14 @@ export async function generateSolution(content: ResponseInputContent[]): Promise
 }
 
 function isRetryableProviderOutputError(error: unknown): boolean {
-  return error instanceof SyntaxError || (
-    error instanceof Error && (
-      error.message.includes("invalid solution envelope") ||
-      error.message.includes("invalid structured solution") ||
-      error.message.includes("no text")
-    )
+  return isSolveUpstreamOutputError(error);
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && (
+    error.name === "AbortError" ||
+    error.name === "APIUserAbortError" ||
+    error.message.toLowerCase().includes("aborted")
   );
 }
 
@@ -222,7 +262,7 @@ export function parseSolveGenerationResult(
 
   const normalizedSolution = normalizeGeneratedSolution(parsed.solution);
   if (!isSolveSolution(normalizedSolution)) {
-    throw new Error("The model returned an invalid structured solution.");
+    throw new Error(`The model returned an invalid structured solution (${invalidSolveSolutionReason(normalizedSolution)}).`);
   }
   const counts = solutionWordCounts(normalizedSolution);
   if (!hasRequiredFormatRatio(counts.short, counts.long)) {
@@ -269,26 +309,31 @@ function normalizeAnnotation(value: unknown): string {
 }
 
 function isSolveSolution(value: unknown): value is SolveSolution {
-  if (!isRecord(value)) return false;
+  return invalidSolveSolutionReason(value) === null;
+}
+
+function invalidSolveSolutionReason(value: unknown): string | null {
+  if (!isRecord(value)) return "solution is not an object";
   const stringFields = ["title", "problem_statement", "framing_line"];
-  if (!stringFields.every((field) => typeof value[field] === "string")) return false;
-  if (!isStringArray(value.tags) || !isStringArray(value.problem_options)) return false;
-  if (![value.step1, value.step2, value.step3].every(isStep)) return false;
+  if (!stringFields.every((field) => typeof value[field] === "string")) return "required string field is missing";
+  if (!isStringArray(value.tags) || !isStringArray(value.problem_options)) return "tags or problem options are invalid";
+  if (![value.step1, value.step2, value.step3].every(isStep)) return "a teaching step is invalid";
   if (
     !isRecord(value.derivation) ||
     typeof value.derivation.label !== "string" ||
     !Array.isArray(value.derivation.blocks) ||
-    !value.derivation.blocks.every(isDerivationBlock) ||
-    value.derivation.blocks.filter(isEquationBlock).length < 2
-  ) return false;
-  if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return false;
-  if (value.final_answer.option !== undefined && typeof value.final_answer.option !== "string") return false;
+    !value.derivation.blocks.every(isDerivationBlock)
+  ) return "a derivation block is invalid";
+  if (value.derivation.blocks.filter(isEquationBlock).length < 2) return "fewer than two equation blocks were returned";
+  if (!isRecord(value.final_answer) || typeof value.final_answer.latex !== "string" || typeof value.final_answer.display !== "string") return "the final answer is invalid";
+  if (value.final_answer.option !== undefined && typeof value.final_answer.option !== "string") return "the final answer option is invalid";
   const equations = value.derivation.blocks.filter(isEquationBlock);
-  if (normalizeLatex(equations.at(-1)?.latex ?? "") !== normalizeLatex(value.final_answer.latex)) return false;
-  if (![value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray)) return false;
-  return hasPrioritySplit(value.reality_checks, 4, 2) &&
+  if (normalizeLatex(equations.at(-1)?.latex ?? "") !== normalizeLatex(value.final_answer.latex)) return "the terminal equation differs from the final answer";
+  if (![value.reality_checks, value.common_errors, value.takeaways].every(isPriorityItemArray)) return "a teaching list is invalid";
+  if (!(hasPrioritySplit(value.reality_checks, 4, 2) &&
     hasPrioritySplit(value.common_errors, 4, 2) &&
-    hasPrioritySplit(value.takeaways, 5, 3);
+    hasPrioritySplit(value.takeaways, 5, 3))) return "teaching-list priority counts are invalid";
+  return null;
 }
 
 function isStep(value: unknown): boolean {

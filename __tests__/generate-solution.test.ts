@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import OpenAI from "openai";
-import { generateSolution, parseSolveGenerationResult } from "@/lib/generate-solution";
+import { generateSolution, parseSolveGenerationResult, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -103,6 +103,31 @@ describe("parseSolveGenerationResult", () => {
       solution: thinLongSolution,
     });
     expect(warning).toHaveBeenCalledWith(expect.stringMatching(/insufficient Long-format depth/));
+  });
+
+  it("uses the faster default vision-capable model and bounded output", async () => {
+    const create = vi.spyOn(OpenAI.Responses.prototype, "create").mockResolvedValue({
+      output_text: JSON.stringify({ needs_clarification: false, clarification_question: "", solution: validSolution }),
+      status: "completed",
+    } as never);
+
+    await generateSolution([{ type: "input_image", image_url: "data:image/png;base64,AA==", detail: "low" }]);
+
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      model: "gpt-4.1-mini",
+      max_output_tokens: 6_000,
+    }), expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  });
+
+  it("maps an aborted provider request to the Solve timeout error", async () => {
+    const aborted = new Error("Request was aborted");
+    aborted.name = "APIUserAbortError";
+    vi.spyOn(OpenAI.Responses.prototype, "create").mockRejectedValue(aborted);
+
+    await expect(generateSolution(
+      [{ type: "input_image", image_url: "data:image/png;base64,AA==", detail: "low" }],
+      { timeoutMs: 25 }
+    )).rejects.toBeInstanceOf(SolveUpstreamTimeoutError);
   });
 
   it("retries once when the provider returns malformed JSON", async () => {
