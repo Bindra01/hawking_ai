@@ -12,6 +12,8 @@ const MAX_TEXT_LENGTH = 12_000;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(request: Request) {
+  const requestStartedAt = Date.now();
+  const responseDeadlineAt = requestStartedAt + 26_000;
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -73,13 +75,27 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Type a problem or attach a file." }, { status: 400 });
       }
 
-      const result = await generateSolution(content, { timeoutMs: 24_000 });
+      const includesImage = content.some((item) => item.type === "input_image");
+      const remainingModelMs = responseDeadlineAt - Date.now() - 1_500;
+      if (remainingModelMs <= 0) throw new SolveUpstreamTimeoutError();
+      const result = await generateSolution(content, {
+        timeoutMs: remainingModelMs,
+        model: includesImage
+          ? (process.env.OPENAI_SOLVE_IMAGE_MODEL || "gpt-4.1-mini")
+          : (process.env.OPENAI_SOLVE_MODEL || "gpt-4.1"),
+      });
       return NextResponse.json(result);
     } finally {
-      await slot.release();
+      await Promise.race([
+        slot.release(),
+        new Promise<void>((resolve) => setTimeout(() => {
+          console.warn("Solve lease release exceeded response budget.");
+          resolve();
+        }, 1_000)),
+      ]);
     }
   } catch (error) {
-    console.error("Solve generation failed", error);
+    console.error("Solve generation failed", { elapsedMs: Date.now() - requestStartedAt, error });
     if (error instanceof SolveUpstreamTimeoutError) {
       return NextResponse.json(
         { error: "Hawking took too long to read this problem. Try a clearer crop or typed text.", code: "SOLVE_UPSTREAM_TIMEOUT" },

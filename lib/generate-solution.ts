@@ -152,23 +152,23 @@ export class SolveUpstreamTimeoutError extends Error {
   }
 }
 
+export class SolveUpstreamOutputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SolveUpstreamOutputError";
+  }
+}
+
 export function isSolveUpstreamOutputError(error: unknown): boolean {
-  return error instanceof SyntaxError || (
-    error instanceof Error && (
-      error.message.includes("invalid solution envelope") ||
-      error.message.includes("invalid structured solution") ||
-      error.message.includes("no text") ||
-      error.message.includes("unusable output")
-    )
-  );
+  return error instanceof SyntaxError || error instanceof SolveUpstreamOutputError;
 }
 
 export async function generateSolution(
   content: ResponseInputContent[],
-  options: { timeoutMs?: number } = {}
+  options: { timeoutMs?: number; model?: string } = {}
 ): Promise<SolveGenerationResult> {
   let lastError: unknown;
-  const model = process.env.OPENAI_SOLVE_MODEL || "gpt-4.1-mini";
+  const model = options.model || process.env.OPENAI_SOLVE_MODEL || "gpt-4.1";
   const deadline = Date.now() + (options.timeoutMs ?? 55_000);
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const remainingMs = deadline - Date.now();
@@ -203,6 +203,13 @@ export async function generateSolution(
         },
       }, { signal: AbortSignal.timeout(remainingMs) });
     } catch (error) {
+      console.error("Solve model call failed", {
+        attempt: attempt + 1,
+        elapsedMs: Date.now() - startedAt,
+        model,
+        includesImage: content.some((item) => item.type === "input_image"),
+        error,
+      });
       if (isAbortError(error) || Date.now() >= deadline) throw new SolveUpstreamTimeoutError();
       throw error;
     }
@@ -214,7 +221,7 @@ export async function generateSolution(
     });
 
     if (!response.output_text) {
-      lastError = new Error(`The model returned no text. Response status: ${response.status}.`);
+      lastError = new SolveUpstreamOutputError(`The model returned no text. Response status: ${response.status}.`);
       continue;
     }
     try {
@@ -246,12 +253,12 @@ export function parseSolveGenerationResult(
 ): SolveGenerationResult {
   const parsed: unknown = JSON.parse(outputText);
   if (!isRecord(parsed) || typeof parsed.needs_clarification !== "boolean") {
-    throw new Error("The model returned an invalid solution envelope.");
+    throw new SolveUpstreamOutputError("The model returned an invalid solution envelope.");
   }
 
   if (parsed.needs_clarification) {
     if (typeof parsed.clarification_question !== "string" || !parsed.clarification_question.trim()) {
-      throw new Error("The model returned an invalid clarification response.");
+      throw new SolveUpstreamOutputError("The model returned an invalid clarification response.");
     }
     return {
       needs_clarification: true,
@@ -262,7 +269,7 @@ export function parseSolveGenerationResult(
 
   const normalizedSolution = normalizeGeneratedSolution(parsed.solution);
   if (!isSolveSolution(normalizedSolution)) {
-    throw new Error(`The model returned an invalid structured solution (${invalidSolveSolutionReason(normalizedSolution)}).`);
+    throw new SolveUpstreamOutputError(`The model returned an invalid structured solution (${invalidSolveSolutionReason(normalizedSolution)}).`);
   }
   const counts = solutionWordCounts(normalizedSolution);
   if (!hasRequiredFormatRatio(counts.short, counts.long)) {

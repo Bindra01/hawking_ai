@@ -105,13 +105,16 @@ describe("parseSolveGenerationResult", () => {
     expect(warning).toHaveBeenCalledWith(expect.stringMatching(/insufficient Long-format depth/));
   });
 
-  it("uses the faster default vision-capable model and bounded output", async () => {
+  it("uses the selected vision model and bounded output", async () => {
     const create = vi.spyOn(OpenAI.Responses.prototype, "create").mockResolvedValue({
       output_text: JSON.stringify({ needs_clarification: false, clarification_question: "", solution: validSolution }),
       status: "completed",
     } as never);
 
-    await generateSolution([{ type: "input_image", image_url: "data:image/png;base64,AA==", detail: "low" }]);
+    await generateSolution(
+      [{ type: "input_image", image_url: "data:image/png;base64,AA==", detail: "low" }],
+      { model: "gpt-4.1-mini" }
+    );
 
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       model: "gpt-4.1-mini",
