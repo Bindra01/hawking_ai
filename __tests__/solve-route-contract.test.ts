@@ -41,7 +41,7 @@ describe("Solve route final model, deadline, and error contract", () => {
     expect((await route.POST(textRequest())).status).toBe(200); expect(options().model).toBe("text-override-model");
   });
   it.each([["quota", "quota-timeout", 503, "SOLVE_QUOTA_TIMEOUT"], ["provider", "provider-timeout", 504, "SOLVE_UPSTREAM_TIMEOUT"], ["output", "output", 502, "SOLVE_UPSTREAM_OUTPUT"]] as const)("maps %s failure to no-store structured status", async (_label, mode, status, code) => {
-    state.mode = mode; const response = await route.POST(imageRequest()); expect(response.status).toBe(status); expect(response.headers.get("Cache-Control")).toBe("no-store"); await expect(response.json()).resolves.toMatchObject({ code });
+    state.mode = mode; const response = await route.POST(imageRequest()); expect(response.status).toBe(status); expect(response.headers.get("Cache-Control")).toBe("no-store"); if (code === "SOLVE_QUOTA_TIMEOUT") expect(response.headers.get("Retry-After")).toBe("2"); await expect(response.json()).resolves.toMatchObject({ code });
   });
   it("caps quota acquisition at eight seconds to preserve model time", async () => { await route.POST(imageRequest()); const [, , quotaOptions] = state.quotaCalls[0] as [string, Date, { timeoutMs: number }]; expect(quotaOptions.timeoutMs).toBeGreaterThan(7_900); expect(quotaOptions.timeoutMs).toBeLessThanOrEqual(8_000); });
 });
