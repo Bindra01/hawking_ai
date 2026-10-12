@@ -10,7 +10,11 @@ export type SolveLimitResult =
   | { allowed: true; release: () => Promise<void> }
   | { allowed: false; status: 429; message: string; retryAfterSeconds: number };
 
-export async function acquireSolveSlot(userId: string, now = new Date()): Promise<SolveLimitResult> {
+export async function acquireSolveSlot(
+  userId: string,
+  now = new Date(),
+  options: { timeoutMs?: number } = {}
+): Promise<SolveLimitResult> {
   const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const minuteFloor = new Date(now);
   minuteFloor.setUTCSeconds(0, 0);
@@ -69,7 +73,11 @@ export async function acquireSolveSlot(userId: string, now = new Date()): Promis
       },
     });
     return { allowed: true as const };
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+  }, {
+    isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+    maxWait: Math.max(1, options.timeoutMs ?? 5_000),
+    timeout: Math.max(1, options.timeoutMs ?? 5_000),
+  });
 
   if (!decision.allowed) return { ...decision, status: 429 };
 

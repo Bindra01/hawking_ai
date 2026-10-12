@@ -24,7 +24,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const slot = await withinDeadline(acquireSolveSlot(user.id), responseDeadlineAt);
+    const quotaBudgetMs = responseDeadlineAt - Date.now();
+    if (quotaBudgetMs <= 0) throw new SolveUpstreamTimeoutError();
+    const slot = await withinDeadline(
+      acquireSolveSlot(user.id, new Date(), { timeoutMs: quotaBudgetMs }),
+      responseDeadlineAt
+    );
     if (!slot.allowed) {
       return NextResponse.json(
         { error: slot.message },
@@ -127,12 +132,15 @@ async function withinDeadline<T>(promise: Promise<T>, deadlineAt: number): Promi
 
 async function releaseWithinBudget(release: Promise<void>): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const timedOut = await Promise.race([
-    release.then(() => false),
-    new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => resolve(true), 1_000);
-    }),
-  ]);
-  if (timer) clearTimeout(timer);
-  if (timedOut) console.warn("Solve lease release exceeded response budget.");
+  try {
+    const timedOut = await Promise.race([
+      release.then(() => false),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(true), 1_000);
+      }),
+    ]);
+    if (timedOut) console.warn("Solve lease release exceeded response budget.");
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
