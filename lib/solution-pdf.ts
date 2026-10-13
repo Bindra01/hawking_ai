@@ -7,7 +7,7 @@ import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
 import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
 import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
 import { HAWKING_FOOTER, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
-import { projectSolution } from "@/lib/solution-format";
+import { cleanLatexSource, isLatexSource, projectSolution } from "@/lib/solution-format";
 
 const C = {
   green: "#2E7D32", greenLight: "#58CC02", blue: "#1565C0", purple: "#6A1B9A",
@@ -165,7 +165,12 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
   doc.roundedRect(MARGIN, finalY, CONTENT_WIDTH, finalH, 8).fillAndStroke("#F0FDF4", C.greenLight);
   if (projected.showTeaching) doc.font("Helvetica-Bold").fontSize(8).fillColor(C.green).text("FINAL ANSWER", MARGIN + 15, finalY + 12, { width: CONTENT_WIDTH - 30, align: "center" });
   drawMath(doc, solution.final_answer.latex, MARGIN + 24, finalY + (projected.showTeaching ? 24 : 10), CONTENT_WIDTH - 48, 28, C.green);
-  doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, finalY + (projected.showTeaching ? 56 : 43), { width: CONTENT_WIDTH - 30, align: "center" });
+  const displayY = finalY + (projected.showTeaching ? 56 : 43);
+  if (isLatexSource(solution.final_answer.display)) {
+    drawMath(doc, cleanLatexSource(solution.final_answer.display), MARGIN + 24, displayY, CONTENT_WIDTH - 48, 14, C.green);
+  } else if (solution.final_answer.display) {
+    doc.font("Times-Bold").fontSize(11).fillColor(C.green).text(solution.final_answer.display, MARGIN + 15, displayY, { width: CONTENT_WIDTH - 30, align: "center" });
+  }
   if (solution.final_answer.option) doc.font("Helvetica").fontSize(8).fillColor(C.green).text(solution.final_answer.option, MARGIN + 15, finalY + (projected.showTeaching ? 71 : 64), { width: CONTENT_WIDTH - 30, align: "center" });
   doc.y = finalY + finalH + 6;
 

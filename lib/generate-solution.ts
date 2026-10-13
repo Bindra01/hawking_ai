@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import type { SolveSolution } from "@/lib/solve-types";
-import { hasRequiredFormatRatio, solutionWordCounts } from "@/lib/solution-format";
+import { cleanLatexSource, hasRequiredFormatRatio, isLatexSource, solutionWordCounts } from "@/lib/solution-format";
 
 let client: OpenAI | null = null;
 
@@ -123,6 +123,8 @@ Follow these rules strictly:
 - framing_line is an optional one-line Short setup naming the mathematical approach. Keep it empty when the approach is obvious.
 - Steps 4–6 form one continuous calculation. Store every mathematical move as an equation block. Each equation annotation must be a short 3–8 word note. Use prose and subsection blocks only for Long teaching context; never hide a necessary calculation in them.
 - Use LaTeX without dollar delimiters in latex fields. Use plain text with optional $...$ math elsewhere.
+- final_answer.display is a short plain-language reading of the answer, such as "20 m/s" or "tan θ equals tan φ plus gT² over 2d". Never put LaTeX commands or \\displaystyle in it.
+- final_answer.option is the matching option label only when problem_options is non-empty. Otherwise return an empty string, never a sentence.
 - Verify dimensions, limiting cases, numerical consistency, or physical intuition.
 - Name problem-specific misconceptions, not generic study advice.
 - Extract transferable takeaways.
@@ -309,7 +311,22 @@ function normalizeGeneratedSolution(value: unknown): unknown {
       text: "",
     });
   }
-  return { ...value, derivation: { ...value.derivation, blocks } };
+  return {
+    ...value,
+    derivation: { ...value.derivation, blocks },
+    final_answer: normalizeFinalAnswer(value.final_answer, Array.isArray(value.problem_options) && value.problem_options.length > 0),
+  };
+}
+
+function normalizeFinalAnswer(value: unknown, hasOptions: boolean): unknown {
+  if (!isRecord(value) || typeof value.latex !== "string" || typeof value.display !== "string") return value;
+  let display = value.display.trim();
+  if (isLatexSource(display)) {
+    display = cleanLatexSource(display);
+    if (normalizeLatex(display) === normalizeLatex(cleanLatexSource(value.latex))) display = "";
+  }
+  const option = hasOptions && typeof value.option === "string" ? value.option : "";
+  return { ...value, display, option };
 }
 
 function normalizeAnnotation(value: unknown): string {

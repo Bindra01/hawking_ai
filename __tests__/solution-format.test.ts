@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasRequiredFormatRatio, projectSolution, solutionWordCounts } from "@/lib/solution-format";
+import { cleanLatexSource, hasRequiredFormatRatio, isLatexSource, projectSolution, solutionWordCounts } from "@/lib/solution-format";
 import type { SolveSolution } from "@/lib/solve-types";
 
 const item = (text: string, priority: "high" | "low") => ({ heading: text, title: text, text, priority });
@@ -20,6 +20,17 @@ const solution: SolveSolution = {
 };
 
 describe("solution format projection", () => {
+  it("detects LaTeX commands in text meant for plain display", () => {
+    expect(isLatexSource("\\displaystyle \\tan \\theta = \\frac{d}{2}")).toBe(true);
+    expect(isLatexSource("tan θ equals d over 2")).toBe(false);
+    expect(isLatexSource("20 m/s")).toBe(false);
+  });
+
+  it("cleans display switches and dollar delimiters from stray LaTeX", () => {
+    expect(cleanLatexSource("$$\\displaystyle \\tan \\theta = \\frac{d}{2}$$")).toBe("\\tan \\theta = \\frac{d}{2}");
+    expect(cleanLatexSource("  v=20  ")).toBe("v=20");
+  });
+
   it("makes Short a bare worked derivation", () => {
     const short = projectSolution(solution, "short");
     expect(short.showTeaching).toBe(false);

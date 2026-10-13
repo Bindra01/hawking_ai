@@ -52,6 +52,46 @@ describe("parseSolveGenerationResult", () => {
     expect(result.needs_clarification).toBe(false);
   });
 
+  it("blanks a final display that only repeats the final LaTeX and drops a stray option", () => {
+    const result = parseSolveGenerationResult(JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: {
+        ...validSolution,
+        final_answer: { latex: "v=20\\,m/s", display: "\\displaystyle v = 20 \\, m/s", option: "Use the relation derived from minimizing the distance." },
+      },
+    }), { enforceFormatRatio: false });
+
+    expect(result.solution?.final_answer).toEqual({ latex: "v=20\\,m/s", display: "", option: "" });
+  });
+
+  it("strips \\displaystyle from a LaTeX display that differs from the final LaTeX", () => {
+    const result = parseSolveGenerationResult(JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: {
+        ...validSolution,
+        final_answer: { latex: "v=20\\,m/s", display: "$\\displaystyle v = \\frac{40}{2}\\,m/s$", option: "" },
+      },
+    }), { enforceFormatRatio: false });
+
+    expect(result.solution?.final_answer.display).toBe("v = \\frac{40}{2}\\,m/s");
+  });
+
+  it("keeps a plain display and the option when the problem has options", () => {
+    const result = parseSolveGenerationResult(JSON.stringify({
+      needs_clarification: false,
+      clarification_question: "",
+      solution: {
+        ...validSolution,
+        problem_options: ["(A) 10 m/s", "(B) 20 m/s"],
+        final_answer: { latex: "v=20\\,m/s", display: " 20 m/s ", option: "(B)" },
+      },
+    }), { enforceFormatRatio: false });
+
+    expect(result.solution?.final_answer).toEqual({ latex: "v=20\\,m/s", display: "20 m/s", option: "(B)" });
+  });
+
   it("can return a valid solution when only the format ratio misses the quality target", () => {
     const thinLongSolution = {
       ...validSolution,

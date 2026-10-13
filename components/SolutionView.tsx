@@ -5,7 +5,7 @@ import Link from "next/link";
 import katex from "katex";
 import AppNav from "@/components/AppNav";
 import { HAWKING_FOOTER, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
-import { projectSolution } from "@/lib/solution-format";
+import { cleanLatexSource, isLatexSource, projectSolution } from "@/lib/solution-format";
 import { isUnauthorizedSolveResponse } from "@/lib/solve-response";
 
 function MathBlock({ latex, inline = false }: { latex: string; inline?: boolean }) {
@@ -116,7 +116,12 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
               return <div className="equation-block" key={index}><MathBlock latex={block.latex} />{block.annotation && <em>{block.annotation}</em>}</div>;
             })}
           </div>
-          <div className="final-answer">{projected.showTeaching && <small>FINAL ANSWER</small>}<MathBlock latex={solution.final_answer.latex} /><strong>{solution.final_answer.display}</strong>{solution.final_answer.option && <span>{solution.final_answer.option}</span>}</div>
+          <div className="final-answer">
+            {projected.showTeaching && <small>FINAL ANSWER</small>}
+            <MathBlock latex={solution.final_answer.latex} />
+            {solution.final_answer.display && <strong>{isLatexSource(solution.final_answer.display) ? <MathBlock latex={cleanLatexSource(solution.final_answer.display)} inline /> : solution.final_answer.display}</strong>}
+            {solution.final_answer.option && <span>{solution.final_answer.option}</span>}
+          </div>
         </section>
 
         {projected.showTeaching && <><section className="solution-section check-section">

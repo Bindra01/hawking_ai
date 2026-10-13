@@ -40,6 +40,16 @@ export function hasRequiredFormatRatio(shortWords: number, longWords: number): b
   return shortWords > 0 && longWords / shortWords >= 2.5;
 }
 
+/** True when a field meant for plain text contains LaTeX commands such as `\frac` or `\theta`. */
+export function isLatexSource(text: string): boolean {
+  return /\\[A-Za-z]+/.test(text);
+}
+
+/** Removes `\displaystyle` switches and surrounding `$` delimiters so a stray LaTeX string renders cleanly. */
+export function cleanLatexSource(text: string): string {
+  return text.replace(/\\displaystyle\b/g, "").replace(/^\s*\$+|\$+\s*$/g, "").trim();
+}
+
 function projectedWordCount(solution: SolveSolution, format: SolveFormat): number {
   const projected = projectSolution(solution, format);
   const derivation = projected.derivationBlocks.flatMap((block) =>
