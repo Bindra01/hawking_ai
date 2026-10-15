@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ResponseInputContent } from "openai/resources/responses/responses";
 import { createClient } from "@/lib/supabase-server";
-import { generateSolution, isSolveUpstreamOutputError, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
+import { generateSolution, isSolveUpstreamOutputError, SolveProviderError, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
 import { acquireSolveSlot, SolveLimitTimeoutError } from "@/lib/solve-rate-limit";
 
 export const runtime = "nodejs";
@@ -10,6 +10,12 @@ export const maxDuration = 90;
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 12_000;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+const PROVIDER_ERRORS: Record<SolveProviderError["reason"], { error: string; code: string; retryAfter?: string }> = {
+  quota: { error: "Hawking's AI provider is out of credits. The site owner must add OpenAI credits before Hawking can solve again.", code: "SOLVE_PROVIDER_QUOTA" },
+  rate_limit: { error: "Hawking's AI provider is busy right now. Please try again in a few seconds.", code: "SOLVE_PROVIDER_RATE_LIMIT", retryAfter: "5" },
+  auth: { error: "Hawking's AI provider rejected the server's API key. The site owner must update it.", code: "SOLVE_PROVIDER_AUTH" },
+};
 
 export async function POST(request: Request) {
   const requestStartedAt = Date.now();
@@ -105,6 +111,13 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Hawking took too long to read this problem. Try a clearer crop or typed text.", code: "SOLVE_UPSTREAM_TIMEOUT" },
         { status: 504, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+    if (error instanceof SolveProviderError) {
+      const { error: message, code, retryAfter } = PROVIDER_ERRORS[error.reason];
+      return NextResponse.json(
+        { error: message, code },
+        { status: 503, headers: { "Cache-Control": "no-store", ...(retryAfter ? { "Retry-After": retryAfter } : {}) } }
       );
     }
     if (isSolveUpstreamOutputError(error)) {

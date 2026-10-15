@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import OpenAI from "openai";
-import { generateSolution, parseSolveGenerationResult, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
+import { classifyProviderError, generateSolution, parseSolveGenerationResult, SolveProviderError, SolveUpstreamTimeoutError } from "@/lib/generate-solution";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -159,7 +159,26 @@ describe("parseSolveGenerationResult", () => {
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       model: "gpt-4.1-mini",
       max_output_tokens: 6_000,
-    }), expect.objectContaining({ signal: expect.any(AbortSignal) }));
+    }), expect.objectContaining({ signal: expect.any(AbortSignal), maxRetries: 0 }));
+  });
+
+  it("fails fast with a quota provider error when OpenAI reports no credits", async () => {
+    const create = vi.spyOn(OpenAI.Responses.prototype, "create").mockRejectedValue(
+      Object.assign(new Error("429 You have no credits remaining."), { status: 429, type: "insufficient_quota", code: "credit_balance_exhausted" })
+    );
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const failure = generateSolution([{ type: "input_text", text: "Solve this." }], { timeoutMs: 5_000 });
+    await expect(failure).rejects.toBeInstanceOf(SolveProviderError);
+    await expect(failure).rejects.toMatchObject({ reason: "quota" });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("classifies provider refusals by status and leaves other errors alone", () => {
+    expect(classifyProviderError(Object.assign(new Error("429"), { status: 429, type: "requests", code: "rate_limit_exceeded" }))).toMatchObject({ reason: "rate_limit" });
+    expect(classifyProviderError(Object.assign(new Error("401"), { status: 401, code: "invalid_api_key" }))).toMatchObject({ reason: "auth" });
+    expect(classifyProviderError(Object.assign(new Error("500"), { status: 500 }))).toBeNull();
+    expect(classifyProviderError(new Error("socket hang up"))).toBeNull();
   });
 
   it("maps an aborted provider request to the Solve timeout error", async () => {

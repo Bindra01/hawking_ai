@@ -165,6 +165,27 @@ export function isSolveUpstreamOutputError(error: unknown): boolean {
   return error instanceof SyntaxError || error instanceof SolveUpstreamOutputError;
 }
 
+export type SolveProviderErrorReason = "quota" | "rate_limit" | "auth";
+
+/** The model provider refused the request for a reason a retry inside one solve cannot fix. */
+export class SolveProviderError extends Error {
+  constructor(public readonly reason: SolveProviderErrorReason) {
+    super(`The Solve model provider refused the request (${reason}).`);
+    this.name = "SolveProviderError";
+  }
+}
+
+/** Maps an OpenAI 401/403/429 failure to a SolveProviderError; returns null for every other error. */
+export function classifyProviderError(error: unknown): SolveProviderError | null {
+  if (!(error instanceof Error)) return null;
+  const { status, code, type } = error as Error & { status?: unknown; code?: unknown; type?: unknown };
+  if (status === 401 || status === 403) return new SolveProviderError("auth");
+  if (status !== 429) return null;
+  const marker = `${typeof type === "string" ? type : ""} ${typeof code === "string" ? code : ""}`;
+  const outOfCredits = marker.includes("insufficient_quota") || marker.includes("credit_balance_exhausted") || marker.includes("billing");
+  return new SolveProviderError(outOfCredits ? "quota" : "rate_limit");
+}
+
 export async function generateSolution(
   content: ResponseInputContent[],
   options: { timeoutMs?: number; model?: string } = {}
@@ -206,7 +227,7 @@ export async function generateSolution(
             },
           },
         },
-      }, { signal: AbortSignal.timeout(remainingMs) });
+      }, { signal: AbortSignal.timeout(remainingMs), maxRetries: 0 });
     } catch (error) {
       console.error("Solve model call failed", {
         attempt: attempt + 1,
@@ -216,7 +237,7 @@ export async function generateSolution(
         error,
       });
       if (isAbortError(error) || Date.now() >= deadline) throw new SolveUpstreamTimeoutError();
-      throw error;
+      throw classifyProviderError(error) ?? error;
     }
     console.info("Solve model call completed", {
       attempt: attempt + 1,

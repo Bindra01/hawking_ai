@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const state = vi.hoisted(() => ({ mode: "ok" as "ok" | "quota-timeout" | "output" | "provider-timeout", quotaCalls: [] as unknown[][], solveCalls: [] as unknown[][] }));
+const state = vi.hoisted(() => ({ mode: "ok" as "ok" | "quota-timeout" | "output" | "provider-timeout" | "provider-quota" | "provider-rate-limit", quotaCalls: [] as unknown[][], solveCalls: [] as unknown[][] }));
 vi.mock("@/lib/supabase-server", () => ({ createClient: vi.fn(async () => ({ auth: { getUser: async () => ({ data: { user: { id: "test-user" } } }) } })) }));
 vi.mock("@/lib/solve-rate-limit", () => {
   class SolveLimitTimeoutError extends Error {}
@@ -9,10 +9,11 @@ vi.mock("@/lib/solve-rate-limit", () => {
 vi.mock("@/lib/generate-solution", () => {
   class SolveUpstreamTimeoutError extends Error {}
   class SolveUpstreamOutputError extends Error {}
+  class SolveProviderError extends Error { constructor(public readonly reason: string) { super(reason); } }
   return {
-    SolveUpstreamTimeoutError, SolveUpstreamOutputError,
+    SolveUpstreamTimeoutError, SolveUpstreamOutputError, SolveProviderError,
     isSolveUpstreamOutputError: (error: unknown) => error instanceof SolveUpstreamOutputError,
-    generateSolution: vi.fn(async (...args: unknown[]) => { state.solveCalls.push(args); if (state.mode === "provider-timeout") throw new SolveUpstreamTimeoutError(); if (state.mode === "output") throw new SolveUpstreamOutputError(); return { needs_clarification: true, clarification_question: "Clarify the problem.", solution: null }; }),
+    generateSolution: vi.fn(async (...args: unknown[]) => { state.solveCalls.push(args); if (state.mode === "provider-timeout") throw new SolveUpstreamTimeoutError(); if (state.mode === "output") throw new SolveUpstreamOutputError(); if (state.mode === "provider-quota") throw new SolveProviderError("quota"); if (state.mode === "provider-rate-limit") throw new SolveProviderError("rate_limit"); return { needs_clarification: true, clarification_question: "Clarify the problem.", solution: null }; }),
   };
 });
 const route = await import("@/app/api/solve/route");
@@ -40,8 +41,8 @@ describe("Solve route final model, deadline, and error contract", () => {
     process.env.OPENAI_SOLVE_MODEL = "text-override-model";
     expect((await route.POST(textRequest())).status).toBe(200); expect(options().model).toBe("text-override-model");
   });
-  it.each([["quota", "quota-timeout", 503, "SOLVE_QUOTA_TIMEOUT"], ["provider", "provider-timeout", 504, "SOLVE_UPSTREAM_TIMEOUT"], ["output", "output", 502, "SOLVE_UPSTREAM_OUTPUT"]] as const)("maps %s failure to no-store structured status", async (_label, mode, status, code) => {
-    state.mode = mode; const response = await route.POST(imageRequest()); expect(response.status).toBe(status); expect(response.headers.get("Cache-Control")).toBe("no-store"); if (code === "SOLVE_QUOTA_TIMEOUT") expect(response.headers.get("Retry-After")).toBe("2"); await expect(response.json()).resolves.toMatchObject({ code });
+  it.each([["quota", "quota-timeout", 503, "SOLVE_QUOTA_TIMEOUT"], ["provider", "provider-timeout", 504, "SOLVE_UPSTREAM_TIMEOUT"], ["output", "output", 502, "SOLVE_UPSTREAM_OUTPUT"], ["provider credits", "provider-quota", 503, "SOLVE_PROVIDER_QUOTA"], ["provider rate limit", "provider-rate-limit", 503, "SOLVE_PROVIDER_RATE_LIMIT"]] as const)("maps %s failure to no-store structured status", async (_label, mode, status, code) => {
+    state.mode = mode; const response = await route.POST(imageRequest()); expect(response.status).toBe(status); expect(response.headers.get("Cache-Control")).toBe("no-store"); if (code === "SOLVE_QUOTA_TIMEOUT") expect(response.headers.get("Retry-After")).toBe("2"); if (code === "SOLVE_PROVIDER_RATE_LIMIT") expect(response.headers.get("Retry-After")).toBe("5"); if (code === "SOLVE_PROVIDER_QUOTA") { expect(response.headers.get("Retry-After")).toBeNull(); await expect(response.clone().json()).resolves.toMatchObject({ error: expect.stringContaining("out of credits") }); } await expect(response.json()).resolves.toMatchObject({ code });
   });
   it("caps quota acquisition at eight seconds to preserve model time", async () => { await route.POST(imageRequest()); const [, , quotaOptions] = state.quotaCalls[0] as [string, Date, { timeoutMs: number }]; expect(quotaOptions.timeoutMs).toBeGreaterThan(7_900); expect(quotaOptions.timeoutMs).toBeLessThanOrEqual(8_000); });
 });
