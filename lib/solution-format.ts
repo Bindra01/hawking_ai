@@ -1,4 +1,4 @@
-import type { DerivationBlock, SolveFormat, SolveSolution, SolveStep } from "@/lib/solve-types";
+import { STEP_LABELS, type DerivationBlock, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
 
 export interface ProjectedStep extends SolveStep {
   explanation: string;
@@ -56,14 +56,15 @@ function projectedWordCount(solution: SolveSolution, format: SolveFormat): numbe
     Object.values(block).filter((value): value is string => typeof value === "string")
   );
   const steps = projected.showTeaching ? projected.steps.flatMap((step) => [
-    step.label, step.answer, step.explanation, step.tip?.text ?? "", step.warning?.text ?? "",
+    step.answer, step.explanation, step.tip?.text ?? "", step.warning?.text ?? "",
   ]) : [];
+  const labels = projected.showTeaching ? Object.values(STEP_LABELS) : [];
   const items = [...projected.realityChecks, ...projected.commonErrors, ...projected.takeaways]
     .flatMap((item) => [item.heading ?? "", item.title ?? "", item.text]);
 
   return wordCount([
     solution.title, ...solution.tags, solution.problem_statement, ...solution.problem_options,
-    projected.setupLine, ...steps, ...(projected.showTeaching ? [solution.derivation.label] : []), ...derivation,
+    projected.setupLine, ...labels, ...steps, ...derivation,
     solution.final_answer.latex, solution.final_answer.display, solution.final_answer.option ?? "", ...items,
   ].join(" "));
 }

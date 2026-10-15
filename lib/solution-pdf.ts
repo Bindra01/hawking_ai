@@ -6,7 +6,7 @@ import { SVG } from "mathjax-full/js/output/svg.js";
 import { liteAdaptor } from "mathjax-full/js/adaptors/liteAdaptor.js";
 import { RegisterHTMLHandler } from "mathjax-full/js/handlers/html.js";
 import { AllPackages } from "mathjax-full/js/input/tex/AllPackages.js";
-import { HAWKING_FOOTER, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import { HAWKING_FOOTER, STEP_LABELS, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
 import { cleanLatexSource, isLatexSource, projectSolution } from "@/lib/solution-format";
 
 const C = {
@@ -55,13 +55,13 @@ function callout(doc: PDFKit.PDFDocument, label: string, text: string, border: s
   doc.y = y + h + 5;
 }
 
-function step(doc: PDFKit.PDFDocument, number: number, data: SolveStep, color: string) {
+function step(doc: PDFKit.PDFDocument, number: number, label: string, data: SolveStep, color: string) {
   ensureSpace(doc, 130);
   doc.moveDown(.8);
   const y = doc.y;
   doc.roundedRect(MARGIN, y, 51, 17, 8).fill(C.dark);
   doc.font("Helvetica-Bold").fontSize(7).fillColor("#FFFFFF").text(`STEP ${number}`, MARGIN + 9, y + 5);
-  doc.font("Helvetica-Bold").fontSize(12).fillColor(color).text(data.label, MARGIN + 62, y + 2, { width: CONTENT_WIDTH - 62 });
+  doc.font("Helvetica-Bold").fontSize(12).fillColor(color).text(label, MARGIN + 62, y + 2, { width: CONTENT_WIDTH - 62 });
   doc.y = y + 27;
   callout(doc, "ANSWER", data.answer, C.greenLight, "#F0FDF4");
   if (data.explanation) doc.font("Helvetica").fontSize(9.5).fillColor(C.dark).text(data.explanation, MARGIN, doc.y + 4, { width: CONTENT_WIDTH, lineGap: 3 });
@@ -115,9 +115,9 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
   }
 
   if (projected.showTeaching) {
-    step(doc, 1, projected.steps[0], C.purple);
-    step(doc, 2, projected.steps[1], C.orange);
-    step(doc, 3, projected.steps[2], C.teal);
+    step(doc, 1, STEP_LABELS.step1, projected.steps[0], C.purple);
+    step(doc, 2, STEP_LABELS.step2, projected.steps[1], C.orange);
+    step(doc, 3, STEP_LABELS.step3, projected.steps[2], C.teal);
   }
 
   ensureSpace(doc, 80);
@@ -126,7 +126,7 @@ export async function renderSolutionPdf(solution: SolveSolution, format: SolveFo
     const y = doc.y;
     doc.roundedRect(MARGIN, y, 66, 17, 8).fill(C.dark);
     doc.font("Helvetica-Bold").fontSize(7).fillColor("#FFFFFF").text("STEPS 4-6", MARGIN + 8, y + 5);
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(C.blue).text(solution.derivation.label, MARGIN + 77, y + 2, { width: CONTENT_WIDTH - 77 });
+    doc.font("Helvetica-Bold").fontSize(12).fillColor(C.blue).text(STEP_LABELS.derivation, MARGIN + 77, y + 2, { width: CONTENT_WIDTH - 77 });
     doc.y = y + 28;
   }
 

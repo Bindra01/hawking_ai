@@ -14,10 +14,10 @@ describe("parseSolveGenerationResult", () => {
     problem_statement: "Find the speed.",
     problem_options: [],
     framing_line: "Use Newton's second law.",
-    step1: { label: "Recall", answer: "F = ma", explanation: longTeaching, tip: null, warning: null },
-    step2: { label: "Inputs", answer: "m = 2 kg", explanation: longTeaching, tip: null, warning: null },
-    step3: { label: "Plan", answer: "Find a, then v", explanation: longTeaching, tip: null, warning: null },
-    derivation: { label: "Derivation", blocks: [
+    step1: { answer: "F = ma", explanation: longTeaching, tip: null, warning: null },
+    step2: { answer: "m = 2 kg", explanation: longTeaching, tip: null, warning: null },
+    step3: { answer: "Find a, then v", explanation: longTeaching, tip: null, warning: null },
+    derivation: { blocks: [
       { type: "equation", latex: "a=F/m", annotation: "solve for the acceleration" },
       { type: "equation", latex: "v=20\\,m/s", annotation: "substitute values and calculate speed" },
     ] },
@@ -162,6 +162,35 @@ describe("parseSolveGenerationResult", () => {
     }), expect.objectContaining({ signal: expect.any(AbortSignal), maxRetries: 0 }));
   });
 
+  it("sends OpenAI a schema that cannot carry a step label", async () => {
+    const create = vi.spyOn(OpenAI.Responses.prototype, "create").mockResolvedValue({
+      output_text: JSON.stringify({ needs_clarification: false, clarification_question: "", solution: validSolution }),
+      status: "completed",
+    } as never);
+
+    await generateSolution([{ type: "input_text", text: "Solve this." }]);
+
+    const request = create.mock.calls[0][0] as { text: { format: { schema: unknown } } };
+    const names: string[] = [];
+    const walk = (node: unknown) => {
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      if (!node || typeof node !== "object") return;
+      const record = node as Record<string, unknown>;
+      if (record.properties && typeof record.properties === "object") names.push(...Object.keys(record.properties as object));
+      if (Array.isArray(record.required)) names.push(...(record.required as string[]));
+      Object.values(record).forEach(walk);
+    };
+    walk(request.text.format.schema);
+
+    expect(names).toContain("answer");
+    expect(names).toContain("explanation");
+    expect(names).toContain("blocks");
+    expect(names).not.toContain("label");
+  });
+
   it("fails fast with a quota provider error when OpenAI reports no credits", async () => {
     const create = vi.spyOn(OpenAI.Responses.prototype, "create").mockRejectedValue(
       Object.assign(new Error("429 You have no credits remaining."), { status: 429, type: "insufficient_quota", code: "credit_balance_exhausted" })
@@ -301,9 +330,9 @@ describe("parseSolveGenerationResult", () => {
   });
 
   it.each([
-    { ...validSolution, derivation: { label: "Derivation", blocks: [null] } },
-    { ...validSolution, derivation: { label: "Derivation", blocks: [{ type: "unknown" }] } },
-    { ...validSolution, derivation: { label: "Derivation", blocks: [
+    { ...validSolution, derivation: { blocks: [null] } },
+    { ...validSolution, derivation: { blocks: [{ type: "unknown" }] } },
+    { ...validSolution, derivation: { blocks: [
       { type: "equation", latex: "", annotation: "invalid empty equation value" },
       { type: "equation", latex: "v=20\\,m/s", annotation: "state the final calculated speed" },
     ] } },

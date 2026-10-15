@@ -43,9 +43,8 @@ const callout = {
 const step = {
   type: "object",
   additionalProperties: false,
-  required: ["label", "answer", "explanation", "tip", "warning"],
+  required: ["answer", "explanation", "tip", "warning"],
   properties: {
-    label: { type: "string" },
     answer: { type: "string" },
     explanation: { type: "string" },
     tip: callout,
@@ -73,9 +72,8 @@ const solutionSchema = {
     derivation: {
       type: "object",
       additionalProperties: false,
-      required: ["label", "blocks"],
+      required: ["blocks"],
       properties: {
-        label: { type: "string" },
         blocks: {
           type: "array",
           minItems: 4,
@@ -119,7 +117,7 @@ Otherwise, set needs_clarification=false and generate ONE complete, full-depth L
 Follow these rules strictly:
 - Teach directly to a student. The Long format is a patient five-minute lesson, not a terse answer key.
 - Every conceptual step has a concise answer of one or two sentences, then a separate focused explanation of 80–140 words. Never fold the teaching prose into the answer.
-- Step 1 is RECALL THE PRINCIPLE. Step 2 is WHAT GOES IN. Step 3 is MAP THE DERIVATION.
+- The step labels are fixed by the app and are never part of your output. step1 is the RECALL THE PRINCIPLE move: name the law or principle that governs the problem and why. step2 is the WHAT GOES IN move: the given data, variables, setup, and the unknown. step3 is the MAP THE DERIVATION move: a one-paragraph preview of the solution path before executing it. Put problem-specific detail only in answer and explanation fields.
 - framing_line is an optional one-line Short setup naming the mathematical approach. Keep it empty when the approach is obvious.
 - Steps 4–6 form one continuous calculation. Store every mathematical move as an equation block. Each equation annotation must be a short 3–8 word note. Use prose and subsection blocks only for Long teaching context; never hide a necessary calculation in them.
 - Use LaTeX without dollar delimiters in latex fields. Use plain text with optional $...$ math elsewhere.
@@ -368,7 +366,6 @@ function invalidSolveSolutionReason(value: unknown): string | null {
   if (![value.step1, value.step2, value.step3].every(isStep)) return "a teaching step is invalid";
   if (
     !isRecord(value.derivation) ||
-    typeof value.derivation.label !== "string" ||
     !Array.isArray(value.derivation.blocks) ||
     !value.derivation.blocks.every(isDerivationBlock)
   ) return "a derivation block is invalid";
@@ -386,7 +383,7 @@ function invalidSolveSolutionReason(value: unknown): string | null {
 
 function isStep(value: unknown): boolean {
   return isRecord(value) &&
-    ["label", "answer", "explanation"].every((field) => typeof value[field] === "string") &&
+    ["answer", "explanation"].every((field) => typeof value[field] === "string") &&
     isCallout(value.tip) &&
     isCallout(value.warning);
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import katex from "katex";
 import AppNav from "@/components/AppNav";
-import { HAWKING_FOOTER, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import { HAWKING_FOOTER, STEP_LABELS, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
 import { cleanLatexSource, isLatexSource, projectSolution } from "@/lib/solution-format";
 import { isUnauthorizedSolveResponse } from "@/lib/solve-response";
 
@@ -12,12 +12,12 @@ function MathBlock({ latex, inline = false }: { latex: string; inline?: boolean 
   return <span className={inline ? "math-inline" : "math-display"} dangerouslySetInnerHTML={{ __html: katex.renderToString(latex, { displayMode: !inline, throwOnError: false, output: "html", trust: false }) }} />;
 }
 
-function StepSection({ number, step, color }: { number: number; step: SolveStep; color: string }) {
+function StepSection({ number, label, step, color }: { number: number; label: string; step: SolveStep; color: string }) {
   return (
     <section className="solution-section">
       <div className="step-heading">
         <span className="step-badge">STEP {number}</span>
-        <h2 style={{ color }}>{step.label}</h2>
+        <h2 style={{ color }}>{label}</h2>
       </div>
       <div className="answer-box"><strong>ANSWER</strong><p>{step.answer}</p></div>
       {step.explanation && <p className="solution-explanation">{step.explanation}</p>}
@@ -27,8 +27,8 @@ function StepSection({ number, step, color }: { number: number; step: SolveStep;
   );
 }
 
-export default function SolutionView({ solution }: { solution: SolveSolution }) {
-  const [format, setFormat] = useState<SolveFormat>("short");
+export default function SolutionView({ solution, initialFormat = "short" }: { solution: SolveSolution; initialFormat?: SolveFormat }) {
+  const [format, setFormat] = useState<SolveFormat>(initialFormat);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [downloading, setDownloading] = useState<SolveFormat | null>(null);
   const [downloadError, setDownloadError] = useState("");
@@ -101,13 +101,13 @@ export default function SolutionView({ solution }: { solution: SolveSolution }) 
         </section>
 
         {projected.showTeaching && <>
-          <StepSection number={1} step={projected.steps[0]} color="var(--hawking-purple)" />
-          <StepSection number={2} step={projected.steps[1]} color="var(--hawking-orange)" />
-          <StepSection number={3} step={projected.steps[2]} color="var(--hawking-teal)" />
+          <StepSection number={1} label={STEP_LABELS.step1} step={projected.steps[0]} color="var(--hawking-purple)" />
+          <StepSection number={2} label={STEP_LABELS.step2} step={projected.steps[1]} color="var(--hawking-orange)" />
+          <StepSection number={3} label={STEP_LABELS.step3} step={projected.steps[2]} color="var(--hawking-teal)" />
         </>}
 
         <section className={`solution-section derivation-section ${format === "short" ? "short-derivation" : ""}`}>
-          {projected.showTeaching && <div className="step-heading"><span className="step-badge">STEPS 4→6</span><h2 style={{ color: "var(--hawking-blue)" }}>{solution.derivation.label}</h2></div>}
+          {projected.showTeaching && <div className="step-heading"><span className="step-badge">STEPS 4→6</span><h2 style={{ color: "var(--hawking-blue)" }}>{STEP_LABELS.derivation}</h2></div>}
           <div className="derivation-flow">
             {projected.derivationBlocks.map((block, index) => {
               if (block.type === "subsection") return <h3 key={index}>{block.title}</h3>;

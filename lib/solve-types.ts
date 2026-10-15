@@ -12,8 +12,18 @@ export interface SolveCallout {
   priority: Priority;
 }
 
+/**
+ * The fixed Hawking step labels. They are the teaching mechanism: every solution shows the same
+ * four signposts, so the renderer supplies them and the model never generates them.
+ */
+export const STEP_LABELS = {
+  step1: "RECALL THE PRINCIPLE",
+  step2: "WHAT GOES IN",
+  step3: "MAP THE DERIVATION",
+  derivation: "SET UP · DERIVE · ASSEMBLE",
+} as const;
+
 export interface SolveStep {
-  label: string;
   answer: string;
   explanation: string;
   tip?: SolveCallout | null;
@@ -36,7 +46,6 @@ export interface SolveSolution {
   step2: SolveStep;
   step3: SolveStep;
   derivation: {
-    label: string;
     blocks: DerivationBlock[];
   };
   final_answer: {
