@@ -174,6 +174,8 @@ html, body {
 .short-derivation .math-display { text-align: left; color: var(--hawking-darktext); }
 .solution-paper-short .final-answer { margin-top: 24px; padding: 17px 12px; border-color: var(--hawking-darktext); border-radius: 3px; background: #fff; color: var(--hawking-darktext); }
 .math-display { display: block; min-width: max-content; text-align: center; color: #173b69; }
+.solution-cover h1 .katex { text-transform: none; }
+.solution-paper .katex-display { margin: .5em 0; }
 .intermediate-result { overflow-x: auto; margin: 12px auto; padding: 10px 14px; border: 1px solid var(--hawking-blue); border-radius: 7px; background: #fff; }
 .final-answer { margin-top: 20px; padding: 20px 15px; border: 2px solid var(--hawking-greenlight); border-radius: 12px; background: var(--bg-green); text-align: center; color: var(--hawking-green); }
 .final-answer small { display: block; margin-bottom: 8px; font-size: 9px; font-weight: 800; letter-spacing: .14em; }

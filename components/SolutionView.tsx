@@ -4,12 +4,17 @@ import { useState } from "react";
 import Link from "next/link";
 import katex from "katex";
 import AppNav from "@/components/AppNav";
-import { HAWKING_FOOTER, STEP_LABELS, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
-import { cleanLatexSource, isLatexSource, projectSolution } from "@/lib/solution-format";
+import MathText from "@/components/MathText";
+import { HAWKING_FOOTER, STEP_LABELS, type PriorityItem, type SolveFormat, type SolveSolution, type SolveStep } from "@/lib/solve-types";
+import { projectSolution } from "@/lib/solution-format";
 import { isUnauthorizedSolveResponse } from "@/lib/solve-response";
 
-function MathBlock({ latex, inline = false }: { latex: string; inline?: boolean }) {
-  return <span className={inline ? "math-inline" : "math-display"} dangerouslySetInnerHTML={{ __html: katex.renderToString(latex, { displayMode: !inline, throwOnError: false, output: "html", trust: false }) }} />;
+function MathBlock({ latex }: { latex: string }) {
+  return <span className="math-display" dangerouslySetInnerHTML={{ __html: katex.renderToString(latex, { displayMode: true, throwOnError: false, output: "html", trust: false }) }} />;
+}
+
+function itemHeading(item: PriorityItem): string {
+  return [item.heading, item.title].filter(Boolean).join(" — ");
 }
 
 function StepSection({ number, label, step, color }: { number: number; label: string; step: SolveStep; color: string }) {
@@ -19,10 +24,10 @@ function StepSection({ number, label, step, color }: { number: number; label: st
         <span className="step-badge">STEP {number}</span>
         <h2 style={{ color }}>{label}</h2>
       </div>
-      <div className="answer-box"><strong>ANSWER</strong><p>{step.answer}</p></div>
-      {step.explanation && <p className="solution-explanation">{step.explanation}</p>}
-      {step.tip && <div className="tip-box"><strong>TIP</strong><span>{step.tip.text}</span></div>}
-      {step.warning && <div className="warning-box"><strong>WARNING</strong><span>{step.warning.text}</span></div>}
+      <div className="answer-box"><strong>ANSWER</strong><p><MathText text={step.answer} /></p></div>
+      {step.explanation && <p className="solution-explanation"><MathText text={step.explanation} /></p>}
+      {step.tip && <div className="tip-box"><strong>TIP</strong><span><MathText text={step.tip.text} /></span></div>}
+      {step.warning && <div className="warning-box"><strong>WARNING</strong><span><MathText text={step.warning.text} /></span></div>}
     </section>
   );
 }
@@ -89,15 +94,15 @@ export default function SolutionView({ solution, initialFormat = "short" }: { so
       <article className={`solution-paper solution-paper-${format}`}>
         <div className="solution-cover">
           {projected.showTeaching && <div className="solution-logo">HAWKING <span>· Think Through Physics</span></div>}
-          <h1>{solution.title}</h1>
+          <h1><MathText text={solution.title} /></h1>
           {projected.showTeaching && <div className="solution-tags">{solution.tags.join(" · ")}</div>}
         </div>
 
         <section className="problem-section">
           <h2>THE PROBLEM</h2>
-          <p>{solution.problem_statement}</p>
-          {solution.problem_options.length > 0 && <div className="problem-options">{solution.problem_options.map((option) => <span key={option}>{option}</span>)}</div>}
-          {projected.setupLine && <em>{projected.setupLine}</em>}
+          <p><MathText text={solution.problem_statement} /></p>
+          {solution.problem_options.length > 0 && <div className="problem-options">{solution.problem_options.map((option) => <span key={option}><MathText text={option} /></span>)}</div>}
+          {projected.setupLine && <em><MathText text={projected.setupLine} /></em>}
         </section>
 
         {projected.showTeaching && <>
@@ -110,33 +115,33 @@ export default function SolutionView({ solution, initialFormat = "short" }: { so
           {projected.showTeaching && <div className="step-heading"><span className="step-badge">STEPS 4→6</span><h2 style={{ color: "var(--hawking-blue)" }}>{STEP_LABELS.derivation}</h2></div>}
           <div className="derivation-flow">
             {projected.derivationBlocks.map((block, index) => {
-              if (block.type === "subsection") return <h3 key={index}>{block.title}</h3>;
-              if (block.type === "prose") return <p key={index}>{block.text}</p>;
+              if (block.type === "subsection") return <h3 key={index}><MathText text={block.title} /></h3>;
+              if (block.type === "prose") return <p key={index}><MathText text={block.text} /></p>;
               if (block.type === "boxed_result") return <div className="intermediate-result" key={index}><MathBlock latex={block.latex} /></div>;
-              return <div className="equation-block" key={index}><MathBlock latex={block.latex} />{block.annotation && <em>{block.annotation}</em>}</div>;
+              return <div className="equation-block" key={index}><MathBlock latex={block.latex} />{block.annotation && <em><MathText text={block.annotation} /></em>}</div>;
             })}
           </div>
           <div className="final-answer">
             {projected.showTeaching && <small>FINAL ANSWER</small>}
             <MathBlock latex={solution.final_answer.latex} />
-            {solution.final_answer.display && <strong>{isLatexSource(solution.final_answer.display) ? <MathBlock latex={cleanLatexSource(solution.final_answer.display)} inline /> : solution.final_answer.display}</strong>}
+            {solution.final_answer.display && <strong><MathText text={solution.final_answer.display} /></strong>}
             {solution.final_answer.option && <span>{solution.final_answer.option}</span>}
           </div>
         </section>
 
         {projected.showTeaching && <><section className="solution-section check-section">
           <h2>REALITY CHECK</h2>
-          <div className="check-list">{projected.realityChecks.map((item, index) => <div key={index}><span>✓</span><p><strong>{[item.heading, item.title].filter(Boolean).join(" — ")}</strong>{item.text}</p></div>)}</div>
+          <div className="check-list">{projected.realityChecks.map((item, index) => <div key={index}><span>✓</span><p><strong><MathText text={itemHeading(item)} /></strong><MathText text={item.text} /></p></div>)}</div>
         </section>
 
         <section className="solution-section errors-section">
           <h2>WHERE STUDENTS GO WRONG</h2>
-          <ol>{projected.commonErrors.map((item, index) => <li key={index}><strong>{[item.heading, item.title].filter(Boolean).join(" — ")}</strong><span>{item.text}</span></li>)}</ol>
+          <ol>{projected.commonErrors.map((item, index) => <li key={index}><strong><MathText text={itemHeading(item)} /></strong><span><MathText text={item.text} /></span></li>)}</ol>
         </section>
 
         <section className="solution-section takeaway-section">
           <h2>TAKE THESE INTO YOUR NEXT PROBLEM</h2>
-          <ul>{projected.takeaways.map((item, index) => <li key={index}><strong>{[item.heading, item.title].filter(Boolean).join(" — ")}</strong>{item.text}</li>)}</ul>
+          <ul>{projected.takeaways.map((item, index) => <li key={index}><strong><MathText text={itemHeading(item)} /></strong><MathText text={item.text} /></li>)}</ul>
         </section></>}
 
         <footer className="solution-footer">

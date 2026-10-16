@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { inflateSync } from "node:zlib";
 import SolutionView from "@/components/SolutionView";
 import { renderSolutionPdf } from "@/lib/solution-pdf";
 import { STEP_LABELS, type SolveSolution } from "@/lib/solve-types";
+import { pdfText } from "./helpers/pdf-text";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/solve" }));
 
@@ -43,25 +43,6 @@ function solutionFor(topic: string): SolveSolution {
 
 function stepHeadings(html: string): string[] {
   return [...html.matchAll(/<div class="step-heading">.*?<h2[^>]*>(.*?)<\/h2>/g)].map((match) => match[1]);
-}
-
-/** Decodes every text-showing operator in the PDF so labels can be searched as plain text. */
-function pdfText(pdf: Buffer): string {
-  const raw = pdf.toString("latin1");
-  const streams = [...raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)].map((match) => {
-    const bytes = Buffer.from(match[1], "latin1");
-    try {
-      return inflateSync(bytes).toString("latin1");
-    } catch {
-      return match[1];
-    }
-  });
-  return streams
-    .join("\n")
-    .split("\n")
-    .filter((line) => / T[Jj]$/.test(line))
-    .map((line) => [...line.matchAll(/<([0-9a-fA-F]+)>/g)].map((hex) => Buffer.from(hex[1], "hex").toString("latin1")).join(""))
-    .join("\n");
 }
 
 describe("fixed step labels", () => {

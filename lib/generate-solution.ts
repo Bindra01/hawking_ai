@@ -120,7 +120,7 @@ Follow these rules strictly:
 - The step labels are fixed by the app and are never part of your output. step1 is the RECALL THE PRINCIPLE move: name the law or principle that governs the problem and why. step2 is the WHAT GOES IN move: the given data, variables, setup, and the unknown. step3 is the MAP THE DERIVATION move: a one-paragraph preview of the solution path before executing it. Put problem-specific detail only in answer and explanation fields.
 - framing_line is an optional one-line Short setup naming the mathematical approach. Keep it empty when the approach is obvious.
 - Steps 4–6 form one continuous calculation. Store every mathematical move as an equation block. Each equation annotation must be a short 3–8 word note. Use prose and subsection blocks only for Long teaching context; never hide a necessary calculation in them.
-- Use LaTeX without dollar delimiters in latex fields. Use plain text with optional $...$ math elsewhere.
+- Use LaTeX without dollar delimiters in latex fields. Everywhere else write plain English and wrap every symbol, variable, or formula in $...$ (for example "the launch angle $\\theta$"). Never use \\( \\), \\[ \\], or bare LaTeX commands outside $...$.
 - final_answer.display is a short plain-language reading of the answer, such as "20 m/s" or "tan θ equals tan φ plus gT² over 2d". Never put LaTeX commands or \\displaystyle in it.
 - final_answer.option is the matching option label only when problem_options is non-empty. Otherwise return an empty string, never a sentence.
 - Verify dimensions, limiting cases, numerical consistency, or physical intuition.
