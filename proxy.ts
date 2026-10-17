@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -29,8 +29,19 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh the auth token — this is critical for server-side auth to work
-  await supabase.auth.getUser();
+  // Refresh the auth token — this is critical for server-side auth to work.
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const protectedRoute = ["/home", "/practice", "/play", "/solve", "/profile", "/admin"]
+    .some((path) => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`));
+
+  if (protectedRoute && !user) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(loginUrl);
+  }
 
   return supabaseResponse;
 }

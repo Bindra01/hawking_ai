@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import PlayScreen from "@/components/PlayScreen";
 import { Problem } from "@/lib/types";
 import { shuffleStepOptions } from "@/lib/shuffle-options";
+import AppNav from "@/components/AppNav";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -38,5 +39,5 @@ export default async function PlayPage({ params }: Props) {
     created_at: problem.created_at.toISOString(),
   });
 
-  return <PlayScreen problem={problemData} />;
+  return <><PlayScreen problem={problemData} /><AppNav /></>;
 }
