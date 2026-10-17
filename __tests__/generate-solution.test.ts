@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import OpenAI from "openai";
 import {
   ACCURACY_REQUIREMENTS,
@@ -13,7 +13,14 @@ import {
   SolveUpstreamTimeoutError,
 } from "@/lib/generate-solution";
 
+// Fail closed: a test that queues too few responses must never reach the real SDK,
+// because OPENAI_API_KEY may be present and a real call would spend credits.
+beforeEach(() => {
+  vi.spyOn(OpenAI.Responses.prototype, "create").mockRejectedValue(new Error("Unexpected live OpenAI call in tests"));
+});
+
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -361,6 +368,77 @@ describe("parseSolveGenerationResult", () => {
 
     await expect(generateSolution([{ type: "input_text", text: "Solve this." }])).rejects.toThrow(/invalid structured solution/);
     expect(create).toHaveBeenCalledTimes(3);
+  });
+
+  it("never falls through to the real SDK when a test queues too few responses", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(generateSolution([{ type: "input_text", text: "Solve this." }])).rejects.toThrow(/Unexpected live OpenAI call/);
+  });
+
+  describe("shared deadline across the two calls", () => {
+    const validOutput = JSON.stringify({ needs_clarification: false, clarification_question: "", solution: validSolution });
+    const problem = [{ type: "input_text" as const, text: "Solve this." }];
+
+    /** Freezes the clock and records every per-call abort budget without arming real timers. */
+    function controlledClock() {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-17T09:00:00Z"));
+      const budgets = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => new AbortController().signal);
+      const advance = (ms: number) => vi.setSystemTime(Date.now() + ms);
+      return { budgets, advance };
+    }
+
+    it("reserves eight seconds of a large budget for the formatter, which then gets whatever time remains", async () => {
+      const { budgets, advance } = controlledClock();
+      const create = vi.spyOn(OpenAI.Responses.prototype, "create")
+        .mockImplementationOnce((async () => { advance(12_000); return { output_text: WORKING, status: "completed" }; }) as never)
+        .mockResolvedValueOnce({ output_text: validOutput, status: "completed" } as never);
+
+      await expect(generateSolution(problem, { timeoutMs: 30_000 })).resolves.toMatchObject({ needs_clarification: false });
+
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(budgets.mock.calls.map(([ms]) => ms)).toEqual([22_000, 18_000]);
+    });
+
+    it("reserves half of a small budget for the formatter", async () => {
+      const { budgets } = controlledClock();
+      mockSolve(validOutput);
+
+      await expect(generateSolution(problem, { timeoutMs: 10_000 })).resolves.toMatchObject({ needs_clarification: false });
+
+      expect(budgets.mock.calls.map(([ms]) => ms)).toEqual([5_000, 10_000]);
+    });
+
+    it("does not start the formatter once the physics call has used the whole budget", async () => {
+      const { advance } = controlledClock();
+      const create = vi.spyOn(OpenAI.Responses.prototype, "create")
+        .mockImplementationOnce((async () => { advance(30_000); return { output_text: WORKING, status: "completed" }; }) as never);
+
+      await expect(generateSolution(problem, { timeoutMs: 30_000 })).rejects.toBeInstanceOf(SolveUpstreamTimeoutError);
+      expect(create).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not retry the formatter after the deadline has passed", async () => {
+      const { advance } = controlledClock();
+      const create = vi.spyOn(OpenAI.Responses.prototype, "create")
+        .mockResolvedValueOnce({ output_text: WORKING, status: "completed" } as never)
+        .mockImplementationOnce((async () => { advance(30_000); return { output_text: '{"broken":', status: "completed" }; }) as never);
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      await expect(generateSolution(problem, { timeoutMs: 30_000 })).rejects.toBeInstanceOf(SolveUpstreamTimeoutError);
+      expect(create).toHaveBeenCalledTimes(2);
+    });
+
+    it("maps a provider failure that lands after the deadline to the Solve timeout error", async () => {
+      const { advance } = controlledClock();
+      const create = vi.spyOn(OpenAI.Responses.prototype, "create")
+        .mockImplementationOnce((async () => { advance(30_000); throw new Error("socket hang up"); }) as never);
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      await expect(generateSolution(problem, { timeoutMs: 30_000 })).rejects.toBeInstanceOf(SolveUpstreamTimeoutError);
+      expect(create).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("normalizes provider annotation length and appends the exact final equation", () => {
