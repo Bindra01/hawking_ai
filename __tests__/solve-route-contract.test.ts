@@ -22,7 +22,7 @@ function imageRequest() { const f = new FormData(); f.set("file", new File([Uint
 function textRequest() { const f = new FormData(); f.set("problem", "What is the speed after two seconds?"); return request(f); }
 function pdfRequest() { const f = new FormData(); f.set("file", new File([Uint8Array.of(37,80,68,70)], "q.pdf", { type: "application/pdf" })); return request(f); }
 function options() { return state.solveCalls.at(-1)?.[1] as { model: string; timeoutMs: number }; }
-afterEach(() => { state.mode = "ok"; state.quotaCalls.length = 0; state.solveCalls.length = 0; delete process.env.OPENAI_SOLVE_IMAGE_MODEL; delete process.env.OPENAI_SOLVE_MODEL; });
+afterEach(() => { state.mode = "ok"; state.quotaCalls.length = 0; state.solveCalls.length = 0; delete process.env.OPENAI_SOLVE_IMAGE_MODEL; delete process.env.OPENAI_SOLVE_MODEL; delete process.env.SOLVE_RESPONSE_BUDGET_MS; });
 
 describe("Solve route final model, deadline, and error contract", () => {
   it("uses gpt-4.1-mini with low detail for image input by default", async () => {
@@ -45,4 +45,15 @@ describe("Solve route final model, deadline, and error contract", () => {
     state.mode = mode; const response = await route.POST(imageRequest()); expect(response.status).toBe(status); expect(response.headers.get("Cache-Control")).toBe("no-store"); if (code === "SOLVE_QUOTA_TIMEOUT") expect(response.headers.get("Retry-After")).toBe("2"); if (code === "SOLVE_PROVIDER_RATE_LIMIT") expect(response.headers.get("Retry-After")).toBe("5"); if (code === "SOLVE_PROVIDER_QUOTA") { expect(response.headers.get("Retry-After")).toBeNull(); await expect(response.clone().json()).resolves.toMatchObject({ error: expect.stringContaining("out of credits") }); } await expect(response.json()).resolves.toMatchObject({ code });
   });
   it("caps quota acquisition at eight seconds to preserve model time", async () => { await route.POST(imageRequest()); const [, , quotaOptions] = state.quotaCalls[0] as [string, Date, { timeoutMs: number }]; expect(quotaOptions.timeoutMs).toBeGreaterThan(7_900); expect(quotaOptions.timeoutMs).toBeLessThanOrEqual(8_000); });
+  it.each([
+    ["raises the model deadline with SOLVE_RESPONSE_BUDGET_MS", "40000", 38_000, 38_500],
+    ["clamps SOLVE_RESPONSE_BUDGET_MS below the route's maxDuration", "200000", 83_000, 83_500],
+    ["clamps SOLVE_RESPONSE_BUDGET_MS to a ten-second floor", "1000", 8_000, 8_500],
+    ["ignores a non-numeric SOLVE_RESPONSE_BUDGET_MS", "soon", 24_000, 24_500],
+    ["ignores a non-positive SOLVE_RESPONSE_BUDGET_MS", "-5", 24_000, 24_500],
+  ])("%s", async (_label, configured, above, atMost) => {
+    process.env.SOLVE_RESPONSE_BUDGET_MS = configured;
+    expect((await route.POST(textRequest())).status).toBe(200);
+    expect(options().timeoutMs).toBeGreaterThan(above); expect(options().timeoutMs).toBeLessThanOrEqual(atMost);
+  });
 });

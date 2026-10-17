@@ -11,6 +11,21 @@ const MAX_FILE_BYTES = 4 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 12_000;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
+/**
+ * Wall-clock budget for one solve response. The default stays under the 30 s cutoff of the
+ * preview gateway. Set SOLVE_RESPONSE_BUDGET_MS on hosts that allow longer requests so the
+ * two-call solve (physics, then formatting) is not cut short.
+ */
+const DEFAULT_RESPONSE_BUDGET_MS = 26_000;
+const MIN_RESPONSE_BUDGET_MS = 10_000;
+const MAX_RESPONSE_BUDGET_MS = (maxDuration - 5) * 1_000;
+
+function responseBudgetMs(): number {
+  const configured = Number(process.env.SOLVE_RESPONSE_BUDGET_MS);
+  if (!Number.isFinite(configured) || configured <= 0) return DEFAULT_RESPONSE_BUDGET_MS;
+  return Math.min(MAX_RESPONSE_BUDGET_MS, Math.max(MIN_RESPONSE_BUDGET_MS, Math.floor(configured)));
+}
+
 const PROVIDER_ERRORS: Record<SolveProviderError["reason"], { error: string; code: string; retryAfter?: string }> = {
   quota: { error: "Hawking's AI provider is out of credits. The site owner must add OpenAI credits before Hawking can solve again.", code: "SOLVE_PROVIDER_QUOTA" },
   rate_limit: { error: "Hawking's AI provider is busy right now. Please try again in a few seconds.", code: "SOLVE_PROVIDER_RATE_LIMIT", retryAfter: "5" },
@@ -19,7 +34,7 @@ const PROVIDER_ERRORS: Record<SolveProviderError["reason"], { error: string; cod
 
 export async function POST(request: Request) {
   const requestStartedAt = Date.now();
-  const responseDeadlineAt = requestStartedAt + 26_000;
+  const responseDeadlineAt = requestStartedAt + responseBudgetMs();
   try {
     const supabase = await withinDeadline(createClient(), responseDeadlineAt);
     const { data: { user } } = await withinDeadline(supabase.auth.getUser(), responseDeadlineAt);
